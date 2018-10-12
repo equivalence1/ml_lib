@@ -4,7 +4,9 @@ import tarfile
 import os
 from urllib.request import urlretrieve
 import numpy as np
+import sys
 
+sys.path.append("../build")
 import example
 
 
