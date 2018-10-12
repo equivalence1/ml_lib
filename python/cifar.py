@@ -5,6 +5,8 @@ import os
 from urllib.request import urlretrieve
 import numpy as np
 
+import example
+
 
 def cifar10(path=None):
     r"""Return (train_images, train_labels, test_images, test_labels).
@@ -94,3 +96,7 @@ def cifar10(path=None):
 
 
 train_images, train_labels, test_images, test_labels = cifar10()
+
+ds = example.DataSet(test_labels)
+print("Test printing dataset prefix:")
+ds.test_print(10)
