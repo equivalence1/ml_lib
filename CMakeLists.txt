@@ -3,7 +3,13 @@ project(nn_introduction)
 
 add_subdirectory(third_party)
 
-pybind11_add_module(example cpp/src/dataset.cpp)
+set(PYTHON_PREFIX /usr/local/lib/python3.7)
+
+pybind11_add_module(example cpp/src/dataset.cpp
+                            cpp/src/least_squares.cpp
+)
+
+find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
 message(STATUS "libs=${LIBS}, include_paths=${INCLUDE_PATHS}")
 
@@ -30,5 +36,5 @@ else()
     message(FATAL_ERROR "failed to find mkldnn headers.")
 endif()
 
-target_link_libraries(example PRIVATE ${MKLDNN_LIB})
+target_link_libraries(example PRIVATE ${MKLDNN_LIB} Eigen3::Eigen)
 target_include_directories(example PRIVATE ${MKLDNN_PATH})
