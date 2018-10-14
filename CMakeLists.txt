@@ -7,6 +7,7 @@ set(PYTHON_PREFIX /usr/local/lib/python3.7)
 
 pybind11_add_module(example cpp/src/dataset.cpp
                             cpp/src/least_squares.cpp
+                            cpp/src/convolution.cpp
 )
 
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)

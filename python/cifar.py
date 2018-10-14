@@ -6,7 +6,7 @@ from urllib.request import urlretrieve
 import numpy as np
 import sys
 
-sys.path.append("../cmake-build-debug")
+sys.path.append("../build")
 import example
 
 
@@ -101,4 +101,5 @@ train_images, train_labels, test_images, test_labels = cifar10()
 
 ds = example.DataSet(train_images, train_labels)
 print("Test printing dataset prefix:")
-ds.test_print(10)
+print(ds.test_print(10))
+

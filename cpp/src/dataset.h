@@ -8,7 +8,7 @@ namespace py = pybind11;
 class DataSet {
 public:
     explicit DataSet(py::array_t<float> X, py::array_t<float> y);
-    void TestPrint(ssize_t size);
+    py::array_t<float> TestPrint(ssize_t size);
     virtual ~DataSet();
 private:
     py::array_t<float> mx_x_;
