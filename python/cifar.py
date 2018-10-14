@@ -8,6 +8,7 @@ import sys
 
 sys.path.append("../build")
 import example
+from catboost import CatBoostRegressor
 
 
 def cifar10(path=None):
@@ -101,5 +102,12 @@ train_images, train_labels, test_images, test_labels = cifar10()
 
 ds = example.DataSet(train_images, train_labels)
 print("Test printing dataset prefix:")
-print(ds.test_print(10))
+
+number_of_samples = 10
+new_features = ds.test_print(number_of_samples)
+new_features = np.resize(new_features,(number_of_samples, 6))
+model = CatBoostRegressor(iterations=1, learning_rate=1, depth=6, loss_function='RMSE')
+fit_model = model.fit(new_features, np.argmax(train_labels[:number_of_samples],axis=1))
+
+print (fit_model.get_params())
 
