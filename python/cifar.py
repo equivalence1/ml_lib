@@ -101,15 +101,15 @@ def cifar10(path=None):
 
 train_images, train_labels, test_images, test_labels = cifar10()
 
-ds = nntreepy.DataSet(train_images, train_labels)
+ds = nntreepy.DataSet(train_images, np.argmax(train_labels, axis=1).reshape(train_labels.shape[0], 1))
 print("Test printing dataset prefix:")
 
-number_of_samples = 50000
-new_features = ds.test_print(number_of_samples)
-new_features = np.resize(new_features,(number_of_samples, 6 * 6 * 1))
-
-model = CatBoostClassifier(iterations=1000, learning_rate=1, depth=6, loss_function='MultiClass')
-print(np.argmax(train_labels[:number_of_samples],axis=1))
+# number_of_samples = 50000
+# new_features = ds.test_print(number_of_samples)
+# new_features = np.resize(new_features,(number_of_samples, 6 * 6 * 1))
+#
+# model = CatBoostClassifier(iterations=1000, learning_rate=1, depth=6, loss_function='MultiClass')
+# print(np.argmax(train_labels[:number_of_samples],axis=1))
 # fit_model = model.fit(new_features, np.argmax(train_labels[:number_of_samples],axis=1))
 
 # print (fit_model.get_params())
@@ -123,5 +123,21 @@ train_images_first_ten = [train_images[i] for i in range(10)]
 train_labels_first_ten = [train_labels[i] for i in range(10)]
 print("train_labels_first_ten: ", train_labels_first_ten)
 
-ans_labels = nntreepy.least_squares(ds)
-print("ans_labels: ", ans_labels)
+w = nntreepy.least_squares(ds)
+print("w: ", w.shape)
+# print(w)
+
+labels_pred = test_images.dot(w)
+classes_pred = np.round(labels_pred)#np.argmax(labels_pred, axis=1) + 1
+print(classes_pred.shape)
+print(classes_pred)
+# print(np.sum(np.where(classes_pred != 2, 1, 0)))
+cls_tst = np.argmax(test_labels, axis=1).reshape(10000, 1)
+print(cls_tst.shape)
+diff_r = classes_pred - cls_tst
+
+sim = np.where(diff_r == 0, 1, 0)
+accuracy_rs = np.sum(sim)/sim.shape[0]
+print(accuracy_rs)
+
+# prediction =

@@ -15,7 +15,7 @@ float* least_squares(float* X, float* y, int rows, int colsX, int colsY) {
   Map<MatrixXf> mxX(X, rows, colsX);
   Map<MatrixXf> mxY(y, rows, colsY);
 
-  auto solution = (mxX.transpose() * mxX).inverse() * (mxX.transpose() * mxY);
+  auto solution = (mxX.transpose() * mxX).inverse() * mxX.transpose() * mxY;
   auto result = new float[solution.rows() * solution.cols()];
   assert(result != nullptr);
   Map<MatrixXf> resultMap(result, solution.rows(), solution.cols());
@@ -32,7 +32,7 @@ struct buffer_info<float> least_squares(core::DataSet<float, float> &ds) {
   res.ptr = least_squares(x.ptr, y.ptr, (int)x.shape[0], (int)x.shape[1], (int)y.shape[1]);
   res.ndim = y.ndim;
   res.strides = y.strides;
-  res.shape = y.shape;
+  res.shape = {x.shape[1], y.shape[1]};
   res.size = y.size;
   return res;
 }
