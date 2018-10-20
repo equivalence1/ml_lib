@@ -1,18 +1,42 @@
 cmake_minimum_required(VERSION "3.1.0")
 project(nn_introduction)
 
+# compiler-related
+set(CMAKE_CXX_STANDARD 17)
+
+# TODO(equivalence1) -O3 and -march probably should be set elsewhere.
+# left for now just to speed up Eigene (without it it's
+# impossible to wait for matrix multiplication)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpedantic -Wall -O3 -march=native")
+
+# TODO(equivalence1): move all dependency search to separate file
+
 add_subdirectory(third_party)
 
 set(PYTHON_PREFIX /usr/local/lib/python3.7)
 
-pybind11_add_module(example cpp/src/dataset.cpp
-                            cpp/src/least_squares.cpp
-                            cpp/src/convolution.cpp
-)
+set(CORE_SRCS
+        cpp/include/nntree/buffer_info.h
+        cpp/include/nntree/dataset.h
+        cpp/include/nntree/nd_array.h
+
+        cpp/src/convolution.cpp
+        cpp/src/convolution.h
+        cpp/src/least_squares.cpp
+        cpp/src/least_squares.h
+        cpp/src/nd_array.cpp)
+
+# TODO(equivalence1) Eigen + MKL (https://eigen.tuxfamily.org/dox/TopicUsingIntelMKL.html)
+# Eigen + OpenMP (but seems like clang and openmp are incompatible,
+# see https://stackoverflow.com/questions/51656818/matrix-multiplication-performance-c-eigen-is-much-slower-than-python)
 
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
-message(STATUS "libs=${LIBS}, include_paths=${INCLUDE_PATHS}")
+# sadly, it seems like CLION does not understand target_include_dir property
+# and we have to just include_dir
+include_directories(cpp/include)
+
+add_library(nntree SHARED ${CORE_SRCS})
 
 # mkl-dnn
 
@@ -37,5 +61,20 @@ else()
     message(FATAL_ERROR "failed to find mkldnn headers.")
 endif()
 
-target_link_libraries(example PRIVATE ${MKLDNN_LIB} Eigen3::Eigen)
-target_include_directories(example PRIVATE ${MKLDNN_PATH})
+target_link_libraries(nntree PRIVATE ${MKLDNN_LIB} Eigen3::Eigen)
+target_include_directories(nntree PRIVATE ${MKLDNN_PATH})
+
+# python module
+# TODO(equivalence1): move to separate file and only build if flags are set
+# TODO(equivalence1): provide setup.py
+
+set(PY_MODULE_SRCS
+        cpp/src/py_bindings.cpp
+        )
+pybind11_add_module(nntreepy ${PY_MODULE_SRCS})
+target_link_libraries(nntreepy PRIVATE nntree)
+
+# TODO(equivalence1) just a simple exec to check least squares method
+# left for now just because it was useful for debugging.
+add_executable(main cpp/src/main.cpp)
+target_link_libraries(main PRIVATE nntree)

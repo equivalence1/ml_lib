@@ -3,6 +3,9 @@
 #include "mkldnn.hpp"
 #include <iostream>
 
+namespace nntree {
+namespace core {
+
 std::vector<float> convolution(float *data, int batch, int height, int width) {
   height = 32;
   width = 32;
@@ -92,4 +95,7 @@ std::vector<float> convolution(float *data, int batch, int height, int width) {
     ret[i] = net_output[i];
   }
   return ret;
+}
+
+}
 }

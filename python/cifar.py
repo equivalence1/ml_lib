@@ -7,7 +7,8 @@ import numpy as np
 import sys
 
 sys.path.append("../build")
-import example
+sys.path.append("../cmake-build-debug")
+import nntreepy
 from catboost import CatBoostClassifier
 
 
@@ -100,7 +101,7 @@ def cifar10(path=None):
 
 train_images, train_labels, test_images, test_labels = cifar10()
 
-ds = example.DataSet(train_images, train_labels)
+ds = nntreepy.DataSet(train_images, train_labels)
 print("Test printing dataset prefix:")
 
 number_of_samples = 50000
@@ -109,7 +110,18 @@ new_features = np.resize(new_features,(number_of_samples, 6 * 6 * 1))
 
 model = CatBoostClassifier(iterations=1000, learning_rate=1, depth=6, loss_function='MultiClass')
 print(np.argmax(train_labels[:number_of_samples],axis=1))
-fit_model = model.fit(new_features, np.argmax(train_labels[:number_of_samples],axis=1))
+# fit_model = model.fit(new_features, np.argmax(train_labels[:number_of_samples],axis=1))
 
-print (fit_model.get_params())
+# print (fit_model.get_params())
 
+#### linear model
+
+print(train_images.shape, train_images.strides)
+print(train_labels.shape)
+
+train_images_first_ten = [train_images[i] for i in range(10)]
+train_labels_first_ten = [train_labels[i] for i in range(10)]
+print("train_labels_first_ten: ", train_labels_first_ten)
+
+ans_labels = nntreepy.least_squares(ds)
+print("ans_labels: ", ans_labels)
