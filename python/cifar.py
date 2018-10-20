@@ -7,7 +7,8 @@ import numpy as np
 import sys
 
 sys.path.append("../build")
-import example
+sys.path.append("../cmake-build-debug")
+import nntreepy
 from catboost import CatBoostRegressor
 
 
@@ -99,15 +100,22 @@ def cifar10(path=None):
 
 
 train_images, train_labels, test_images, test_labels = cifar10()
+print(train_images.shape, train_images.strides)
+print(train_labels.shape)
 
-ds = example.DataSet(train_images, train_labels)
-print("Test printing dataset prefix:")
+train_images_first_ten = [train_images[i] for i in range(10)]
+train_labels_first_ten = [train_labels[i] for i in range(10)]
+print("train_labels_first_ten: ", train_labels_first_ten)
 
-number_of_samples = 10
-new_features = ds.test_print(number_of_samples)
-new_features = np.resize(new_features,(number_of_samples, 6))
-model = CatBoostRegressor(iterations=1, learning_rate=1, depth=6, loss_function='RMSE')
-fit_model = model.fit(new_features, np.argmax(train_labels[:number_of_samples],axis=1))
+ds = nntreepy.DataSet(train_images_first_ten, train_labels_first_ten)
+ans_labels = nntreepy.least_squares(ds)
+print("ans_labels: ", ans_labels)
 
-print (fit_model.get_params())
+# number_of_samples = 10
+# new_features = ds.test_print(number_of_samples)
+# new_features = np.resize(new_features,(number_of_samples, 6))
+# model = CatBoostRegressor(iterations=1, learning_rate=1, depth=6, loss_function='RMSE')
+# fit_model = model.fit(new_features, np.argmax(train_labels[:number_of_samples],axis=1))
+#
+# print (fit_model.get_params())
 
