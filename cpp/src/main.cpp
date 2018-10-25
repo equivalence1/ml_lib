@@ -14,7 +14,7 @@ int main() {
     y[i] = 1.0f;
   }
 
-  float *res = nntree::core::least_squares(x.data(), y.data(), 2, 2, 1);
+  float *res = nntree::core::LeastSquares(x.data(), y.data(), 2, 2, 1);
 
   printf("res:\n");
   for (int i = 0; i < 2 * 1; i++) {

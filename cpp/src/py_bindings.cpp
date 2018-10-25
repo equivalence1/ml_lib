@@ -59,7 +59,7 @@ private:
 };
 
 py::array_t<float> least_squares(DataSet<float, float> ds) {
-  auto buff = core::least_squares(ds);
+  auto buff = core::LeastSquares(ds);
   py::array_t<float> res = py::array_t<float>((size_t)buff.size);
   auto res_buff = res.request();
   auto res_buff_ptr = (float*)res_buff.ptr;

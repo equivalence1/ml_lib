@@ -101,8 +101,14 @@ def cifar10(path=None):
 
 train_images, train_labels, test_images, test_labels = cifar10()
 
-ds = nntreepy.DataSet(train_images, np.argmax(train_labels, axis=1).reshape(train_labels.shape[0], 1))
-print("Test printing dataset prefix:")
+# add one column of 1s in train and test features, so we can use bias
+# TODO in future we should do it internally
+# ones = np.ones((train_images.shape[0], 1))
+# train_images = np.hstack((train_images, ones))
+# ones = np.ones((test_images.shape[0], 1))
+# test_images = np.hstack((test_images, ones))
+
+ds = nntreepy.DataSet(train_images, train_labels)# np.argmax(train_labels, axis=1).reshape(train_labels.shape[0], 1))
 
 # number_of_samples = 50000
 # new_features = ds.test_print(number_of_samples)
@@ -116,23 +122,28 @@ print("Test printing dataset prefix:")
 
 #### linear model
 
-print(train_images.shape, train_images.strides)
-print(train_labels.shape)
-
-train_images_first_ten = [train_images[i] for i in range(10)]
-train_labels_first_ten = [train_labels[i] for i in range(10)]
-print("train_labels_first_ten: ", train_labels_first_ten)
-
+# get matrix of weights using least squares
 w = nntreepy.least_squares(ds)
 print("w: ", w.shape)
+print("w[0]:", w[0])
+print("w[1]:", w[1])
 # print(w)
 
+train_classes = np.argmax(train_labels, axis=1)
+print("train_classes:          ", train_classes)
+train_classes_predicted = np.argmax(train_images.dot(w), axis=1)
+print("train_classes_predicted:", train_classes_predicted)
+diff_r = train_classes - train_classes_predicted
+sim = np.where(diff_r == 0, 1, 0)
+accuracy_rs = np.sum(sim)/sim.shape[0]
+print(accuracy_rs)
+
 labels_pred = test_images.dot(w)
-classes_pred = np.round(labels_pred)#np.argmax(labels_pred, axis=1) + 1
+classes_pred = np.argmax(labels_pred, axis=1)#np.round(labels_pred)#np.argmax(labels_pred, axis=1) + 1
 print(classes_pred.shape)
 print(classes_pred)
 # print(np.sum(np.where(classes_pred != 2, 1, 0)))
-cls_tst = np.argmax(test_labels, axis=1).reshape(10000, 1)
+cls_tst = np.argmax(test_labels, axis=1)#.reshape(10000, 1)
 print(cls_tst.shape)
 diff_r = classes_pred - cls_tst
 
