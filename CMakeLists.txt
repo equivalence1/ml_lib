@@ -19,12 +19,16 @@ set(CORE_SRCS
         cpp/include/nntree/buffer_info.h
         cpp/include/nntree/dataset.h
         cpp/include/nntree/nd_array.h
+        cpp/include/nntree/cost_function.h
+        cpp/include/nntree/model.h
+        cpp/include/nntree/optimizer.h
 
         cpp/src/convolution.cpp
         cpp/src/convolution.h
         cpp/src/least_squares.cpp
         cpp/src/least_squares.h
-        cpp/src/nd_array.cpp)
+        cpp/src/nd_array.cpp
+        cpp/src/optimizer.cpp)
 
 # TODO(equivalence1) Eigen + MKL (https://eigen.tuxfamily.org/dox/TopicUsingIntelMKL.html)
 # Eigen + OpenMP (but seems like clang and openmp are incompatible,
