@@ -26,7 +26,7 @@ struct PyBufferInfo: public core::buffer_info<T> {
 // We have to store x and y arrays in DataSet
 // otherwise there will be memory leaks
 // TODO(equivalence1) for now all types are floats
-template<typename IN_T = float, typename OUT_T = float>
+template<typename IN_T = double, typename OUT_T = double>
 class DataSet: public core::DataSet<IN_T, OUT_T> {
 public:
   DataSet(py::array_t<IN_T> x, py::array_t<OUT_T> y)
@@ -35,7 +35,7 @@ public:
       , y_(std::move(y)) {}
 
   // Just a test function to check that we correctly accept data from python
-  py::array_t<float> TestPrint(ssize_t size) {
+  py::array_t<double> TestPrint(ssize_t size) {
     auto X = x_.request(false);
     printf("%zu %zu\n", X.size / X.itemsize, X.itemsize);
     auto res = core::convolution((float *)X.ptr, size, 1, 1); // least_squares((float *)X.ptr, (float *)y_.request(false).ptr, X.size / X.itemsize, X.itemsize);
@@ -43,9 +43,9 @@ public:
 //    for (ssize_t i = 0; i < size; i++) {
 //        printf("%f ", ((float*)buff.ptr)[i]);
 //    }
-    py::array_t<float> result = py::array_t<float>(res.size());
+    py::array_t<double> result = py::array_t<double>(res.size());
     auto buf = result.request();
-    float *ptr = (float*)buf.ptr;
+    auto ptr = (double*)buf.ptr;
     for(size_t i = 0; i < res.size(); ++i) {
       ptr[i] = res[i];
     }
@@ -58,11 +58,11 @@ private:
   py::array_t<OUT_T> y_;
 };
 
-py::array_t<float> least_squares(DataSet<float, float> ds) {
+py::array_t<double> least_squares(DataSet<double, double> ds) {
   auto buff = core::LeastSquares(ds);
-  py::array_t<float> res = py::array_t<float>((size_t)buff.size);
+  py::array_t<double> res = py::array_t<double>((size_t)buff.size);
   auto res_buff = res.request();
-  auto res_buff_ptr = (float*)res_buff.ptr;
+  auto res_buff_ptr = (double*)res_buff.ptr;
   for (int i = 0; i < res.size(); i++) {
     res_buff_ptr[i] = buff.ptr[i];
   }
@@ -72,9 +72,9 @@ py::array_t<float> least_squares(DataSet<float, float> ds) {
 
 PYBIND11_MODULE(nntreepy, m) {
   m.doc() = "nntreepy module to work with intel mkl through python";
-  py::class_<DataSet<float, float>> dataset(m, "DataSet");
-  dataset.def(py::init<py::array_t<float>, py::array_t<float>> ());
-  dataset.def("test_print", &DataSet<float, float>::TestPrint);
+  py::class_<DataSet<double, double>> dataset(m, "DataSet");
+  dataset.def(py::init<py::array_t<double>, py::array_t<double>> ());
+  dataset.def("test_print", &DataSet<double, double>::TestPrint);
   m.def("least_squares", &least_squares);
 }
 

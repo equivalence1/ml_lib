@@ -4,17 +4,17 @@
 #include <vector>
 
 int main() {
-  std::vector<float> x(2 * 2);
+  std::vector<double> x(2 * 2);
   for (int i = 0; i < 2 * 2; i++) {
     x[i] = 1.0f;
   }
 
-  std::vector<float> y(2 * 1);
+  std::vector<double> y(2 * 1);
   for (int i = 0; i < 2 * 1; i++) {
     y[i] = 1.0f;
   }
 
-  float *res = nntree::core::LeastSquares(x.data(), y.data(), 2, 2, 1);
+  auto res = nntree::core::LeastSquares(x.data(), y.data(), 2, 2, 1);
 
   printf("res:\n");
   for (int i = 0; i < 2 * 1; i++) {

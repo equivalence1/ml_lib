@@ -6,8 +6,8 @@
 namespace nntree {
 namespace core {
 
-float* LeastSquares(float *X, float *y, int rows, int colsX, int colsY);
-struct buffer_info<float> LeastSquares(core::DataSet<float, float> &ds);
+double* LeastSquares(double *X, double *y, int rows, int colsX, int colsY);
+struct buffer_info<double> LeastSquares(core::DataSet<double, double> &ds);
 
 }
 }
