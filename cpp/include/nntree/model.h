@@ -10,7 +10,7 @@ namespace core {
 class Model {
 public:
   virtual buffer_info<double> Apply(buffer_info<double>) const = 0;
-  virtual std::vector<double> Backward(std::function<double (const Model*)>) const = 0;
+  virtual std::vector<double> Backward(std::function<buffer_info<double> (const Model*)>) const = 0;
   virtual void AdjustParams(const std::vector<double>&) = 0;
 };
 
