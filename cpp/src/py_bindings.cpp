@@ -5,6 +5,8 @@
 #include "least_squares.h"
 #include "convolution.h"
 
+#include <cstdint>
+
 // TODO(equivalence1) make it a collection of separate files
 
 namespace py = pybind11;
@@ -18,8 +20,8 @@ struct PyBufferInfo: public core::buffer_info<T> {
     this->ptr = (T*)buff.ptr;
     this->size = buff.size;
     this->ndim = buff.ndim;
-    this->shape = buff.shape;
-    this->strides = buff.strides;
+    this->shape = std::vector<int64_t>(buff.shape.begin(), buff.shape.end());
+    this->strides = std::vector<int64_t>(buff.strides.begin(), buff.strides.end());
   }
 };
 
@@ -35,12 +37,12 @@ public:
       , y_(std::move(y)) {}
 
   // Just a test function to check that we correctly accept data from python
-  py::array_t<double> TestPrint(ssize_t size) {
+  py::array_t<double> TestPrint(int64_t size) {
     auto X = x_.request(false);
     printf("%zu %zu\n", X.size / X.itemsize, X.itemsize);
     auto res = core::convolution((float *)X.ptr, size, 1, 1); // least_squares((float *)X.ptr, (float *)y_.request(false).ptr, X.size / X.itemsize, X.itemsize);
 //    size = std::min(size, buff.size / buff.itemsize);
-//    for (ssize_t i = 0; i < size; i++) {
+//    for (int64_t i = 0; i < size; i++) {
 //        printf("%f ", ((float*)buff.ptr)[i]);
 //    }
     py::array_t<double> result = py::array_t<double>(res.size());

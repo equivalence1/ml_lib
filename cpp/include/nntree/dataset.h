@@ -5,6 +5,7 @@
 #include <random>
 #include <algorithm>
 #include <cstring>
+#include <cstdint>
 
 #include "nd_array.h"
 #include "buffer_info.h"
@@ -49,8 +50,8 @@ public:
     size_t x_row_sz = 1;
     size_t y_row_sz = 1;
 
-    std::for_each(x_.shape.begin() + 1, x_.shape.end(), [&](ssize_t sz){x_row_sz *= sz;});
-    std::for_each(y_.shape.begin() + 1, y_.shape.end(), [&](ssize_t sz){y_row_sz *= sz;});
+    std::for_each(x_.shape.begin() + 1, x_.shape.end(), [&](int64_t sz){x_row_sz *= sz;});
+    std::for_each(y_.shape.begin() + 1, y_.shape.end(), [&](int64_t sz){y_row_sz *= sz;});
 
     for (size_t i = 0; i < batch_size; ++i) {
       auto id = uni(rng);
@@ -65,14 +66,14 @@ public:
 
     batch_x.ndim = x_.ndim;
     batch_x.size = batch_size * x_row_sz;
-    batch_x.shape = std::vector<ssize_t>(x_.shape.begin() + 1, x_.shape.end());
+    batch_x.shape = std::vector<int64_t>(x_.shape.begin() + 1, x_.shape.end());
     batch_x.shape.insert(batch_x.shape.begin(), batch_size);
     batch_x.ptr = new IN_T[batch_x.size];
     std::memcpy(batch_x.ptr, vx.data(), vx.size());
 
     batch_y.ndim = y_.ndim;
     batch_y.size = batch_size * y_row_sz;
-    batch_y.shape = std::vector<ssize_t>(y_.shape.begin() + 1, y_.shape.end());
+    batch_y.shape = std::vector<int64_t>(y_.shape.begin() + 1, y_.shape.end());
     batch_y.shape.insert(batch_y.shape.begin(), batch_size);
     batch_y.ptr = new OUT_T[batch_y.size];
     std::memcpy(batch_y.ptr, vy.data(), vy.size());

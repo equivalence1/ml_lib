@@ -1,8 +1,8 @@
 #pragma once
 
-#include <sys/types.h>
 #include <string>
 #include <vector>
+#include <cstdint>
 
 namespace nntree {
 namespace core {
@@ -11,12 +11,12 @@ template<typename T>
 struct buffer_info {
 public:
   T *ptr = nullptr;             // Pointer to the underlying storage
-  ssize_t size = 0;             // Total number of entries
-  ssize_t ndim = 0;             // Number of dimensions
-  std::vector<ssize_t> shape;   // Shape of the tensor (1 entry per dimension)
-  std::vector<ssize_t> strides; // Number of entries between adjacent entries (for each per dimension)
+  int64_t size = 0;             // Total number of entries
+  int64_t ndim = 0;             // Number of dimensions
+  std::vector<int64_t> shape;   // Shape of the tensor (1 entry per dimension)
+  std::vector<int64_t> strides; // Number of entries between adjacent entries (for each per dimension)
 
-  const ssize_t itemsize = sizeof(T);
+  const int64_t itemsize = sizeof(T);
 
   buffer_info() = default;
 
