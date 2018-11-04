@@ -18,7 +18,7 @@ double* LeastSquares(double *X, double *y, int rows, int colsX, int colsY) {
   Map<MatrixXd> mxY_t(y, colsY, rows);
   auto mxY = mxY_t.transpose();
 
-  auto solution = (mxX.transpose() * mxX).inverse() * mxX.transpose();
+  auto solution = (mxX.transpose() * mxX).inverse() * mxX.transpose() * mxY;
   auto solution_t = solution.transpose();
 
   auto result = new double[solution_t.rows() * solution_t.cols()];
