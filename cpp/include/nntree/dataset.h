@@ -7,7 +7,6 @@
 #include <cstring>
 #include <cstdint>
 
-#include "nd_array.h"
 #include "buffer_info.h"
 
 namespace nntree {
