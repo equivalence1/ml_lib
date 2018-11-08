@@ -1,6 +1,6 @@
 #pragma once
 
-#include "buffer_info.h"
+#include "tensor.h"
 
 #include <functional>
 
@@ -9,8 +9,8 @@ namespace core {
 
 class Model {
 public:
-  virtual buffer_info<double> Apply(buffer_info<double>) const = 0;
-  virtual std::vector<double> Backward(std::function<buffer_info<double> (const Model*)>) const = 0;
+  virtual void Apply(Tensor<double>& x, Tensor<double>& res) const = 0;
+//  virtual std::vector<double> Backward(std::function<Tensor<double>* (const Model*)>) const = 0;
   virtual void AdjustParams(const std::vector<double>&) = 0;
 };
 

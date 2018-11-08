@@ -16,7 +16,6 @@ add_subdirectory(third_party)
 set(PYTHON_PREFIX /usr/local/lib/python3.7)
 
 set(CORE_SRCS
-        cpp/include/nntree/buffer_info.h
         cpp/include/nntree/dataset.h
         cpp/include/nntree/tensor.h
         cpp/include/nntree/cpu_tensor.h

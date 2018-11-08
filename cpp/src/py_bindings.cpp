@@ -1,11 +1,13 @@
+#include <cstdint>
+
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 
-#include <nntree/dataset.h>
+#include "nntree/dataset.h"
+#include "nntree/tensor.h"
+#include "nntree/cpu_tensor.h"
 #include "least_squares.h"
 #include "convolution.h"
-
-#include <cstdint>
 
 // TODO(equivalence1) make it a collection of separate files
 
@@ -15,24 +17,24 @@ namespace nntree {
 namespace pymodule {
 
 template<typename T>
-struct PyBufferInfo: public core::buffer_info<T> {
-  explicit PyBufferInfo(py::buffer_info &&buff) {
-    this->ptr = (T*)buff.ptr;
-    this->size = buff.size;
-    this->ndim = buff.ndim;
-    this->shape = std::vector<int64_t>(buff.shape.begin(), buff.shape.end());
-    this->strides = std::vector<int64_t>(buff.strides.begin(), buff.strides.end());
+struct PyCpuTensor: public core::CpuTensor<T> {
+  explicit PyCpuTensor(py::buffer_info &&buff) {
+    auto ptr = (T*)buff.ptr;
+    auto shape = std::vector<uint64_t>(buff.shape.begin(), buff.shape.end());
+    auto strides = std::vector<uint64_t>(buff.strides.begin(), buff.strides.end());
+
+    this->FromMem(ptr, shape, strides, false);
   }
 };
 
 // We have to store x and y arrays in DataSet
 // otherwise there will be memory leaks
-// TODO(equivalence1) for now all types are floats
 template<typename IN_T = double, typename OUT_T = double>
 class DataSet: public core::DataSet<IN_T, OUT_T> {
 public:
   DataSet(py::array_t<IN_T> x, py::array_t<OUT_T> y)
-      : core::DataSet<IN_T, OUT_T>(PyBufferInfo<IN_T>(x.request()), PyBufferInfo<OUT_T>(y.request()))
+  // TODO(equvalence1) leak here
+      : core::DataSet<IN_T, OUT_T>(new PyCpuTensor<IN_T>(x.request()), new PyCpuTensor<OUT_T>(y.request()))
       , x_(std::move(x))
       , y_(std::move(y)) {}
 
@@ -60,15 +62,16 @@ private:
   py::array_t<OUT_T> y_;
 };
 
-py::array_t<double> least_squares(DataSet<double, double> ds) {
-  auto buff = core::LeastSquares(ds);
-  py::array_t<double> res = py::array_t<double>((size_t)buff.size);
+py::array_t<double> least_squares(DataSet<double, double>& ds) {
+  core::CpuTensor<double> w;
+  core::LeastSquares(ds, w);
+  py::array_t<double> res = py::array_t<double>((size_t)w.Size());
   auto res_buff = res.request();
   auto res_buff_ptr = (double*)res_buff.ptr;
   for (int i = 0; i < res.size(); i++) {
-    res_buff_ptr[i] = buff.ptr[i];
+    res_buff_ptr[i] = w.GetVal((uint64_t)i);
   }
-  res.resize(buff.shape);
+  res.resize(w.Shape());
   return res;
 }
 

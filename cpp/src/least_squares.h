@@ -1,13 +1,13 @@
 #pragma once
 
-#include <nntree/dataset.h>
-#include <nntree/buffer_info.h>
+#include "nntree/dataset.h"
+#include "nntree/tensor.h"
 
 namespace nntree {
 namespace core {
 
-double* LeastSquares(double *X, double *y, int rows, int colsX, int colsY);
-struct buffer_info<double> LeastSquares(core::DataSet<double, double> &ds);
+void LeastSquares(Tensor<double>& X, Tensor<double>& y, Tensor<double>& res);
+void LeastSquares(DataSet<double, double>& ds, Tensor<double>& res);
 
 }
 }
