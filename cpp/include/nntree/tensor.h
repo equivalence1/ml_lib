@@ -11,10 +11,9 @@ namespace core {
  * Tensor is essentially a multidimensional array.
  * Analogues to numpy ndarray or pytorch tensor.
  *
- * @tparam D this tensor's dimensionality
  * @tparam T data type of the individual elements of this tensor
  */
-template<unsigned int D, typename T>
+template<typename T>
 class Tensor {
 public:
   virtual ~Tensor() = default;
@@ -40,8 +39,8 @@ public:
    * @param owner if set to true then this Tensor controls the memory pointed by ptr
    */
   virtual void FromMem(T* ptr,
-                       std::vector<uint64_t>& shape,
-                       std::vector<uint64_t>& strides,
+                       const std::vector<uint64_t>& shape,
+                       const std::vector<uint64_t>& strides,
                        bool owner) = 0;
 
   /**
@@ -80,7 +79,7 @@ public:
    * @param val value to set
    * @return this tensor object reference
    */
-  virtual Tensor<D, T>& SetVal(uint64_t id, T val) = 0;
+  virtual Tensor<T>& SetVal(uint64_t id, T val) = 0;
 
   /**
    * Same as SetVal above, but specifying ids of the element along
@@ -90,7 +89,7 @@ public:
    * @param val value to set
    * @return this tensor object reference
    */
-  virtual Tensor<D, T>& SetVal(std::initializer_list<uint64_t> ids, T val) = 0;
+  virtual Tensor<T>& SetVal(const std::initializer_list<uint64_t>& ids, T val) = 0;
 
   // TODO(equivalence1) not sure how this function should behave if Tensor is on GPU
   /**
@@ -140,7 +139,7 @@ public:
    *
    * @param t tensor to copy this tensor's content to
    */
-  virtual void Copy(Tensor<D, T>& t) const = 0;
+  virtual void Copy(Tensor<T>& t) const = 0;
 
   /**
    * Get a copy of this tensor's row. It's not specified whether
@@ -151,7 +150,7 @@ public:
    * @param id id of the row
    * @param t tensor to (shallow) copy row's content to
    */
-  virtual void GetRow(uint64_t id, Tensor<D - 1, T>& t) const = 0;
+  virtual void GetRow(uint64_t id, Tensor<T>& t) const = 0;
 
   /**
    * Set a row of this vector to a specific tensor value.
@@ -160,37 +159,37 @@ public:
    * @param t tensor which content will be copied to the specified row
    * @return this tensor object reference
    */
-  virtual Tensor<D, T>& SetRow(uint64_t id, Tensor<D - 1, T>& t) = 0;
+  virtual Tensor<T>& SetRow(uint64_t id, Tensor<T>& t) = 0;
 
   /**
-   * Shorthand of Shape()[0]. In case of D == 2, and thus this Tensor is
+   * Shorthand of Shape()[0]. In case of Ndim == 2, and thus this Tensor is
    * in fact a matrix, this value actually equals to the number of row
    * of this matrix.
    *
-   * If D == 0 this method will fail.
+   * If Ndim == 0 this method will fail.
    *
    * @return shape of this tensor along its first axis
    */
   virtual uint64_t Nrows() const = 0;
 
   /**
-   * Shorthand of Shape()[1]. In case of D == 2, and thus this Tensor is
+   * Shorthand of Shape()[1]. In case of Ndim == 2, and thus this Tensor is
    * in fact a matrix, this value actually equals to the number of columns
    * of this matrix.
    *
-   * If D < 2 this method will fail.
+   * If Ndim < 2 this method will fail.
    *
    * @return shape of this tensor along its second axis
    */
   virtual uint64_t Ncols() const = 0;
 
   /**
-   * Number of dimensions of this tensor. Always equals to D.
+   * Number of dimensions of this tensor.
    *
    * @return number of dimensions of this tensor
    */
-  uint64_t Ndim() const {
-    return D;
+  virtual uint64_t Ndim() const {
+    return Shape().size();
   };
 };
 
