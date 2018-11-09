@@ -79,25 +79,22 @@ public:
       data[i] = *item_ptr;
     }
 
-    ct.owner_ = true;
-    ct.ptr_ = data;
-    ct.shape_ = shape_;
-    ct.strides_.resize(0);
+    std::vector<uint64_t> strides;
     uint64_t stride = sizeof(T);
     for (auto it = shape_.rbegin(); it != shape_.rend(); ++it) {
-      ct.strides_.push_back(stride);
+      strides.push_back(stride);
       stride *= *it;
     }
+
+    ct.FromMem(data, shape_, strides, true);
   }
 
   void GetRow(uint64_t id, Tensor<D - 1, T>& t) const override {
-    assert(id < Nrows());
-    auto ct = dynamic_cast<CpuTensor<D, T>&>(t);
+    auto ptr = ptr_ + (strides_[0] / sizeof(T)) * id;
+    auto shape = std::vector<uint64_t>(shape_.begin() + 1, shape_.end());
+    auto strides = std::vector<uint64_t>(strides_.begin() + 1, strides_.end());
 
-    ct.owner_ = false;
-    ct.ptr_ = ptr_ + (strides_[0] / sizeof(T)) * id;
-    ct.strides_ = std::vector<uint64_t>(strides_.begin() + 1, strides_.end());
-    ct.shape_ = std::vector<uint64_t>(shape_.begin() + 1, shape_.end());
+    t.FromMem(ptr, shape, strides, false);
   }
 
   Tensor<D, T>& SetRow(uint64_t id, Tensor<D - 1, T>& t) override {
