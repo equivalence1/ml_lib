@@ -1,7 +1,11 @@
+#include <cstdint>
+
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 
-#include <nntree/dataset.h>
+#include "nntree/dataset.h"
+#include "nntree/tensor.h"
+#include "nntree/cpu_tensor.h"
 #include "least_squares.h"
 #include "convolution.h"
 
@@ -13,39 +17,39 @@ namespace nntree {
 namespace pymodule {
 
 template<typename T>
-struct PyBufferInfo: public core::buffer_info<T> {
-  explicit PyBufferInfo(py::buffer_info &&buff) {
-    this->ptr = (T*)buff.ptr;
-    this->size = buff.size;
-    this->ndim = buff.ndim;
-    this->shape = buff.shape;
-    this->strides = buff.strides;
+struct PyCpuTensor: public core::CpuTensor<T> {
+  explicit PyCpuTensor(py::buffer_info &&buff) {
+    auto ptr = (T*)buff.ptr;
+    auto shape = std::vector<uint64_t>(buff.shape.begin(), buff.shape.end());
+    auto strides = std::vector<uint64_t>(buff.strides.begin(), buff.strides.end());
+
+    this->FromMem(ptr, shape, strides, false);
   }
 };
 
 // We have to store x and y arrays in DataSet
 // otherwise there will be memory leaks
-// TODO(equivalence1) for now all types are floats
-template<typename IN_T = float, typename OUT_T = float>
+template<typename IN_T = double, typename OUT_T = double>
 class DataSet: public core::DataSet<IN_T, OUT_T> {
 public:
   DataSet(py::array_t<IN_T> x, py::array_t<OUT_T> y)
-      : core::DataSet<IN_T, OUT_T>(PyBufferInfo<IN_T>(x.request()), PyBufferInfo<OUT_T>(y.request()))
+  // TODO(equvalence1) leak here
+      : core::DataSet<IN_T, OUT_T>(new PyCpuTensor<IN_T>(x.request()), new PyCpuTensor<OUT_T>(y.request()))
       , x_(std::move(x))
       , y_(std::move(y)) {}
 
   // Just a test function to check that we correctly accept data from python
-  py::array_t<float> TestPrint(ssize_t size) {
+  py::array_t<double> TestPrint(int64_t size) {
     auto X = x_.request(false);
     printf("%zu %zu\n", X.size / X.itemsize, X.itemsize);
     auto res = core::convolution((float *)X.ptr, size, 1, 1); // least_squares((float *)X.ptr, (float *)y_.request(false).ptr, X.size / X.itemsize, X.itemsize);
 //    size = std::min(size, buff.size / buff.itemsize);
-//    for (ssize_t i = 0; i < size; i++) {
+//    for (int64_t i = 0; i < size; i++) {
 //        printf("%f ", ((float*)buff.ptr)[i]);
 //    }
-    py::array_t<float> result = py::array_t<float>(res.size());
+    py::array_t<double> result = py::array_t<double>(res.size());
     auto buf = result.request();
-    float *ptr = (float*)buf.ptr;
+    auto ptr = (double*)buf.ptr;
     for(size_t i = 0; i < res.size(); ++i) {
       ptr[i] = res[i];
     }
@@ -58,23 +62,24 @@ private:
   py::array_t<OUT_T> y_;
 };
 
-py::array_t<float> least_squares(DataSet<float, float> ds) {
-  auto buff = core::LeastSquares(ds);
-  py::array_t<float> res = py::array_t<float>((size_t)buff.size);
+py::array_t<double> least_squares(DataSet<double, double>& ds) {
+  core::CpuTensor<double> w;
+  core::LeastSquares(ds, w);
+  py::array_t<double> res = py::array_t<double>((size_t)w.Size());
   auto res_buff = res.request();
-  auto res_buff_ptr = (float*)res_buff.ptr;
+  auto res_buff_ptr = (double*)res_buff.ptr;
   for (int i = 0; i < res.size(); i++) {
-    res_buff_ptr[i] = buff.ptr[i];
+    res_buff_ptr[i] = w.GetVal((uint64_t)i);
   }
-  res.resize(buff.shape);
+  res.resize(w.Shape());
   return res;
 }
 
 PYBIND11_MODULE(nntreepy, m) {
   m.doc() = "nntreepy module to work with intel mkl through python";
-  py::class_<DataSet<float, float>> dataset(m, "DataSet");
-  dataset.def(py::init<py::array_t<float>, py::array_t<float>> ());
-  dataset.def("test_print", &DataSet<float, float>::TestPrint);
+  py::class_<DataSet<double, double>> dataset(m, "DataSet");
+  dataset.def(py::init<py::array_t<double>, py::array_t<double>> ());
+  dataset.def("test_print", &DataSet<double, double>::TestPrint);
   m.def("least_squares", &least_squares);
 }
 

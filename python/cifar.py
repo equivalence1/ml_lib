@@ -103,10 +103,10 @@ train_images, train_labels, test_images, test_labels = cifar10()
 
 # add one column of 1s in train and test features, so we can use bias
 # TODO in future we should do it internally
-# ones = np.ones((train_images.shape[0], 1))
-# train_images = np.hstack((train_images, ones))
-# ones = np.ones((test_images.shape[0], 1))
-# test_images = np.hstack((test_images, ones))
+ones = np.ones((train_images.shape[0], 1))
+train_images = np.hstack((train_images, ones))
+ones = np.ones((test_images.shape[0], 1))
+test_images = np.hstack((test_images, ones))
 
 ds = nntreepy.DataSet(train_images, train_labels)# np.argmax(train_labels, axis=1).reshape(train_labels.shape[0], 1))
 
