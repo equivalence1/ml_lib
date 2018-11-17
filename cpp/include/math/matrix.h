@@ -3,6 +3,9 @@
 
 class Matrix : public Vec {
 public:
+    Matrix(Vec& x, int64_t nrows, int64_t ncols);
+    Matrix(const Vec& x, int64_t nrows, int64_t ncols);
+
     Matrix sub(int64_t i, int64_t j, int64_t height, int64_t weight) const;
 
     Matrix sub(int64_t i, int64_t j, int64_t height, int64_t weight);
