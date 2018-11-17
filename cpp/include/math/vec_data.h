@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <memory>
 
-class VecData  {
+class VecData {
 public:
     using VecDataPtr = std::shared_ptr<VecData>;
 
@@ -21,5 +21,23 @@ public:
     virtual VecDataPtr instance(int64_t size, bool fillZero);
 };
 
-
 using VecDataPtr = VecData::VecDataPtr;
+
+namespace Impl {
+
+
+
+    template<class T = double>
+    class ArrayVecData : public VecData {
+    public:
+        ArrayVecData(ui64 size);
+        ArrayVecData(ArrayVecData ptr, ui64 offset, ui64 size);
+    private:
+        std::shared_ptr<T> data_;
+        ui64 size_;
+        ui64 offset_;
+    };
+
+
+
+}
