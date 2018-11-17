@@ -24,4 +24,5 @@ protected:
 
     }
 
+    friend class VecFactory;
 };
