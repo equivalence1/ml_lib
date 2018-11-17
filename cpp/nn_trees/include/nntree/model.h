@@ -7,6 +7,7 @@
 namespace nntree {
 namespace core {
 
+;
 class Model {
 public:
   virtual void Apply(Tensor<double>& x, Tensor<double>& res) const = 0;

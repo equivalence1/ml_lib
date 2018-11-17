@@ -8,13 +8,13 @@ namespace core {
 
 class Optimizer {
 public:
-  Optimizer();
-  void Step();
+    Optimizer();
+    void Step();
 
 private:
-  DataSet<double, double>* ds_;
-  CostFunction* loss_;
-  Model *model_;
+    DataSet<double, double>* ds_;
+    CostFunction* loss_;
+    Model* model_;
 };
 
 }
