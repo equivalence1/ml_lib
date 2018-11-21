@@ -21,7 +21,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpedantic -Wall -O3 -march=native")
 # TODO(equivalence1): move all dependency search to separate file
 
 add_subdirectory(contrib/pybind11)
-
+add_subdirectory(contrib/googletest)
 add_subdirectory(cpp)
 
 #TODO: get rid of this

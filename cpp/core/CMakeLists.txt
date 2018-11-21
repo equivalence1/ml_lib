@@ -3,28 +3,37 @@ cmake_version()
 project(core)
 
 add_library(core
+        include/core/object.h
         include/core/vec.h
-        include/core/data_holder.h
-        include/core/matrix.h
-        include/core/vec_data.h
+        include/core/trans.h
+        include/core/func.h
+        include/core/funcs/linear.h
         include/core/vec_factory.h
+        include/core/batch.h
+#        include/coree/matrix.h
 
-        include/core/vec_tools/distance.h
-        include/core/vec_tools/meta_info.h
+#
         include/core/vec_tools/ops.h
-        include/core/vec_tools/stats.h
-        include/core/vec_tools/transform.h
+#        include/core/vec_tools/meta_info.h
+#        include/core/vec_tools/ops.h
+#        include/core/vec_tools/stats.h
+#        include/core/vec_tools/transform.h
 
         src/vec.cpp
-        )
+        src/vec_factory.cpp
+        src/array_vec.h
+        src/array_vec.cpp
+        src/vec_tools/ops.cpp
+        src/funcs/linear.cpp
+)
 
 enable_cxx17(core)
 
 
 target_include_directories(core INTERFACE
         PUBLIC $<INSTALL_INTERFACE:include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/core>
-        PRIVATE src
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        PRIVATE  ${CMAKE_CURRENT_SOURCE_DIR}/src
         )
 
 

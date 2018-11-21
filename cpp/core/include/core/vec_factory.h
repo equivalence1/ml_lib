@@ -1,6 +1,12 @@
 #pragma once
 
+#include "vec.h"
+
+enum class VecType {
+    Cpu
+};
 
 class VecFactory {
-    static Vec create(std::string type, int64_t dim);
-}
+public:
+    static Vec create(VecType type, int64_t dim);
+};

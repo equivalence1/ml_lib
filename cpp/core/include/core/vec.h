@@ -1,9 +1,9 @@
 #pragma once
 
-#include <math/vec_data.h>
+#include "object.h"
 #include <cstdint>
 
-class Vec : public DataHolder<VecDataImpl> {
+class Vec  {
 public:
     Vec(Vec& other) = default;
     Vec(const Vec& other) = default;
@@ -11,18 +11,30 @@ public:
 
     void set(int64_t index, double value);
 
-    double get(int64_t index) const
+    double get(int64_t index) const;
+    double operator()(int64_t index) const {
+        return get(index);
+    }
 
     int64_t dim() const;
 
-    Vec slice(int64_t from, int64_t to);
-    Vec slice(int64_t from, int64_t to) const;
+//    Vec slice(int64_t from, int64_t to);
+//    Vec slice(int64_t from, int64_t to) const;
 
 protected:
-    Vec(VecImplPtr data)
-    : DataHolder(data) {
+    explicit Vec(ObjectPtr<Object> data)
+    : data_(data) {
 
     }
 
+    Object* data() {
+        return data_.get();
+    }
+
+    const Object* data() const {
+        return data_.get();
+    }
+private:
+    ObjectPtr<Object> data_;
     friend class VecFactory;
 };
