@@ -1,5 +1,9 @@
 #pragma once
+
 #include <vector>
+#include <cassert>
+#include <cstdint>
+
 //TODO: could be specialized for vectors, matrix
 //here just vector
 template <class T>

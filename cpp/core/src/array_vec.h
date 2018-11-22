@@ -1,7 +1,11 @@
 #pragma once
 
 #include <core/object.h>
+
 #include <vector>
+#include <cassert>
+#include <cstdint>
+#include <memory>
 
 class ArrayVec  : public Object {
 public:
@@ -26,7 +30,7 @@ public:
         return data_->data();
     }
     int64_t dim() const {
-        assert(offset_ <= data_->size());
+        assert(offset_ <= (int64_t)data_->size());
         return data_->size() - offset_;
     }
 private:

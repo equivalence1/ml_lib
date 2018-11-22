@@ -1,5 +1,7 @@
 #include <core/vec_tools/ops.h>
 
+#include <cassert>
+
 double VecTools::dotProduct(const Vec& left, const Vec& right) {
     assert(left.dim() == right.dim());
     double val = 0;

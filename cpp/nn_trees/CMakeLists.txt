@@ -45,7 +45,7 @@ find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 
 # sadly, it seems like CLION does not understand target_include_dir property
 # and we have to just include_dir
-include_directories(cpp/include)
+include_directories(include)
 
 add_library(nntree SHARED ${CORE_SRCS})
 
