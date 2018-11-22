@@ -25,4 +25,3 @@ int64_t Vec::dim() const {
     }
     return 0;
 }
-

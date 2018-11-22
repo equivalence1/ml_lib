@@ -1,4 +1,5 @@
 #pragma once
+
 #include <vec.h>
 
 class Matrix : public Vec {
@@ -16,9 +17,6 @@ public:
     Vec row(int64_t i) const;
     Vec col(int64_t i) const;
 
-
     Matrix& set(int64_t x, int64_t y, double val);
     double get(int64_t x, int64_t y) const;
-
-
 };

@@ -8,19 +8,19 @@
 //here just vector
 template <class T>
 struct Batch {
-    std::vector<T> Batch;
+    std::vector<T> batch;
 
     T& operator[](int64_t idx) {
         assert(idx >= 0);//TODO
-        return Batch[idx];
+        return batch[idx];
     }
 
     const T& operator[](int64_t idx) const {
         assert(idx >= 0);//TODO
-        return Batch[idx];
+        return batch[idx];
     }
 
     int64_t size() const {
-        return Batch.size();
+        return batch.size();
     }
 };

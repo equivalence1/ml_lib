@@ -4,7 +4,6 @@
 
 class Func : public Trans {
 public:
-
     int64_t ydim() const final {
         return 1;
     }
@@ -15,7 +14,6 @@ public:
         to.set(0, value(x));
         return this;
     }
-
 
     double operator()(const Vec& x) const {
         return value(x);

@@ -14,4 +14,3 @@ double Linear::value(const Vec& x) const {
     }
     return result;
 }
-

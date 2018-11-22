@@ -1,6 +1,7 @@
 #pragma once
 
 #include "object.h"
+
 #include <cstdint>
 
 class Vec  {
@@ -34,6 +35,7 @@ protected:
     const Object* data() const {
         return data_.get();
     }
+
 private:
     ObjectPtr<Object> data_;
     friend class VecFactory;

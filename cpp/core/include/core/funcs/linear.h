@@ -1,4 +1,5 @@
 #pragma once
+
 #include <core/func.h>
 
 class Linear : public Func {

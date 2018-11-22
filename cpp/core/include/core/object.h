@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+
 /*
  * Base class for all RTTI classes
  */

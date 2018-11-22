@@ -28,4 +28,5 @@ namespace VecTools {
 //    Vec& log(Vec& x);
 //
 //    Vec& abs(Vec& x);
+
 }
