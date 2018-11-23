@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <array>
+#include <cassert>
 
 class SingleElemVec{
 public:
@@ -14,12 +15,12 @@ public:
     SingleElemVec(const SingleElemVec& other) = default;
 
     void set(int64_t idx, double val) {
-        assert(idx < Size);
+        assert(idx < (int64_t)Size);
         data_[idx] = val;
     }
 
     double get(int64_t idx)  const {
-        assert(idx < Size);
+        assert(idx < (int64_t)Size);
         return data_[idx];
     }
 

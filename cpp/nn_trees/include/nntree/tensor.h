@@ -3,6 +3,7 @@
 #include <vector>
 #include <algorithm>
 #include <cstdint>
+#include <numeric>
 
 namespace nntree {
 namespace core {

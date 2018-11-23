@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <variant>
+#include <memory>
 
 class ArrayVec;
 using ArrayVecPtr = std::shared_ptr<ArrayVec>;
@@ -10,7 +11,6 @@ class VecRef;
 using VecRefPtr = std::shared_ptr<VecRef>;
 
 class SingleElemVec;
-
 using SingleElemVecPtr = std::shared_ptr<SingleElemVec>;
 
 class Vec {
