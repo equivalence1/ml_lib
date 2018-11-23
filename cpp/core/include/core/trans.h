@@ -11,12 +11,16 @@ public:
     virtual int64_t xdim() const = 0;
     virtual int64_t ydim() const = 0;
 
-    virtual const Trans* trans(const Vec& x, Vec& to) const = 0;
+    virtual const Trans& trans(const Vec& x, Vec& to) const = 0;
 
-    virtual const Trans* trans(const Batch<Vec>& x, Batch<Vec>& to) const {
+    virtual const Trans& trans(const Batch<Vec>& x, Batch<Vec>& to) const {
         for (int64_t i = 0; i < x.size(); ++i) {
             trans(x[i], to[i]);
         }
-        return this;
+        return *this;
+    }
+
+    virtual ObjectPtr<Trans> gradient() const {
+        return ObjectPtr<Trans>();
     }
 };

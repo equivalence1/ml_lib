@@ -10,6 +10,7 @@ public:
     }
     int64_t xdim() const override;
     double value(const Vec& x) const override;
+    virtual ObjectPtr<Trans> gradient() const override;
 private:
     Vec param_;
 

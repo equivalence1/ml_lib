@@ -11,8 +11,8 @@ add_library(core
         include/core/vec_factory.h
         include/core/batch.h
         include/core/fwd.h
-
-        #        include/coree/matrix.h
+        include/core/trans/const_trans.h
+#        include/coree/matrix.h
 
 #
         include/core/vec_tools/fill.h
@@ -36,6 +36,7 @@ add_library(core
         src/fixed_size_vec.cpp
         src/vec_tools/ops.cpp
         src/funcs/linear.cpp
+        src/trans/const_trans.cpp
 )
 
 add_library(core_kernels

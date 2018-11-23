@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <variant>
 #include <memory>
+#include <utility>
 
 class Vec {
 public:
@@ -13,6 +14,11 @@ public:
     Vec(const Vec& other) = default;
 
     Vec(Vec&& other) = default;
+
+    Vec& operator=(Vec other) {
+        std::swap(data_, other.data_);
+        return *this;
+    }
 
     void set(int64_t index, double value);
 
