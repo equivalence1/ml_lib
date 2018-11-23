@@ -3,6 +3,7 @@
 #include "vec_ops.h"
 #include <vector>
 #include <memory>
+#include <cassert>
 
 class ArrayVec  : public VecOps<float, ArrayVec> {
 public:
@@ -38,3 +39,6 @@ private:
     std::shared_ptr<DataContainer> data_;
     int64_t offset_;
 };
+
+
+

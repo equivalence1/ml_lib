@@ -1,17 +1,9 @@
 #pragma once
 
+#include "fwd.h"
 #include <cstdint>
 #include <variant>
 #include <memory>
-
-class ArrayVec;
-using ArrayVecPtr = std::shared_ptr<ArrayVec>;
-
-class VecRef;
-using VecRefPtr = std::shared_ptr<VecRef>;
-
-class SingleElemVec;
-using SingleElemVecPtr = std::shared_ptr<SingleElemVec>;
 
 class Vec {
 public:
@@ -35,6 +27,19 @@ public:
 //    Vec slice(int64_t from, int64_t to);
 //    Vec slice(int64_t from, int64_t to) const;
 
+    using Data =  std::variant<ArrayVecPtr,
+                               VecRefPtr,
+                               #if defined(CUDA)
+                               CudaVecPtr,
+                               #endif
+                               SingleElemVecPtr>;
+
+    Data& data() {
+        return data_;
+    }
+    const Data& data() const {
+        return data_;
+    }
 protected:
     template <class T>
     using Ptr = std::shared_ptr<T>;
@@ -46,9 +51,7 @@ protected:
     }
 
 private:
-    std::variant<ArrayVecPtr,
-                 VecRefPtr,
-                 SingleElemVecPtr> data_;
+    Data data_;
 
     friend class VecFactory;
 };

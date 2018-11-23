@@ -3,7 +3,8 @@
 #include "vec.h"
 
 enum class VecType {
-    Cpu
+    Cpu,
+    Gpu
 };
 
 class VecFactory {

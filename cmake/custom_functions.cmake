@@ -1,5 +1,7 @@
 function(enable_cxx17 TARGET)
-	target_compile_features(${TARGET} PUBLIC cxx_std_17)
+    target_compile_features(${TARGET} PUBLIC cxx_std_17)
+    set_property(TARGET ${TARGET} PROPERTY CXX_STANDARD 17)
+    set_property(TARGET ${TARGET} PROPERTY CXX_STANDARD_REQUIRED ON)
 endfunction(enable_cxx17)
 
 
@@ -13,28 +15,60 @@ function(cmake_version)
 endfunction(cmake_version)
 
 
-# Generate nvcc compiler flags given a list of architectures
-# Also generates PTX for the most recent architecture for forwards compatibility
-function(format_gencode_flags flags out)
-    # Set up architecture flags
-    if(NOT flags)
-        if((CUDA_VERSION_MAJOR EQUAL 9) OR (CUDA_VERSION_MAJOR GREATER 9))
-            set(flags "35;50;52;60;61;70")
-        else()
-            set(flags "35;50;52;60;61")
+function(maybe_enable_cuda TARGET)
+    if (USE_CUDA)
+        set(CMAKE_CUDA_STANDARD 14)
+        find_package(CUDA 10.0 REQUIRED)
+
+        if(CUDA_FOUND)
+            message(STATUS "CUDA include: ${CUDA_INCLUDE_DIRS}")
+            message(STATUS "CUDA lib: ${CUDA_LIBRARIES}")
+            include(CheckLanguage)
+            check_language(CUDA)
+        endif()
+
+        include_directories(${CUDA_INCLUDE_DIRS})
+        target_link_libraries(${TARGET} ${CUDA_LIBRARIES})
+
+        set_property(TARGET ${TARGET} PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+        set_property(TARGET ${TARGET} PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+        if(APPLE)
+            # We need to add the path to the driver (libcuda.dylib) as an rpath,
+            # so that the static cuda runtime can find it at runtime.
+            set_property(TARGET ${TARGET} PROPERTY BUILD_RPATH ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES})
         endif()
     endif()
-    # Generate SASS
-    foreach(ver ${flags})
-        set(${out} "${${out}}-gencode arch=compute_${ver},code=sm_${ver};")
-    endforeach()
-    # Generate PTX for last architecture
-    list(GET flags -1 ver)
-    set(${out} "${${out}}-gencode arch=compute_${ver},code=compute_${ver};")
 
-    set(${out} "${${out}}" PARENT_SCOPE)
-endfunction(format_gencode_flags flags)
+endfunction(maybe_enable_cuda)
 
+
+function(maybe_enable_cuda TARGET)
+    if (USE_CUDA)
+        set(CMAKE_CUDA_STANDARD 14)
+        find_package(CUDA 10.0 REQUIRED)
+
+        if(CUDA_FOUND)
+            message(STATUS "CUDA include: ${CUDA_INCLUDE_DIRS}")
+            message(STATUS "CUDA lib: ${CUDA_LIBRARIES}")
+            include(CheckLanguage)
+            check_language(CUDA)
+        endif()
+
+        include_directories(${CUDA_INCLUDE_DIRS})
+        target_link_libraries(${TARGET} ${CUDA_LIBRARIES})
+
+#        set_property(TARGET ${TARGET} PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+#        set_property(TARGET ${TARGET} PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+        if(APPLE)
+            # We need to add the path to the driver (libcuda.dylib) as an rpath,
+            # so that the static cuda runtime can find it at runtime.
+            set_property(TARGET ${TARGET} PROPERTY BUILD_RPATH ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES})
+        endif()
+    endif()
+
+endfunction(maybe_enable_cuda)
 
 
 function(find_mkldnn)
@@ -43,16 +77,17 @@ function(find_mkldnn)
     find_library(MKLDNN_LIB NAMES mkldnn)
     if (MKLDNN_LIB)
         message(STATUS "ok, mkl-dnn was found (${MKLDNN_LIB}).")
-    else()
+    else ()
         message(FATAL_ERROR "mkl-dnn library was not found. Aborting.")
-    endif()
+    endif ()
 
     ## include
     message(STATUS "searching for mkl-dnn library.")
     find_path(MKLDNN_PATH NAMES mkldnn.hpp)
     if (MKLDNN_PATH)
         message(STATUS "ok, found mkldnn headers (${MKLDNN_PATH}).")
-    else()
+    else ()
         message(FATAL_ERROR "failed to find mkldnn headers.")
-    endif()
+    endif ()
+
 endfunction(find_mkldnn)

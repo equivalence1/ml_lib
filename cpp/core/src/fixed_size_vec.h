@@ -6,7 +6,7 @@
 
 class SingleElemVec{
 public:
-    static const uint64_t Size = 1;
+    static const int64_t Size = 1;
 
     SingleElemVec() {
         data_.fill(0);

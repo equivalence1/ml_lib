@@ -36,7 +36,7 @@ private:
         return static_cast<const Impl*>(this)->data();
     }
 
-    const int64_t implSize() const {
+    int64_t implSize() const {
         return static_cast<const Impl*>(this)->size();
     }
 };

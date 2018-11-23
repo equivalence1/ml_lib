@@ -1,8 +1,9 @@
 #include <gtest/gtest.h>
 #include <core/vec.h>
 #include <core/vec_factory.h>
-#include <core/vec_tools/ops.h>
+#include <core/vec_tools/fill.h>
 #include <core/funcs/linear.h>
+#include <util/exception.h>
 
 TEST(FuncTests, Linear) {
     Vec param = VecFactory::create(VecType::Cpu, 3);
@@ -19,6 +20,7 @@ TEST(FuncTests, Linear) {
     Linear linear(param);
     double res = linear.value(x);
     EXPECT_EQ(res, 41);
+
 }
 
 

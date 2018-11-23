@@ -1,9 +1,28 @@
-#include "fixed_size_vec.h"
-#include "array_vec.h"
-#include "vec_ref.h"
+#include "vec_impls.h"
+
 #include <core/vec.h>
 
 namespace {
+
+    template <class T>
+    struct GetImpl {
+        static double Get(const T& vec, int64_t idx) {
+            return vec->get(idx);
+        }
+    };
+
+    #if defined(CUDA)
+    template<>
+    struct GetImpl<CudaVecPtr> {
+        static double Get(const CudaVecPtr& impl, int64_t idx) {
+            //don't do this in production, just for test
+            float val;
+            Cuda::CopyMemory(impl->data() + idx, &val, 1);
+            return val;
+        }
+    };
+    #endif
+
     struct VecGetter {
 
         VecGetter(int64_t i)
@@ -11,13 +30,34 @@ namespace {
 
         }
 
-        template <class Impl>
-        double operator()(const Impl& impl) const {
-            return impl->get(idx_);
+
+        template <class Ptr>
+        double operator()(const Ptr& impl) const {
+            return GetImpl<Ptr>::Get(impl, idx_);
         }
+
+
 
         int64_t idx_;
     };
+
+    template <class T>
+    struct SetImpl {
+        static void Set(T& vec, int64_t idx, double value) {
+            return vec->set(idx, value);
+        }
+    };
+
+    #if defined(CUDA)
+    template <>
+    struct SetImpl<CudaVecPtr> {
+
+        static void Set(CudaVecPtr& vec, int64_t idx, double value) {
+            float val = value;
+            Cuda::CopyMemory(&val, vec->data() + idx, 1);;
+        }
+    };
+    #endif
 
     struct VecSetter {
 
@@ -27,9 +67,9 @@ namespace {
 
         }
 
-        template <class Impl>
-        void operator()(Impl& impl) const {
-            impl->set(idx_, value_);
+        template <class T>
+        void operator()(T& impl) const {
+            SetImpl<T>::Set(impl, idx_, value_);
         }
 
         int64_t idx_;

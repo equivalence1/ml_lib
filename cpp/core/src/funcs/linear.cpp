@@ -1,5 +1,5 @@
 #include <core/funcs/linear.h>
-
+#include <cassert>
 int64_t Linear::xdim() const {
     assert(param_.dim());
     return param_.dim() - 1;

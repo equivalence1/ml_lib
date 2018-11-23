@@ -15,7 +15,7 @@ include(GNUInstallDirs)
 # TODO(equivalence1) -O3 and -march probably should be set elsewhere.
 # left for now just to speed up Eigene (without it it's
 # impossible to wait for matrix multiplication)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpedantic -Wall -O3 -march=native")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpedantic -Wall -O3 -march=native")
 
 # TODO(equivalence1): move all dependency search to separate file
 
@@ -41,7 +41,7 @@ set(CORE_SRCS
 # Eigen + OpenMP (but seems like clang and openmp are incompatible,
 # see https://stackoverflow.com/questions/51656818/matrix-multiplication-performance-c-eigen-is-much-slower-than-python)
 
-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+find_package(Eigen3 REQUIRED NO_MODULE)
 
 # sadly, it seems like CLION does not understand target_include_dir property
 # and we have to just include_dir

@@ -801,7 +801,7 @@ void simple_net(int times = 10) {
     }
 }
 
-int main(int argc, char **argv) {
+int main(int, char**) {
     try {
         auto begin = chrono::duration_cast<chrono::milliseconds>(
                 chrono::steady_clock::now().time_since_epoch())

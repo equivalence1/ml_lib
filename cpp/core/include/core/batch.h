@@ -3,7 +3,7 @@
 #include <vector>
 #include <cassert>
 #include <cstdint>
-
+#include <cassert>
 //TODO: could be specialized for vectors, matrix
 //here just vector
 template <class T>
