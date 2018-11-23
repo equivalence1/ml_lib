@@ -16,10 +16,10 @@ add_library(core
 
 #
         include/core/vec_tools/fill.h
-#        include/util/vec_tools/meta_info.h
-#        include/util/vec_tools/ops.h
-#        include/util/vec_tools/stats.h
-#        include/util/vec_tools/transform.h
+        include/core/vec_tools/distance.h
+#        include/core/vec_tools/meta_info.h
+        include/core/vec_tools/stats.h
+        include/core/vec_tools/transform.h
 
         src/vec_impls.h
         src/vec_impls.cpp
@@ -35,6 +35,9 @@ add_library(core
         src/cuda_vec.cpp
         src/fixed_size_vec.cpp
         src/vec_tools/ops.cpp
+        src/vec_tools/distance.cpp
+        src/vec_tools/stats.cpp
+        src/vec_tools/transform.cpp
         src/funcs/linear.cpp
         src/trans/const_trans.cpp
 )

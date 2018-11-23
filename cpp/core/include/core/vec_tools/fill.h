@@ -14,16 +14,19 @@ namespace VecTools {
 //    Vec& add(Vec& x, const Vec& y);
 //
 //    Vec sum(const Vec& x, const Vec& y);
-//
-//    Vec& subtract(Vec& x, const Vec& y);
-//
+
+    Vec& subtract(Vec& x, const Vec& y);
+
 //    Vec sub(const Vec& x, const Vec& y);
 //
 //    Vec& adjust(const Vec& x, double alpha);
 //
 //
 //
-//    Vec& exp(Vec& x);
+    Vec& exp(double p, const Vec& from, Vec& to);
+
+    Vec& mul(Vec& x, const Vec& y);
+
 //
 //    Vec& log(Vec& x);
 //

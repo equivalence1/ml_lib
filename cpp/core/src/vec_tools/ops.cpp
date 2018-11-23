@@ -1,6 +1,8 @@
 #include <core/vec_tools/fill.h>
 #include <vec_impls.h>
 #include <fill.cuh>
+
+#include <cmath>
 #include <cassert>
 #include <iostream>
 
@@ -55,6 +57,28 @@ Vec& VecTools::makeSequence(double from, double step, Vec& x) {
     for (int64_t i = 0; i < x.dim(); ++i) {
         x.set(i, cursor);
         cursor += step;
+    }
+    return x;
+}
+
+Vec& VecTools::subtract(Vec& x, const Vec& y) {
+    assert(x.dim() == y.dim());
+    for (auto i = 0; i < x.dim(); i++) {
+        x.set(i, x(i) - y(i));
+    }
+    return x;
+}
+
+Vec& VecTools::exp(double p, const Vec& from, Vec& to) {
+    for (auto i = 0; i < from.dim(); i++) {
+        to.set(i, std::pow(from(i), p));
+    }
+    return to;
+}
+
+Vec& VecTools::mul(Vec& x, const Vec& y) {
+    for (auto i = 0; i < x.dim(); i++) {
+        x.set(i, x(i) * y(i));
     }
     return x;
 }
