@@ -10,19 +10,25 @@ add_library(core
         include/core/funcs/linear.h
         include/core/vec_factory.h
         include/core/batch.h
-#        include/coree/matrix.h
+
+        #        include/coree/matrix.h
 
 #
         include/core/vec_tools/ops.h
-#        include/core/vec_tools/meta_info.h
-#        include/core/vec_tools/ops.h
-#        include/core/vec_tools/stats.h
-#        include/core/vec_tools/transform.h
+#        include/util/vec_tools/meta_info.h
+#        include/util/vec_tools/ops.h
+#        include/util/vec_tools/stats.h
+#        include/util/vec_tools/transform.h
 
+        src/vec_ops.h
+        src/vec_ref.cpp
+        src/array_vec.h
+        src/fixed_size_vec.h
+        src/vec_ref.h
         src/vec.cpp
         src/vec_factory.cpp
-        src/array_vec.h
         src/array_vec.cpp
+        src/fixed_size_vec.cpp
         src/vec_tools/ops.cpp
         src/funcs/linear.cpp
 )

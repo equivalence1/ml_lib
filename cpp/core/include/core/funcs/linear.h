@@ -4,7 +4,7 @@
 
 class Linear : public Func {
 public:
-    Linear(Vec& param)
+    Linear(const Vec& param)
     : param_(param) {
 
     }

@@ -1,37 +1,37 @@
 #pragma once
 
-#include <core/object.h>
-
+#include "vec_ops.h"
 #include <vector>
-#include <cassert>
-#include <cstdint>
-#include <memory>
 
-class ArrayVec  : public Object {
+class ArrayVec  : public VecOps<float, ArrayVec> {
 public:
     using DataContainer = std::vector<float>;
 
-    ArrayVec(int64_t size)
-    : data_(std::make_shared<DataContainer>())
+    explicit ArrayVec(int64_t size)
+    : VecOps()
+    , data_(std::make_shared<DataContainer>())
     , offset_(0) {
         data_->resize(size);
     }
 
+    ArrayVec(ArrayVec&& other) = default;
+    ArrayVec(const ArrayVec& other) = default;
+
     ArrayVec(std::shared_ptr<DataContainer> ptr, int64_t offset)
-    : data_(ptr)
+    : data_(std::move(ptr))
     , offset_(offset) {
 
     }
 
-    const float* data() const {
+    int64_t size() const {
+        return static_cast<int64_t>(data_->size() - offset_);
+    }
+
+    float* data() const {
         return data_->data();
     }
     float* data() {
         return data_->data();
-    }
-    int64_t dim() const {
-        assert(offset_ <= (int64_t)data_->size());
-        return data_->size() - offset_;
     }
 private:
     std::shared_ptr<DataContainer> data_;
@@ -39,43 +39,4 @@ private:
 };
 
 
-//#include <cstdint>
-//#include <memory>
-//
-//class VecData : public Object {
-//public:
-//
-//    virtual ~VecData() = default;
-//
-//    virtual double get(int64_t idx) const = 0;
-//
-//    virtual void set(int64_t idx, double value) = 0;
-//
-//    virtual int64_t dim() = 0;
-//
-//    virtual VecDataPtr slice(int64_t from, int64_t to) = 0;
-//
-//    virtual VecDataPtr instance(int64_t size, bool fillZero) = 0;
-//};
-//
-//using VecDataPtr = VecData::VecDataPtr;
-//
-//namespace Impl {
-//
-//
-//
-//    class ArrayVec : public VecData {
-//    public:
-//
-//    protected:
-//        ArrayVecData(ui64 size);
-//        ArrayVecData(ArrayVecData data, ui64 offset, ui64 size);
-//    private:
-//        std::shared_ptr<T> data_;
-//        ui64 size_;
-//        ui64 offset_;
-//    };
-//
-//
-//
-//}
+
