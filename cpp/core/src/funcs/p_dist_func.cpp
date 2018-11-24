@@ -7,7 +7,7 @@
 #include <core/trans/exp_trans.h>
 #include <core/trans/compose_trans.h>
 #include <core/trans/offset_trans.h>
-#include <core/vec_tools/ops.h>
+#include <core/vec_tools/fill.h>
 
 int64_t PDistFunc::xdim() const {
     return b_.dim();

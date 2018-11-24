@@ -1,6 +1,6 @@
 #include <core/trans/exp_trans.h>
 
-#include <core/vec_tools/ops.h>
+#include <core/vec_tools/fill.h>
 
 #include <cassert>
 

@@ -1,6 +1,6 @@
 #include <core/vec_factory.h>
 #include <core/optimizers/gradient_descent.h>
-#include <core/vec_tools/ops.h>
+#include <core/vec_tools/fill.h>
 #include <core/vec_tools/distance.h>
 #include <core/funcs/p_dist_func.h>
 
