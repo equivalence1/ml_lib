@@ -22,6 +22,7 @@ add_library(core
 #        include/util/vec_tools/transform.h
 
         src/vec_impls.h
+        src/vec_impls.cpp
         src/vec_ops.h
         src/vec_ref.cpp
         src/array_vec.h

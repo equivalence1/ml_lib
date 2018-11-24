@@ -30,13 +30,10 @@ namespace {
 
         }
 
-
         template <class Ptr>
         double operator()(const Ptr& impl) const {
             return GetImpl<Ptr>::Get(impl, idx_);
         }
-
-
 
         int64_t idx_;
     };

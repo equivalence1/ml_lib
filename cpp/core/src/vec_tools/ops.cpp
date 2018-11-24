@@ -27,7 +27,6 @@ namespace {
             const float val = val_;
             Cuda::Kernel::FillBuffer<float>(impl->data(), val, impl->dim(), 0);
         }
-
         #endif
 
         Vec& vec_;
@@ -47,9 +46,6 @@ double VecTools::dotProduct(const Vec& left, const Vec& right) {
 
 
 Vec& VecTools::fill(double alpha, Vec& x) {
-    for (int64_t i = 0; i < x.dim(); ++i) {
-        x.set(i, alpha);
-    }
     std::visit(FillVec(x, alpha), x.data());
     return x;
 }
