@@ -17,6 +17,8 @@ add_library(core
         include/core/trans/offset_trans.h
         include/core/trans/exp_trans.h
         include/core/trans/linear_trans.h
+        include/core/optimizer.h
+        include/core/optimizers/gradient_descent.h
 #        include/coree/matrix.h
 
 #
@@ -50,6 +52,7 @@ add_library(core
         src/trans/offset_trans.cpp
         src/trans/exp_trans.cpp
         src/trans/linear_trans.cpp
+        src/optimizers/gradient_descent.cpp
 )
 
 add_library(core_kernels
