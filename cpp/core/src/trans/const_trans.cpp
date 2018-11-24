@@ -3,6 +3,7 @@
 #include <core/vec_factory.h>
 
 #include <memory>
+#include <cassert>
 
 int64_t ConstTrans::xdim() const {
     return params_.dim();
@@ -18,8 +19,6 @@ const Trans& ConstTrans::trans(const Vec& x, Vec& to) const {
 }
 
 ObjectPtr<Trans> ConstTrans::gradient() const {
-    // TODO this actually should be a matrix
-    auto size = xdim() * ydim();
-    auto v = VecFactory::create(VecType::Cpu, size);
-    return std::make_shared<ConstTrans>(ConstTrans(v));
+    // TODO
+    assert(false);
 }

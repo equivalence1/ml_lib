@@ -8,10 +8,15 @@ add_library(core
         include/core/trans.h
         include/core/func.h
         include/core/funcs/linear.h
+        include/core/funcs/p_dist_func.h
         include/core/vec_factory.h
         include/core/batch.h
         include/core/fwd.h
         include/core/trans/const_trans.h
+        include/core/trans/compose_trans.h
+        include/core/trans/offset_trans.h
+        include/core/trans/exp_trans.h
+        include/core/trans/linear_trans.h
 #        include/coree/matrix.h
 
 #
@@ -39,7 +44,12 @@ add_library(core
         src/vec_tools/stats.cpp
         src/vec_tools/transform.cpp
         src/funcs/linear.cpp
+        src/funcs/p_dist_func.cpp
         src/trans/const_trans.cpp
+        src/trans/compose_trans.cpp
+        src/trans/offset_trans.cpp
+        src/trans/exp_trans.cpp
+        src/trans/linear_trans.cpp
 )
 
 add_library(core_kernels
