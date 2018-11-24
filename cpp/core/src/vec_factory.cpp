@@ -5,6 +5,7 @@
 
 #include <core/vec_factory.h>
 #include <core/vec.h>
+#include <util/exception.h>
 
 Vec VecFactory::create(VecType type, int64_t dim) {
     switch (type) {
