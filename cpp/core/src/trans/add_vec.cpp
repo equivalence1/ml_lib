@@ -15,6 +15,6 @@ VecRef AddVecTrans::trans(ConstVecRef x, VecRef to) const {
     return to;
 }
 
-IdentityMap AddVecTrans::gradient() const {
+Trans AddVecTrans::gradient() const {
     return IdentityMap(xdim());
 }

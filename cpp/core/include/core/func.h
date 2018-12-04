@@ -42,133 +42,93 @@ public:
     }
 
 };
-
-namespace Detail {
-
-    template <class T>
-    class FuncWrapper : public AnyFunc {
-    public:
-        FuncWrapper(T&& impl)
-            : instance_(std::move(impl)) {
-
-        }
-
-        int64_t dim() const final {
-            return instance_.dim();
-        }
-
-        void valueTo(ConstVecRef x, DoubleRef to) const {
-            instance_.value(x, to);
-        }
-
-//        Batch<Vec>& trans(const Batch<Vec>& x, Batch<Vec>& to) const final {
-//            instance_.trans(x, to);
+//
+//namespace Detail {
+//
+//    template <class T>
+//    class FuncWrapper : public AnyFunc {
+//    public:
+//        FuncWrapper(T&& impl)
+//            : instance_(std::move(impl)) {
+//
+//        }
+//
+//        int64_t dim() const final {
+//            return instance_.dim();
+//        }
+//
+//        void valueTo(ConstVecRef x, DoubleRef to) const {
+//            instance_.value(x, to);
+//        }
+//
+////        Batch<Vec>& trans(const Batch<Vec>& x, Batch<Vec>& to) const final {
+////            instance_.trans(x, to);
+////            return to;
+////        }
+//
+//    private:
+//        T instance_;
+//    };
+//
+//    template <class T>
+//    class FuncC1Wrapper : public AnyFuncC1 {
+//    public:
+//        FuncC1Wrapper(T&& impl)
+//            : instance_(std::move(impl)) {
+//
+//        }
+//
+//        FuncC1Wrapper(const T& impl)
+//            : instance_(impl) {
+//
+//        }
+//
+//        int64_t xdim() const final {
+//            return instance_.dim();
+//        }
+//
+//        int64_t dim() const final {
+//            return instance_.dim();
+//        }
+//
+//        VecRef trans(ConstVecRef x, VecRef to) const final {
+//            return instance_.trans(x, to);
+//        }
+//
+////        Batch<Vec>& trans(const Batch<Vec>& x, Batch<Vec>& to) const final {
+////            instance_.trans(x, to);
+////            return to;
+////        }
+//
+//        VecRef gradientTo(ConstVecRef x, VecRef to) const final {
+//            instance_.gradient().trans(x, to);
 //            return to;
 //        }
-
-    private:
-        T instance_;
-    };
-
-    template <class T>
-    class FuncC1Wrapper : public AnyFuncC1 {
-    public:
-        FuncC1Wrapper(T&& impl)
-            : instance_(std::move(impl)) {
-
-        }
-
-        FuncC1Wrapper(const T& impl)
-            : instance_(impl) {
-
-        }
-
-        int64_t xdim() const final {
-            return instance_.dim();
-        }
-
-        int64_t dim() const final {
-            return instance_.dim();
-        }
-
-        VecRef trans(ConstVecRef x, VecRef to) const final {
-            return instance_.trans(x, to);
-        }
-
-//        Batch<Vec>& trans(const Batch<Vec>& x, Batch<Vec>& to) const final {
-//            instance_.trans(x, to);
-//            return to;
+//
+//        Trans gradient() const {
+//            using GradTrans = decltype(instance_.gradient());
+//            using AnyTransImpl = TransWrapper<GradTrans>;
+//            return std::make_shared<AnyTransImpl>(instance_.gradient());
 //        }
+//
+//    private:
+//        T instance_;
+//    };
+//}
 
-        VecRef gradientTo(ConstVecRef x, VecRef to) const final {
-            instance_.gradient().trans(x, to);
-            return to;
-        }
 
-        ObjectPtr<AnyTrans> gradient() const {
-            using GradTrans = decltype(instance_.gradient());
-            using AnyTransImpl = TransWrapper<GradTrans>;
-            return std::make_shared<AnyTransImpl>(instance_.gradient());
-        }
-
-    private:
-        T instance_;
-    };
-
-}
-
-namespace Detail {
-
-    template <class Impl, class FuncInstance>
-    class FuncBase {
-    public:
-        int64_t dim() const {
-            return getInstance()->dim();
-        }
-
-        void valueTo(ConstVecRef x, DoubleRef to) const {
-            return getInstance()->trans(x, to);
-        }
-
-//        Batch<VecRef> trans(Batch<ConstVecRef> x, Batch<VecRef> to) const {
-//            return getInstance()->trans(x, to);
-//        }
-
-    protected:
-
-        const FuncInstance* getInstance() const {
-            return static_cast<Impl*>(this)->instance();
-        }
-    };
-
-    template <class Impl, class FuncInstance>
-    class Func1Base : public TransBase<Impl, FuncInstance> {
-    public:
-        using TransBase<Impl, FuncInstance>::getInstance;
-
-        VecRef gradientTo(ConstVecRef x, VecRef to) const {
-            getInstance()->gradientTo(x, to);
-            return to;
-        }
-    };
-}
-
-class Func {
+class Func : public AnyFunc {
 public:
 
-    int64_t xdim() const {
+    int64_t xdim() const final {
         return dim();
     }
 
-    int64_t ydim() const {
-        return 1;
-    }
-
-    int64_t dim() const {
+    int64_t dim() const final {
         return impl_->dim();
     }
 
-    VecRef trans(ConstVecRef x, VecRef to) const {
+    VecRef trans(ConstVecRef x, VecRef to) const final {
         return impl_->trans(x, to);
     }
 
@@ -176,20 +136,19 @@ public:
 //        return impl_->trans(x, to);
 //    }
 
-    template <class T, class ... Args>
-    static Func Create(Args&& ... args) {
-        auto trans = std::make_shared<Detail::FuncWrapper<T>>(std::forward(args)...);
-        return Func(std::static_pointer_cast<AnyFunc>(trans));
+    operator Trans() const {
+        return asTrans();
     }
-
+protected:
+    template <class T, class ... Args>
+    friend Func CreateFunc(Args&& ... args);
 
     Trans asTrans() const {
         return Trans(std::static_pointer_cast<AnyTrans>(impl_));
     }
-protected:
 
     Func(ObjectPtr<AnyFunc>&& impl)
-    :impl_ (std::move(impl)) {
+        : impl_(std::move(impl)) {
 
     }
 
@@ -205,54 +164,86 @@ private:
 
 };
 
-class FuncC1 : Func {
+
+template <class T, class ... Args>
+inline Func CreateFunc(Args&& ... args) {
+    auto trans = std::make_shared<T>(std::forward(args)...);
+    return Func(std::static_pointer_cast<AnyFunc>(trans));
+}
+
+
+
+class FuncC1 : public AnyFuncC1 {
 public:
 
+    int64_t xdim() const final {
+        return dim();
+    }
+
+    int64_t dim() const final {
+        return impl_->dim();
+    }
+
+    VecRef trans(ConstVecRef x, VecRef to) const final {
+        return impl_->trans(x, to);
+    }
+
     VecRef gradientTo(ConstVecRef x, VecRef to) const {
-        this->c1instance()->gradientTo(x, to);
-        return to;
+        return impl_->gradientTo(x, to);
     }
 
     Trans gradient() const {
-        return Trans(this->c1instance()->gradient());
+        return impl_->gradient();
     }
 
-    template <class T, class ... Args>
-    static FuncC1 Create(Args&& ... args) {
-        auto func = std::make_shared<Detail::FuncC1Wrapper<T>>(std::forward<Args>(args)...);
-        return FuncC1(std::static_pointer_cast<AnyFuncC1>(func));
-    }
 
-    TransC1 asTransC1() const {
-        auto asc1 = std::dynamic_pointer_cast<AnyTransC1>(impl());
-        return TransC1(asc1);
+
+    operator TransC1() const {
+        return asTransC1();
     }
 protected:
+    template <class T, class... Args>
+    friend FuncC1 CreateFuncC1(Args&& ... args);
+
+    TransC1 asTransC1() const {
+        auto asc1 = std::dynamic_pointer_cast<AnyTransC1>(impl_);
+        return TransC1(asc1);
+    }
 
     FuncC1(ObjectPtr<AnyFuncC1> impl)
-    : Func(std::static_pointer_cast<AnyFunc>(impl)) {
+        : impl_(std::move(impl)) {
 
     }
 
-    const AnyFuncC1* c1instance() const {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wreinterpret-base-class"
-        return reinterpret_cast<const AnyFuncC1*>(instance());
-#pragma clang diagnostic pop
-    }
+private:
+    ObjectPtr<AnyFuncC1> impl_;
 };
 
+
+
+
+template <class T, class ... Args>
+inline FuncC1 CreateFuncC1(Args&& ... args) {
+    auto func = std::make_shared<T>(std::forward<Args>(args)...);
+    return FuncC1(std::static_pointer_cast<AnyFuncC1>(func));
+}
+
 template <class Impl>
-class FuncStub {
+class FuncStub : public virtual AnyFunc {
 public:
     FuncStub(int64_t dim)
-    : dim_(dim) {
+        : dim_(dim) {
 
     }
 
-    int64_t dim() const {
+    int64_t dim() const final {
         return dim_;
     }
+
+    int64_t xdim() const final {
+        return dim_;
+    }
+
 
     operator Func() const {
         return asFunc();
@@ -268,24 +259,24 @@ public:
         return result;
     }
 
-    VecRef trans(ConstVecRef x, VecRef to) const {
+    VecRef trans(ConstVecRef x, VecRef to) const final {
         static_cast<const Impl*>(this)->trans(x, to);
         return to;
     }
 
 private:
     Func asFunc() const {
-        return Func::Create(*static_cast<const Impl*>(this));
+        return CreateFunc<Impl>(*static_cast<const Impl*>(this));
     }
 private:
     int64_t dim_;
 };
 
 template <class Impl>
-class FuncC1Stub : public FuncStub<Impl> {
+class FuncC1Stub : public FuncStub<Impl>, virtual public AnyFuncC1 {
 public:
     FuncC1Stub(int64_t dim)
-    : FuncStub<Impl>(dim) {
+        : FuncStub<Impl>(dim) {
 
     }
 
@@ -297,11 +288,14 @@ public:
         return asFuncC1().ToTransC1();
     }
 
+    VecRef gradientTo(ConstVecRef x, VecRef to) const {
+        return static_cast<const Impl*>(this)->gradient().trans(x, to);
+    }
 
 private:
 
     FuncC1 asFuncC1() const {
-        return FuncC1::Create<Impl>(*static_cast<const Impl*>(this));
+        return CreateFuncC1<Impl>(*static_cast<const Impl*>(this));
     }
 };
 

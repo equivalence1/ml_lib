@@ -5,6 +5,7 @@
 #include <memory>
 #include <cassert>
 #include <core/vec.h>
+
 namespace Impl {
 
     class ArrayVec : public VecOps<float, ArrayVec>, public AnyVec {
@@ -19,6 +20,7 @@ namespace Impl {
         }
 
         ArrayVec(ArrayVec&& other) = default;
+
         ArrayVec(const ArrayVec& other) = default;
 
         ArrayVec(std::shared_ptr<DataContainer> ptr, int64_t offset)
@@ -41,5 +43,7 @@ namespace Impl {
         std::shared_ptr<DataContainer> data_;
         int64_t offset_;
     };
+
+
 
 }

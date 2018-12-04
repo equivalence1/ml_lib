@@ -6,6 +6,6 @@ VecRef IdentityMap::trans(ConstVecRef x, VecRef to) const {
     return to;
 }
 
-FillConst IdentityMap::gradient() const {
+Trans IdentityMap::gradient() const {
     return FillConst(1.0, xdim(), ydim());
 }

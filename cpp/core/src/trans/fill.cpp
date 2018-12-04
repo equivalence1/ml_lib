@@ -9,7 +9,7 @@ VecRef FillConst::trans(ConstVecRef, VecRef to) const {
     return to;
 }
 
-FillConst FillConst::gradient() const {
+Trans FillConst::gradient() const {
     return FillConst(0, xdim(), ydim());
 }
 
@@ -18,6 +18,6 @@ VecRef FillVec::trans(ConstVecRef, VecRef to) const {
     return to;
 }
 
-FillConst FillVec::gradient() const {
+Trans FillVec::gradient() const {
     return FillConst(0, xdim(), ydim());
 }

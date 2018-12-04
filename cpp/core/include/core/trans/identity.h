@@ -14,6 +14,11 @@ public:
 
     VecRef trans(ConstVecRef x, VecRef to) const;
 
-    FillConst gradient() const;
+    Trans gradient() const;
+
+    VecRef gradientRowTo(ConstVecRef, VecRef to, int64_t) const final {
+        assert(false);
+        return to;
+    }
 };
 

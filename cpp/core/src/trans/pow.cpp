@@ -11,7 +11,7 @@ VecRef Pow::trans(ConstVecRef x, VecRef to) const {
     return to;
 }
 
-Pow Pow::gradient() const {
+Trans Pow::gradient() const {
     return Pow(k_ -1, xdim(), alpha_ * k_);
 }
 

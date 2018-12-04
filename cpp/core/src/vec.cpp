@@ -60,6 +60,10 @@ Vec::Vec(int64_t dim)
 : Vec(std::make_shared<ArrayVec>(dim)) {
 
 }
-
-
-
+//Vec Vec::slice(int64_t from, int64_t to) {
+//    return Vec(0);
+//}
+//
+//Vec VecRef::slice(int64_t from, int64_t to) {
+//    return Vec(0);
+//}

@@ -4,6 +4,7 @@
 #include <core/vec.h>
 #include <vector>
 namespace Impl {
+
     class NonOwningVec : public VecOps<float, NonOwningVec>, public AnyVec {
     public:
         using ValueType = float;
@@ -14,6 +15,7 @@ namespace Impl {
         }
 
         NonOwningVec(NonOwningVec&& other) = default;
+
         NonOwningVec(const NonOwningVec& other) = default;
 
         int64_t size() const {

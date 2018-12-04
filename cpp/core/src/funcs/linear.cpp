@@ -6,7 +6,7 @@
 #include <cassert>
 
 
-FillVec Linear::gradient() const {
+Trans Linear::gradient() const {
     return FillVec(param_, param_.dim());
 }
 

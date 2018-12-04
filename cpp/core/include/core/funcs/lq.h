@@ -48,7 +48,7 @@ public:
 
     DoubleRef valueTo(ConstVecRef x, DoubleRef to) const;
 
-    LqGrad gradient() const {
+    Trans gradient() const {
         return LqGrad(q_, b_);
     }
 private:

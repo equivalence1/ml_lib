@@ -10,6 +10,7 @@ public:
     }
 
     VecOps(VecOps&& other) = default;
+
     VecOps(const VecOps& other) = default;
 
     void set(int64_t idx, double val) {

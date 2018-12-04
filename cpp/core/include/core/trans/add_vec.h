@@ -12,9 +12,14 @@ public:
 
     }
 
-    VecRef trans(ConstVecRef x, VecRef to) const;
+    VecRef trans(ConstVecRef x, VecRef to) const final;
 
-    IdentityMap gradient() const;
+    Trans gradient() const final;
+
+    VecRef gradientRowTo(ConstVecRef, VecRef to, int64_t) const final {
+        assert(false);
+        return to;
+    }
 
 private:
     ConstVec b_;

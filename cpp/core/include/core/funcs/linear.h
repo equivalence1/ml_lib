@@ -14,7 +14,7 @@ public:
 
     DoubleRef valueTo(ConstVecRef x, DoubleRef to) const;
 
-    FillVec gradient() const;
+    Trans gradient() const;
 private:
     ConstVec param_;
     double bias_;

@@ -15,9 +15,14 @@ public:
 
     }
 
-    VecRef trans(ConstVecRef, VecRef to) const;
+    VecRef trans(ConstVecRef, VecRef to) const final;
 
-    FillConst gradient() const;
+    Trans gradient() const final;
+
+    VecRef gradientRowTo(ConstVecRef, VecRef to, int64_t) const final {
+        assert(false);
+        return to;
+    }
 private:
     double value_ = 0;
 };
@@ -32,9 +37,14 @@ public:
 
     }
 
-    VecRef trans(ConstVecRef, VecRef to) const;
+    VecRef trans(ConstVecRef, VecRef to) const final;
 
-    FillConst gradient() const;
+    Trans gradient() const final;
+
+    VecRef gradientRowTo(ConstVecRef, VecRef to, int64_t) const final {
+        assert(false);
+        return to;
+    }
 
 private:
     ConstVec params_;
