@@ -1,26 +1,21 @@
 #pragma once
 
-#include "fwd.h"
+#include "object.h"
 #include <cstdint>
 #include <variant>
 #include <memory>
 #include <utility>
+#include <functional>
 
-class Vec {
+
+class ConstVecRef;
+
+class ConstVec  {
 public:
 
-    Vec(Vec& other) = default;
+    ConstVec(ConstVec& other) = default;
+    ConstVec(const ConstVec& other) = default;
 
-    Vec(const Vec& other) = default;
-
-    Vec(Vec&& other) = default;
-
-    Vec& operator=(Vec other) {
-        std::swap(data_, other.data_);
-        return *this;
-    }
-
-    void set(int64_t index, double value);
 
     double get(int64_t index) const;
 
@@ -30,34 +25,131 @@ public:
 
     int64_t dim() const;
 
+    const AnyVec* anyVec() const {
+        return ptr_.get();
+    }
+//    ConstVecRef slice(int64_t from, int64_t to) const;
+
+protected:
+
+    template <class T>
+    explicit ConstVec(std::shared_ptr<const T>&& ptr)
+        : ptr_(std::static_pointer_cast<const AnyVec>(ptr)) {
+
+    }
+
+    std::shared_ptr<const AnyVec> ptr_;
+};
+
+class ConstVecRef   {
+public:
+
+    ConstVecRef(const ConstVec& vec)
+    : ptr_(const_cast<ConstVec*>(&vec)) {
+
+    }
+
+    ConstVecRef(ConstVecRef& other) = default;
+    ConstVecRef(ConstVecRef&& other) = default;
+    ConstVecRef(const ConstVecRef& other) = default;
+
+    double get(int64_t index) const {
+        return ptr_->get(index);
+    }
+
+    double operator()(int64_t index) const {
+        return get(index);
+    }
+
+    operator ConstVec&() const {
+        return *ptr_;
+    }
+
+    int64_t dim() const {
+        return ptr_->dim();
+    }
+
+    const AnyVec* anyVec() const {
+        return ptr_->anyVec();//ptr_.get();
+    }
+
+protected:
+
+    ConstVec* ptr() const {
+        return ptr_;
+    }
+private:
+    ConstVec* ptr_;
+};
+
+class VecRef;
+
+
+class Vec : public ConstVec {
+public:
+    explicit Vec(int64_t dim);
+
+    Vec(Vec&& other) = default;
+    Vec(Vec& other) = default;
+    Vec(const Vec& other) = default;
+
+
+    void set(int64_t index, double value);
+
+
 //    Vec slice(int64_t from, int64_t to);
-//    Vec slice(int64_t from, int64_t to) const;
 
-    using Data =  std::variant<ArrayVecPtr,
-                               VecRefPtr,
-                               #if defined(CUDA)
-                               CudaVecPtr,
-                               #endif
-                               SingleElemVecPtr>;
+    AnyVec* anyVec() {
+        return const_cast<AnyVec*>(ptr_.get());
+    }
 
-    Data& data() {
-        return data_;
+    operator ConstVecRef() const {
+        const ConstVec& vec = *this;
+        return ConstVecRef(vec);
     }
-    const Data& data() const {
-        return data_;
-    }
+
 protected:
     template <class T>
-    using Ptr = std::shared_ptr<T>;
+    explicit Vec(std::shared_ptr<T>&& ptr)
+        : ConstVec(std::static_pointer_cast<const AnyVec>(ptr)) {
 
-    template <class T>
-    explicit Vec(Ptr<T>&& data)
-        : data_(std::move(data)) {
+    }
 
+
+    friend class VecFactory;
+};
+
+
+
+class VecRef : public ConstVecRef {
+public:
+    VecRef(Vec& vec)
+    : ConstVecRef(vec) {
+
+    }
+
+    VecRef(VecRef& other) = default;
+    VecRef(const VecRef& other) = default;
+    VecRef(VecRef&& other) = default;
+
+    void set(int64_t index, double value) {
+       asVecRef().set(index, value);
+    }
+
+//    Vec slice(int64_t from, int64_t to);
+
+    AnyVec* anyVec() {
+        return asVecRef().anyVec();
+    }
+
+    operator Vec&() {
+        return asVecRef();
     }
 
 private:
-    Data data_;
 
-    friend class VecFactory;
+    Vec& asVecRef() {
+        ConstVec* parent = ptr();
+        return *reinterpret_cast<Vec*>(parent);
+    }
 };

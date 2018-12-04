@@ -8,34 +8,39 @@ add_library(core
         include/core/trans.h
         include/core/func.h
         include/core/funcs/linear.h
-        include/core/funcs/p_dist_func.h
+        include/core/funcs/lq.h
         include/core/vec_factory.h
         include/core/batch.h
-        include/core/fwd.h
-        include/core/trans/const_trans.h
-        include/core/trans/compose_trans.h
-        include/core/trans/offset_trans.h
-        include/core/trans/exp_trans.h
-        include/core/trans/linear_trans.h
+        include/core/trans/fill.h
+        include/core/trans/pow.h
+        include/core/trans/identity.h
+        include/core/trans/add_vec.h
+        include/core/trans/pointwise_multiply.h
+
+        include/core/trans/compose.h
         include/core/optimizer.h
         include/core/optimizers/gradient_descent.h
-#        include/coree/matrix.h
+        #        include/core/matrix.h
 
-#
+        #
         include/core/vec_tools/fill.h
         include/core/vec_tools/distance.h
-#        include/core/vec_tools/meta_info.h
+        #        include/core/vec_tools/meta_info.h
         include/core/vec_tools/stats.h
         include/core/vec_tools/transform.h
 
+        src/trans.cpp
+        src/func.cpp
         src/vec_impls.h
         src/vec_impls.cpp
         src/vec_ops.h
-        src/vec_ref.cpp
+        src/non_owning_vec.cpp
+        src/placeholder_vec.cpp
         src/array_vec.h
         src/cuda_vec.h
+        src/placeholder_vec.h
         src/fixed_size_vec.h
-        src/vec_ref.h
+        src/non_owning_vec.h
         src/vec.cpp
         src/vec_factory.cpp
         src/array_vec.cpp
@@ -46,21 +51,25 @@ add_library(core
         src/vec_tools/stats.cpp
         src/vec_tools/transform.cpp
         src/funcs/linear.cpp
-        src/funcs/p_dist_func.cpp
-        src/trans/const_trans.cpp
-        src/trans/compose_trans.cpp
-        src/trans/offset_trans.cpp
-        src/trans/exp_trans.cpp
-        src/trans/linear_trans.cpp
+        src/funcs/lq.cpp
+        src/trans/fill.cpp
+        src/trans/compose.cpp
+        src/trans/pow.cpp
+        src/trans/identity.cpp
+        src/trans/add_vec.cpp
+        src/trans/pointwise_multiply.cpp
         src/optimizers/gradient_descent.cpp
-)
+        )
 
 add_library(core_kernels
         src/kernels/fill.cuh
         src/kernels/fill.cu
-)
+
+        src/kernels/empty.h
+        src/kernels/empty.cpp)
 
 maybe_enable_cuda(core_kernels)
+
 
 enable_cxx17(core)
 maybe_enable_cuda(core)
@@ -71,23 +80,23 @@ target_link_libraries(core_kernels util)
 target_include_directories(core INTERFACE
         PUBLIC $<INSTALL_INTERFACE:include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        PRIVATE  ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
+        )
 
 target_include_directories(core_kernels INTERFACE
         PUBLIC $<INSTALL_INTERFACE:include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/kernels>
-)
+        )
 
 install(TARGETS core EXPORT CoreConfig
-        ARCHIVE  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        LIBRARY  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        RUNTIME  DESTINATION ${CMAKE_INSTALL_BINDIR})
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 install(TARGETS core_kernels EXPORT CoreKernelsConfig
-        ARCHIVE  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        LIBRARY  DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        RUNTIME  DESTINATION ${CMAKE_INSTALL_BINDIR})
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(EXPORT CoreConfig DESTINATION share/CoreConfig/cmake)

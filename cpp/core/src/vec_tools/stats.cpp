@@ -6,7 +6,7 @@
 
 namespace VecTools {
 
-    double sum2(const Vec& x) {
+    double sum2(ConstVecRef x) {
         double res = 0;
         for (auto i = 0; i < x.dim(); i++) {
             res += std::pow(x(i), 2);
@@ -14,7 +14,7 @@ namespace VecTools {
         return res;
     }
 
-    double sum(const Vec& x) {
+    double sum(ConstVecRef x) {
         double res = 0;
         for (auto i = 0; i < x.dim(); i++) {
             res += x(i);

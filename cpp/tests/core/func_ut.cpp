@@ -3,7 +3,7 @@
 #include <core/vec_tools/fill.h>
 #include <core/funcs/linear.h>
 #include <util/exception.h>
-#include <core/funcs/p_dist_func.h>
+#include <core/funcs/lq.h>
 
 #include <gtest/gtest.h>
 
@@ -15,24 +15,25 @@
 #define EPS 1e-5
 
 TEST(FuncTests, Linear) {
-    Vec param = VecFactory::create(VecType::Cpu, 3);
+    Vec param = VecFactory::create(VecType::Cpu, 2);
 
-    param.set(0, 1);
-    param.set(1, -2);
-    param.set(2, 3);
+    double bias = 1;
+    param.set(0, -2);
+    param.set(1, 3);
 
 
     Vec x = VecFactory::create(VecType::Cpu, 2);
     x.set(0, 10);
     x.set(1, 20);
 
-    Linear linear(param);
+    Linear linear(param, bias);
+    EXPECT_EQ(linear.dim(), 2);
     double res = linear.value(x);
     EXPECT_EQ(res, 41);
 
 }
 
-TEST(FuncTests, PDistFunc) {
+TEST(FuncTests, Lq) {
     const double p = 2;
 
     Vec x = VecFactory::create(VecType::Cpu, 3);
@@ -45,13 +46,14 @@ TEST(FuncTests, PDistFunc) {
     b.set(1, 5);
     b.set(2, 7);
 
-    PDistFunc d(p, b);
+    Lq d(p, b);
     auto res = d.value(x);
     EXPECT_EQ(res, 5);
 
     Vec c = VecFactory::create(VecType::Cpu, 3);
     auto grad = d.gradient();
-    grad->trans(x, c);
+    grad.trans(x, c);
+
     for (auto i = 0; i < 3; i++) {
         EXPECT_NEAR(c(i), p * std::pow(x(i) - b(i), p - 1), EPS);
     }

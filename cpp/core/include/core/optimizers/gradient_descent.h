@@ -18,7 +18,7 @@ public:
 
     }
 
-    Vec optimize(const Func& f, const Vec& x0) const override;
+    VecRef optimize(FuncC1 f, VecRef cursor) const override;
 
 private:
     double eps_;

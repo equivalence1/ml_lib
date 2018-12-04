@@ -1,4 +1,5 @@
 #pragma once
+#if defined(CUDA)
 #include <util/cuda_wrappers.h>
 
 namespace Cuda {
@@ -9,3 +10,5 @@ namespace Cuda {
 
     }
 }
+
+#endif

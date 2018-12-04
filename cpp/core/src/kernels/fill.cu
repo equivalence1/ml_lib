@@ -1,5 +1,5 @@
 #include "fill.cuh"
-
+#if defined(CUDA)
 namespace Cuda {
     namespace Kernel {
 
@@ -33,3 +33,4 @@ namespace Cuda {
     }
 
 }
+#endif

@@ -3,30 +3,34 @@
 #include <cstdint>
 #include <array>
 #include <cassert>
+#include <core/vec.h>
 
-class SingleElemVec{
-public:
-    static const int64_t Size = 1;
+namespace Impl {
 
-    SingleElemVec() {
-        data_.fill(0);
-    }
-    SingleElemVec(SingleElemVec&& other) = default;
-    SingleElemVec(const SingleElemVec& other) = default;
+    class SingleElemVec : public AnyVec {
+    public:
+        static const int64_t Size = 1;
 
-    void set(int64_t idx, double val) {
-        assert(idx < (int64_t)Size);
-        data_[idx] = val;
-    }
+        SingleElemVec() {
+            data_.fill(0);
+        }
+        SingleElemVec(SingleElemVec&& other) = default;
+        SingleElemVec(const SingleElemVec& other) = default;
 
-    double get(int64_t idx)  const {
-        assert(idx < (int64_t)Size);
-        return data_[idx];
-    }
+        void set(int64_t idx, double val) {
+            assert(idx < (int64_t) Size);
+            data_[idx] = val;
+        }
 
-    constexpr int64_t dim() const {
-        return static_cast<int64_t>(Size);
-    }
-private:
-    std::array<double, Size> data_;
-};
+        double get(int64_t idx) const {
+            assert(idx < (int64_t) Size);
+            return data_[idx];
+        }
+
+        constexpr int64_t dim() const {
+            return static_cast<int64_t>(Size);
+        }
+    private:
+        std::array<double, Size> data_;
+    };
+}

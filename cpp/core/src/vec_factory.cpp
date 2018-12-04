@@ -1,11 +1,13 @@
 #include "fixed_size_vec.h"
 #include "array_vec.h"
-#include "vec_ref.h"
+#include "non_owning_vec.h"
 #include "cuda_vec.h"
 
 #include <core/vec_factory.h>
 #include <core/vec.h>
 #include <util/exception.h>
+
+using namespace Impl;
 
 Vec VecFactory::create(VecType type, int64_t dim) {
     switch (type) {
@@ -27,5 +29,5 @@ Vec VecFactory::create(VecType type, int64_t dim) {
 }
 
 Vec VecFactory::createRef(float* ptr, int64_t dim) {
-    return Vec(std::make_shared<VecRef>(ptr, dim));
+    return Vec(std::make_shared<NonOwningVec>(ptr, dim));
 }

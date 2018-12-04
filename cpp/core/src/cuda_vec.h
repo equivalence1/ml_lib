@@ -4,47 +4,49 @@
 #include <vector>
 #include <memory>
 #include <cassert>
+#include <core/vec.h>
 #include <util/cuda_wrappers.h>
 
 #if defined(CUDA)
 
-class CudaVec  {
-public:
-    using Storage = Cuda::Data<float>;
+namespace Impl {
 
-    explicit CudaVec(int64_t size)
-    : data_(std::make_shared<Storage>(size))
-    , offset_(0) {
-    }
+    class CudaVec : public AnyVec {
+    public:
+        using Storage = Cuda::Data<float>;
 
-    CudaVec(CudaVec&& other) = default;
-    CudaVec(const CudaVec& other) = default;
+        explicit CudaVec(int64_t size)
+            : data_(std::make_shared<Storage>(size))
+              , offset_(0) {
+        }
 
-    CudaVec(std::shared_ptr<Storage> ptr, int64_t offset)
-    : data_(std::move(ptr))
-    , offset_(offset) {
+        CudaVec(CudaVec&& other) = default;
+        CudaVec(const CudaVec& other) = default;
 
-    }
+        CudaVec(std::shared_ptr<Storage> ptr, int64_t offset)
+            : data_(std::move(ptr))
+              , offset_(offset) {
 
+        }
 
-    int64_t dim() const {
-        return data_->size() - offset_;
-    }
+        int64_t dim() const {
+            return data_->size() - offset_;
+        }
 
-    float* data() const {
-        return data_->data();
-    }
+        float* data() const {
+            return data_->data();
+        }
 
-    float* data() {
-        return data_->data();
-    }
+        float* data() {
+            return data_->data();
+        }
 
-private:
-    std::shared_ptr<Storage> data_;
-    int64_t offset_;
-};
+    private:
+        std::shared_ptr<Storage> data_;
+        int64_t offset_;
+    };
 
-
+}
 
 #endif
 

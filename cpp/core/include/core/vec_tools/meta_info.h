@@ -2,8 +2,8 @@
 
 namespace VecTools {
 
-    int64_t hashCode(const Vec& other);
+    int64_t hashCode(ConstVecRef other);
 
-    bool equals(const Vec& other);
+    bool equals(ConstVecRef other);
 
 }

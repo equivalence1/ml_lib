@@ -2,26 +2,26 @@
 #include <core/optimizers/gradient_descent.h>
 #include <core/vec_tools/fill.h>
 #include <core/vec_tools/distance.h>
-#include <core/funcs/p_dist_func.h>
+#include <core/funcs/lq.h>
 
 #include <gtest/gtest.h>
 
 TEST(Optimizer, GradientDescentTest) {
     const int N = 10;
-    const double P = 2;
+    const double q = 2;
     const double EPS = 0.01;
 
     GradientDescent gd(EPS);
 
-    auto a = VecFactory::create(VecType::Cpu, N);
-    VecTools::fill(1, a);
+    auto cursor = VecFactory::create(VecType::Cpu, N);
+    VecTools::fill(1, cursor);
 
     auto b = VecFactory::create(VecType::Cpu, N);
     VecTools::fill(2, b);
 
-    auto distFunc = PDistFunc(P, b);
+    Lq distFunc(q, b);
 
-    Vec res = gd.optimize(distFunc, a);
+    gd.optimize(distFunc, cursor);
 
-    EXPECT_LE(VecTools::distanceP(P, res, b), EPS);
+    EXPECT_LE(VecTools::distanceP(q, cursor, b), EPS);
 }

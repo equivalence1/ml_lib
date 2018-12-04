@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION "3.1.0")
 include(cmake/custom_functions.cmake)
 project(root)
 
-
 option(USE_CUDA  "Build with CUDA")
 
 include(GNUInstallDirs)

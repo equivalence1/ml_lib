@@ -38,7 +38,7 @@ public:
 
   // super ugly, leads to leaks, but for now allows to check SGD
   DataSet RandomBatch(uint64_t batch_size) {
-    batch_size = std::min(batch_size, (size_t)x_->Nrows());
+    batch_size = std::min(batch_size, x_->Nrows());
 
     std::random_device rd;
     std::mt19937 rng(rd());

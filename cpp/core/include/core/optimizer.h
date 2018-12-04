@@ -4,10 +4,9 @@
 #include "vec_factory.h"
 #include "func.h"
 
-class Optimizer {
-    virtual Vec optimize(const Func& f, const Vec& x0) const = 0;
 
-    virtual Vec optimize(const Func& f) const {
-        return optimize(f, VecFactory::create(VecType::Cpu, f.xdim()));
-    }
+class Optimizer {
+
+    virtual VecRef optimize(FuncC1 f, VecRef x0) const = 0;
+
 };

@@ -27,6 +27,7 @@ TEST(OpsTest, Fill) {
 
 
 
+#if defined(CUDA)
 TEST(OpsTest, FillGpu) {
     const auto n = 10000;
     Vec vec = VecFactory::create(VecType::Gpu, n);
@@ -37,6 +38,7 @@ TEST(OpsTest, FillGpu) {
         EXPECT_EQ(vec(i), 1);
     }
 }
+#endif
 
 TEST(OpsTest, DotProduct) {
     Vec a = VecFactory::create(VecType::Cpu, 10);
@@ -79,7 +81,7 @@ TEST(OpsTest, Exp) {
     }
 
     Vec b = VecFactory::create(VecType::Cpu, N);
-    VecTools::exp(exp, a, b);
+    VecTools::pow(exp, a, b);
 
     for (auto i = 0; i < N; i++) {
         EXPECT_NEAR(b(i), std::pow(i, exp), EPS);
@@ -99,7 +101,7 @@ TEST(OpsTest, Mul) {
     VecTools::mul(a, b);
 
     for (auto i = 0; i < N; i++) {
-        EXPECT_NEAR(a(i), i * i, EPS);
+        EXPECT_NEAR(b(i), i * i, EPS);
     }
 }
 
@@ -185,12 +187,13 @@ TEST(TransformTest, Copy) {
     const int N = 10;
 
     Vec a = VecFactory::create(VecType::Cpu, N);
+    Vec b = VecFactory::create(VecType::Cpu, N);
     for (auto i = 0; i < N; i++) {
         a.set(i, i);
     }
 
-    auto x = VecTools::copy(a);
+    VecTools::copyTo(a, b);
     for (auto i = 0; i < N; i++) {
-        EXPECT_EQ(x(i), a(i));
+        EXPECT_EQ(a(i), b(i));
     }
 }

@@ -1,17 +1,22 @@
 #pragma once
 
 #include <core/func.h>
+#include <core/trans/fill.h>
 
-class Linear : public Func {
+class Linear : public FuncC1Stub<Linear> {
 public:
-    Linear(const Vec& param)
-    : param_(param) {
+    Linear(ConstVecRef param, double bias)
+    :FuncC1Stub<Linear>(param.dim())
+    , param_(param)
+    , bias_(bias){
 
     }
-    int64_t xdim() const override;
-    double value(const Vec& x) const override;
-    virtual ObjectPtr<Trans> gradient() const override;
+
+    DoubleRef valueTo(ConstVecRef x, DoubleRef to) const;
+
+    FillVec gradient() const;
 private:
-    Vec param_;
+    ConstVec param_;
+    double bias_;
 
 };
