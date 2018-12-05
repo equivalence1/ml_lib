@@ -20,6 +20,7 @@ add_library(core
         include/core/trans/compose.h
         include/core/optimizer.h
         include/core/optimizers/gradient_descent.h
+        include/core/index_transformation.h
         #        include/core/matrix.h
 
         #
@@ -37,6 +38,7 @@ add_library(core
         src/non_owning_vec.cpp
         src/placeholder_vec.cpp
         src/array_vec.h
+        src/subvec.h
         src/cuda_vec.h
         src/placeholder_vec.h
         src/fixed_size_vec.h

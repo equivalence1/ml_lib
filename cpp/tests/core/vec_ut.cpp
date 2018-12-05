@@ -27,6 +27,37 @@ TEST(OpsTest, Fill) {
 
 
 
+TEST(OpsTest, SliceTest) {
+    Vec vec = VecFactory::create(VecType::Cpu, 100);
+
+    EXPECT_EQ(vec.dim(), 100);
+    VecTools::fill(1, vec);
+    for (int64_t i = 0; i < 100; ++i) {
+        EXPECT_EQ(vec(i), 1);
+    }
+
+    auto slice1 = vec.slice(10, 10);
+    VecTools::fill(2, slice1);
+
+    EXPECT_EQ(vec(0), 1);
+    EXPECT_EQ(slice1.dim(), 10);
+
+    for (int64_t i = 10; i < 20; ++i) {
+        EXPECT_EQ(vec(i), 2);
+        EXPECT_EQ(slice1(i - 10), 2);
+    }
+
+    auto slice2 = slice1.slice(1, 5);
+    EXPECT_EQ(slice2.dim(), 5);
+    VecTools::fill(3, slice1);
+
+    for (int64_t i = 11; i < 16; ++i) {
+        EXPECT_EQ(vec(i), 3);
+        EXPECT_EQ(slice2(i - 11), 3);
+    }
+}
+
+
 #if defined(CUDA)
 TEST(OpsTest, FillGpu) {
     const auto n = 10000;

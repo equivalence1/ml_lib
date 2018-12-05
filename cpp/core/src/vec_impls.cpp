@@ -7,39 +7,32 @@
 
 #include <optional>
 #include <util/exception.h>
-#include <iostream>
 
 using namespace Impl;
 
+
 VecVariant Impl::DynamicDispatch(AnyVec* vec) {
-    if (auto ptr = dynamic_cast<ArrayVec*>(vec)) {
-        return ptr;
-    } else if (auto ptr = dynamic_cast<SingleElemVec*>(vec)) {
-        return ptr;
-    } else if (auto ptr = dynamic_cast<NonOwningVec*>(vec)) {
-        return ptr;
+    const auto typeId = vec->id();
+    if (typeId == AnyVec::typeIndex<ArrayVec>()) {
+        return reinterpret_cast<ArrayVec*>(vec);
+    } else if (typeId == AnyVec::typeIndex<SingleElemVec>()) {
+        return reinterpret_cast<SingleElemVec*>(vec);
+    } else if (typeId == AnyVec::typeIndex<NonOwningVec>()) {
+        return reinterpret_cast<NonOwningVec*>(vec);
+    } else if (typeId == AnyVec::typeIndex<SubVec>()) {
+        return reinterpret_cast<SubVec*>(vec);
     } else {
         #if defined(CUDA)
-        if (auto ptr = dynamic_cast<CudaVec*>(vec)) {
-            return ptr;
+        if (typeId ==  AnyVec::typeIndex<CudaVec>()) {
+            return reinterpret_cast<CudaVecc*>(vec);
         }
         #endif
-        throw Exception() << "unknown vec type";
+        throw Exception() << "unknown vec type " << typeid(vec).name();
     }
 }
 ConstVecVariant Impl::DynamicDispatch(const AnyVec* vec) {
-    if (auto ptr = dynamic_cast<const ArrayVec*>(vec)) {
-        return ptr;
-    } else if (auto ptr = dynamic_cast<const SingleElemVec*>(vec)) {
-        return ptr;
-    } else if (auto ptr = dynamic_cast<const NonOwningVec*>(vec)) {
-        return ptr;
-    } else {
-        #if defined(CUDA)
-        if (auto ptr = dynamic_cast<const CudaVec*>(vec)) {
-            return ptr;
-        }
-        #endif
-        throw Exception() << "unknown vec type";
-    }
+    VecVariant variant = DynamicDispatch(const_cast<AnyVec*>(vec));
+    return std::visit([](auto&& ptr) -> ConstVecVariant {
+        return ConstVecVariant(ptr);
+    }, variant);
 }

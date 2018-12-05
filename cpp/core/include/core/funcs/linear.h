@@ -16,7 +16,7 @@ public:
 
     Trans gradient() const;
 private:
-    ConstVec param_;
+    Vec param_;
     double bias_;
 
 };

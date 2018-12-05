@@ -32,7 +32,7 @@ public:
 
     private:
         double q_;
-        ConstVec b_;
+        Vec b_;
     };
 
 public:
@@ -53,5 +53,5 @@ public:
     }
 private:
     double q_;
-    ConstVec b_;
+    Vec b_;
 };

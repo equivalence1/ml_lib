@@ -22,5 +22,5 @@ public:
     }
 
 private:
-    ConstVec b_;
+    Vec b_;
 };

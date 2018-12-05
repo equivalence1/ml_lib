@@ -21,27 +21,22 @@ double VecTools::dotProduct(ConstVecRef left, ConstVecRef right) {
 }
 
 VecRef VecTools::fill(double alpha, VecRef x) {
-    for (int64_t i = 0; i < x.dim(); ++i) {
-        x.set(i, alpha);
-    }
-    return x;
+    return std::visit([&](auto&& impl) -> VecRef {
+        using T = std::decay_t<decltype(impl)>;
 
-//    return std::visit([&](auto&& impl) -> VecRef {
-//        using T = std::decay_t<decltype(impl)>;
-//
-//        #if defined(CUDA)
-//        if constexpr (std::is_same_v<T, CudaVec*>) {
-//            const float val = alpha;
-//            Cuda::Kernel::FillBuffer<float>(impl->data(), val, impl->dim(), 0);
-//            return x;
-//        }
-//        #endif
-//
-//        for (int64_t i = 0; i < x.dim(); ++i) {
-//            x.set(i, alpha);
-//        }
-//        return x;
-//    }, DynamicDispatch(x.anyVec()));
+        #if defined(CUDA)
+        if constexpr (std::is_same_v<T, CudaVec*>) {
+            const float val = alpha;
+            Cuda::Kernel::FillBuffer<float>(impl->data(), val, impl->dim(), 0);
+            return x;
+        }
+        #endif
+
+        for (int64_t i = 0; i < x.dim(); ++i) {
+            x.set(i, alpha);
+        }
+        return x;
+    }, DynamicDispatch(x.anyVec()));
 }
 
 VecRef VecTools::makeSequence(double from, double step, VecRef x) {

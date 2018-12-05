@@ -8,14 +8,23 @@
 #include <functional>
 
 
-class ConstVecRef;
-
-class ConstVec  {
+class Vec {
 public:
+    explicit Vec(int64_t dim);
 
-    ConstVec(ConstVec& other) = default;
-    ConstVec(const ConstVec& other) = default;
+    Vec(Vec&& other) = default;
+    Vec(Vec& other) = default;
 
+    Vec(const Vec& other)
+    : impl_(other.impl_)
+    , immutable_(true) {
+
+    }
+
+    void set(int64_t index, double value);
+
+    Vec slice(int64_t from, int64_t size);
+    Vec slice(int64_t from, int64_t size) const;
 
     double get(int64_t index) const;
 
@@ -26,26 +35,35 @@ public:
     int64_t dim() const;
 
     const AnyVec* anyVec() const {
-        return ptr_.get();
+        return impl_.get();
     }
-//    ConstVecRef slice(int64_t from, int64_t to) const;
+
+    AnyVec* anyVec() {
+        assert(!immutable_);
+        return impl_.get();
+    }
 
 protected:
 
     template <class T>
-    explicit ConstVec(std::shared_ptr<const T>&& ptr)
-        : ptr_(std::static_pointer_cast<const AnyVec>(ptr)) {
+    explicit Vec(std::shared_ptr<T>&& ptr, bool immutable=true)
+        : impl_(std::static_pointer_cast<AnyVec>(ptr))
+        , immutable_(false) {
 
     }
 
-    std::shared_ptr<const AnyVec> ptr_;
+    std::shared_ptr<AnyVec> impl_;
+    bool immutable_ = true;
+
+    friend class VecFactory;
 };
+
+
 
 class ConstVecRef   {
 public:
-
-    ConstVecRef(const ConstVec& vec)
-    : ptr_(const_cast<ConstVec*>(&vec)) {
+    ConstVecRef(const Vec& vec)
+        : ptr_(&vec) {
 
     }
 
@@ -61,7 +79,7 @@ public:
         return get(index);
     }
 
-    operator ConstVec&() const {
+    operator const Vec&() const {
         return *ptr_;
     }
 
@@ -70,55 +88,19 @@ public:
     }
 
     const AnyVec* anyVec() const {
-        return ptr_->anyVec();//ptr_.get();
+        return ptr_->anyVec();
     }
+
+    Vec slice(int64_t from, int64_t to) const;
 
 protected:
 
-    ConstVec* ptr() const {
+    const Vec* ptr() const {
         return ptr_;
     }
 private:
-    ConstVec* ptr_;
+    const Vec* ptr_;
 };
-
-class VecRef;
-
-
-class Vec : public ConstVec {
-public:
-    explicit Vec(int64_t dim);
-
-    Vec(Vec&& other) = default;
-    Vec(Vec& other) = default;
-    Vec(const Vec& other) = default;
-
-
-    void set(int64_t index, double value);
-
-
-//    Vec slice(int64_t from, int64_t to);
-
-    AnyVec* anyVec() {
-        return const_cast<AnyVec*>(ptr_.get());
-    }
-
-    operator ConstVecRef() const {
-        const ConstVec& vec = *this;
-        return ConstVecRef(vec);
-    }
-
-protected:
-    template <class T>
-    explicit Vec(std::shared_ptr<T>&& ptr)
-        : ConstVec(std::static_pointer_cast<const AnyVec>(ptr)) {
-
-    }
-
-
-    friend class VecFactory;
-};
-
 
 
 class VecRef : public ConstVecRef {
@@ -136,7 +118,7 @@ public:
        asVecRef().set(index, value);
     }
 
-//    Vec slice(int64_t from, int64_t to);
+    Vec slice(int64_t from, int64_t to);
 
     AnyVec* anyVec() {
         return asVecRef().anyVec();
@@ -149,7 +131,7 @@ public:
 private:
 
     Vec& asVecRef() {
-        ConstVec* parent = ptr();
-        return *reinterpret_cast<Vec*>(parent);
+        const Vec* parent = ptr();
+        return *const_cast<Vec*>(parent);
     }
 };
