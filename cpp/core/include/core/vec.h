@@ -1,6 +1,8 @@
 #pragma once
 
 #include "object.h"
+
+#include <cassert>
 #include <cstdint>
 #include <variant>
 #include <memory>
