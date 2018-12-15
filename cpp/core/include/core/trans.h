@@ -234,7 +234,6 @@ public:
 };
 
 
-
 template <class Impl>
 class MapC1Stub : public TransC1Stub<Impl> {
 public:

@@ -24,7 +24,7 @@ VecVariant Impl::DynamicDispatch(AnyVec* vec) {
     } else {
         #if defined(CUDA)
         if (typeId ==  AnyVec::typeIndex<CudaVec>()) {
-            return reinterpret_cast<CudaVecc*>(vec);
+            return reinterpret_cast<CudaVec*>(vec);
         }
         #endif
         throw Exception() << "unknown vec type " << typeid(vec).name();
