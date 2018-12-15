@@ -22,9 +22,9 @@ public:
 
     virtual int64_t ydim() const = 0;
 
-    virtual VecRef trans(ConstVecRef x, VecRef to) const = 0;
+    virtual Vec trans(const Vec& x, Vec to) const = 0;
 
-//    virtual Batch<VecRef> trans(Batch<ConstVec> x, Batch<VecRef> to) const = 0;
+//    virtual Batch<Vec> trans(Batch<ConstVec> x, Batch<Vec> to) const = 0;
 };
 
 
@@ -39,11 +39,11 @@ public:
         return impl_->ydim();
     }
 
-    VecRef trans(ConstVecRef x, VecRef to) const final {
+    Vec trans(const Vec& x, Vec to) const final {
         return impl_->trans(x, to);
     }
 
-//    ConstVecRef trans(const Batch<Vec>& x, Batch<Vec>& to) const {
+//    const Vec& trans(const Batch<Vec>& x, Batch<Vec>& to) const {
 //        return Impl_->trans(x, to);
 //    }
 
@@ -88,7 +88,7 @@ namespace Detail {
             return Instance_.ydim();
         }
 
-        VecRef trans(ConstVecRef x, VecRef to) const final {
+        Vec trans(const Vec& x, Vec to) const final {
             Instance_.trans(x, to);
             return to;
         }
@@ -113,9 +113,9 @@ inline Trans CreateTrans(Args&&... args) {
 
 class AnyTransC1 : public virtual AnyTrans {
 public:
-    virtual VecRef gradientTo(ConstVecRef x, VecRef to) const = 0;
+    virtual Vec gradientTo(const Vec& x, Vec to) const = 0;
 
-    virtual VecRef gradientRowTo(ConstVecRef x, VecRef to, int64_t index) const = 0;
+    virtual Vec gradientRowTo(const Vec& x, Vec to, int64_t index) const = 0;
 
     virtual Trans gradient() const = 0;
 };
@@ -137,16 +137,16 @@ public:
         return impl_->ydim();
     }
 
-    VecRef trans(ConstVecRef x, VecRef to) const final {
+    Vec trans(const Vec& x, Vec to) const final {
         return impl_->trans(x, to);
     }
     //TOOD(noxoomo): make to Mx (Mx will be casted to to)
     //this one to func
-    VecRef gradientTo(ConstVecRef x, VecRef to) const final {
+    Vec gradientTo(const Vec& x, Vec to) const final {
         return impl_->gradientTo(x, to);
     }
 
-    VecRef gradientRowTo(ConstVecRef x, VecRef to, int64_t index) const final {
+    Vec gradientRowTo(const Vec& x, Vec to, int64_t index) const final {
         impl_->gradientRowTo(x, to, index);
         return to;
     }
@@ -164,9 +164,7 @@ protected:
     }
 
 private:
-
     ObjectPtr<AnyTransC1> impl_;
-
 };
 
 
@@ -225,7 +223,7 @@ public:
         return CreateTransC1<Impl>(*static_cast<const Impl*>(this));
     }
 
-    VecRef gradientTo(ConstVecRef x, VecRef to) const final {
+    Vec gradientTo(const Vec& x, Vec to) const final {
         return static_cast<const Impl*>(this)->gradient().trans(x, to);
     }
 

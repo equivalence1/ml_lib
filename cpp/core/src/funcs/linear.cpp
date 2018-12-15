@@ -10,7 +10,7 @@ Trans Linear::gradient() const {
     return FillVec(param_, param_.dim());
 }
 
-DoubleRef Linear::valueTo(ConstVecRef x, DoubleRef to) const {
+DoubleRef Linear::valueTo(const Vec& x, DoubleRef to) const {
     assert(dim() == x.dim());
     to = bias_;
 

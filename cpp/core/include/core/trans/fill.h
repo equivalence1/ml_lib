@@ -15,11 +15,11 @@ public:
 
     }
 
-    VecRef trans(ConstVecRef, VecRef to) const final;
+    Vec trans(const Vec&, Vec to) const final;
 
     Trans gradient() const final;
 
-    VecRef gradientRowTo(ConstVecRef, VecRef to, int64_t) const final {
+    Vec gradientRowTo(const Vec&, Vec to, int64_t) const final {
         assert(false);
         return to;
     }
@@ -30,18 +30,18 @@ private:
 class FillVec : public TransC1Stub<FillVec> {
 public:
     FillVec(
-        ConstVecRef params,
+        const Vec& params,
         int64_t xdim)
         : TransC1Stub<FillVec>(xdim, params.dim())
           , params_(params) {
 
     }
 
-    VecRef trans(ConstVecRef, VecRef to) const final;
+    Vec trans(const Vec&, Vec to) const final;
 
     Trans gradient() const final;
 
-    VecRef gradientRowTo(ConstVecRef, VecRef to, int64_t) const final {
+    Vec gradientRowTo(const Vec&, Vec to, int64_t) const final {
         assert(false);
         return to;
     }

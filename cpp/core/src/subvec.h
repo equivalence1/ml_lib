@@ -12,9 +12,9 @@ namespace Impl {
     class SubVec : public AnyVec {
     public:
 
-        explicit SubVec(Vec vec, IndexTransformation trans)
-            : data_(vec)
-            , indexTrans_(trans) {
+        explicit SubVec(Vec&& vec, IndexTransformation&& trans)
+            : data_(std::move(vec))
+            , indexTrans_(std::move(trans)) {
 
         }
 

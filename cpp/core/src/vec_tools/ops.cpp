@@ -10,7 +10,7 @@
 
 using namespace Impl;
 
-double VecTools::dotProduct(ConstVecRef left, ConstVecRef right) {
+double VecTools::dotProduct(const Vec& left, const Vec& right) {
     assert(left.dim() == right.dim());
     double val = 0;
 
@@ -20,8 +20,8 @@ double VecTools::dotProduct(ConstVecRef left, ConstVecRef right) {
     return val;
 }
 
-VecRef VecTools::fill(double alpha, VecRef x) {
-    return std::visit([&](auto&& impl) -> VecRef {
+Vec VecTools::fill(double alpha, Vec x) {
+    return std::visit([&](auto&& impl) -> Vec {
         using T = std::decay_t<decltype(impl)>;
 
         #if defined(CUDA)
@@ -39,7 +39,7 @@ VecRef VecTools::fill(double alpha, VecRef x) {
     }, DynamicDispatch(x.anyVec()));
 }
 
-VecRef VecTools::makeSequence(double from, double step, VecRef x) {
+Vec VecTools::makeSequence(double from, double step, Vec x) {
     double cursor = from;
     for (int64_t i = 0; i < x.dim(); ++i) {
         x.set(i, cursor);
@@ -48,7 +48,7 @@ VecRef VecTools::makeSequence(double from, double step, VecRef x) {
     return x;
 }
 
-VecRef VecTools::subtract(VecRef x, ConstVecRef y) {
+Vec VecTools::subtract(Vec x, const Vec& y) {
     assert(x.dim() == y.dim());
     for (auto i = 0; i < x.dim(); i++) {
         x.set(i, x(i) - y(i));
@@ -56,14 +56,14 @@ VecRef VecTools::subtract(VecRef x, ConstVecRef y) {
     return x;
 }
 
-VecRef VecTools::pow(double p, ConstVecRef from, VecRef to) {
+Vec VecTools::pow(double p, const Vec& from, Vec to) {
     for (auto i = 0; i < from.dim(); i++) {
         to.set(i, std::pow(from(i), p));
     }
     return to;
 }
 
-VecRef VecTools::mul(ConstVecRef x, VecRef y) {
+Vec VecTools::mul(const Vec& x, Vec y) {
     assert(x.dim() == y.dim());
     for (auto i = 0; i < x.dim(); i++) {
         y.set(i, x(i) * y(i));
@@ -71,13 +71,13 @@ VecRef VecTools::mul(ConstVecRef x, VecRef y) {
     return y;
 }
 
-VecRef VecTools::mul(double alpha, VecRef x) {
+Vec VecTools::mul(double alpha, Vec x) {
     for (auto i = 0; i < x.dim(); i++) {
         x.set(i, alpha * x(i));
     }
     return x;
 }
-VecRef VecTools::pow(double p, VecRef x) {
+Vec VecTools::pow(double p, Vec x) {
     for (auto i = 0; i < x.dim(); i++) {
         x.set(i, std::pow(x(i), p));
     }
@@ -89,7 +89,7 @@ T sgn(const T& val) {
     return val > 0 ? 1 : val < 0 ? -1 : 0;
 }
 
-VecRef VecTools::sign(ConstVecRef x, VecRef to) {
+Vec VecTools::sign(const Vec& x, Vec to) {
     assert(x.dim() == to.dim());
 
     for (int64_t i = 0; i < x.dim(); ++i) {
@@ -98,7 +98,7 @@ VecRef VecTools::sign(ConstVecRef x, VecRef to) {
     return to;
 }
 
-VecRef VecTools::abs(VecRef x) {
+Vec VecTools::abs(Vec x) {
     for (int64_t i = 0; i < x.dim(); ++i) {
         x.set(i, std::abs(x.get(i)));
     }

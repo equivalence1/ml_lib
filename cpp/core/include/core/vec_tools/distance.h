@@ -4,14 +4,14 @@
 
 namespace VecTools {
 
-    double distanceP(double p, ConstVecRef left, ConstVecRef right);
+    double distanceP(double p, const Vec& left, const Vec& right);
 
-    double distanceL2(ConstVecRef left, ConstVecRef right);
+    double distanceL2(const Vec& left, const Vec& right);
 
-    double distanceL1(ConstVecRef left, ConstVecRef right);
+    double distanceL1(const Vec& left, const Vec& right);
 
-    double normP(double p, ConstVecRef v);
+    double normP(double p, const Vec& v);
 
-    double norm(ConstVecRef v);
+    double norm(const Vec& v);
 
 }

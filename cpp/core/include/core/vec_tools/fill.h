@@ -4,37 +4,37 @@
 
 namespace VecTools {
 
-    double dotProduct(ConstVecRef left, ConstVecRef right);
+    double dotProduct(const Vec& left, const Vec& right);
 
-    VecRef fill(double alpha, VecRef x);
+    Vec fill(double alpha, Vec x);
 
-    VecRef makeSequence(double from, double step, VecRef x);
-//    VecRefscale(VecRefx, double alpha);
+    Vec makeSequence(double from, double step, Vec x);
+//    Vecscale(Vecx, double alpha);
 //
-//    VecRefadd(VecRefx, ConstVecRef y);
+//    Vecadd(Vecx, const Vec& y);
 //
-//    Vec sum(ConstVecRef x, ConstVecRef y);
+//    Vec sum(const Vec& x, const Vec& y);
 
-    VecRef subtract(VecRef x, ConstVecRef y);
+    Vec subtract(Vec x, const Vec& y);
 
-//    Vec sub(ConstVecRef x, ConstVecRef y);
+//    Vec sub(const Vec& x, const Vec& y);
 //
-//    VecRefadjust(ConstVecRef x, double alpha);
+//    Vecadjust(const Vec& x, double alpha);
 //
 //
 //
-    VecRef pow(double p, ConstVecRef from, VecRef to);
-    VecRef pow(double p, VecRef x);
+    Vec pow(double p, const Vec& from, Vec to);
+    Vec pow(double p, Vec x);
 
-    VecRef sign(ConstVecRef x, VecRef to);
-    VecRef abs(VecRef to);
+    Vec sign(const Vec& x, Vec to);
+    Vec abs(Vec to);
 
-    VecRef mul(ConstVecRef x, VecRef y);
-    VecRef mul(double alpha, VecRef x);
+    Vec mul(const Vec& x, Vec y);
+    Vec mul(double alpha, Vec x);
 
 //
-//    VecReflog(VecRefx);
+//    Veclog(Vecx);
 //
-//    VecRefabs(VecRefx);
+//    Vecabs(Vecx);
 
 }

@@ -4,8 +4,8 @@
 
 namespace VecTools {
 
-    Vec copy(ConstVecRef other);
+    Vec copy(const Vec& other);
 
-    VecRef copyTo(ConstVecRef from, VecRef to);
+    Vec copyTo(const Vec& from, Vec to);
 
 }

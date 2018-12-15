@@ -22,7 +22,7 @@ public:
         assert(f.xdim() == g.ydim());
     }
 
-    VecRef trans(ConstVecRef x, VecRef to) const {
+    Vec trans(const Vec& x, Vec to) const {
         Vec tmp(to.dim());
         g_.trans(x, tmp);
         f_.trans(tmp, to);
@@ -48,7 +48,7 @@ public:
         assert(f.xdim() == g.ydim());
     }
 
-    VecRef trans(ConstVecRef x, VecRef to) const {
+    Vec trans(const Vec& x, Vec to) const {
         Vec tmp(to.dim());
         g_.trans(x, tmp);
         f_.trans(tmp, to);

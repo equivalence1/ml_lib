@@ -65,23 +65,15 @@ Vec::Vec(int64_t dim)
 
 
 Vec Vec::slice(int64_t from, int64_t size) {
-    auto subvec = std::make_shared<SubVec>(*this,
+    auto subvec = std::make_shared<SubVec>(Vec(*this),
                                            SliceIndexTransformation(from, size));
     return Vec(std::move(subvec));
 }
 
 
 Vec Vec::slice(int64_t from, int64_t size) const {
-    auto subvec = std::make_shared<SubVec>(*this,
+    auto subvec = std::make_shared<SubVec>(Vec(*this),
                                            SliceIndexTransformation(from, size));
     return Vec(std::move(subvec), true);
 }
 
-
-Vec VecRef::slice(int64_t from, int64_t size) {
-    return asVecRef().slice(from, size);
-}
-Vec ConstVecRef::slice(int64_t from, int64_t size) const {
-    return ptr_->slice(from, size);
-
-}

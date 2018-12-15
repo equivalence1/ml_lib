@@ -14,8 +14,6 @@ using DoubleRef = double&;
 using ConstDoubleRef = const double&;
 
 //TODO(noxoomo): batch trans
-
-
 class AnyFunc : public virtual AnyTrans {
 public:
     virtual int64_t dim() const = 0;
@@ -24,19 +22,19 @@ public:
         return 1;
     };
 
-    double value(ConstVecRef x) const {
+    double value(const Vec& x) const {
         Vec val(1);
         trans(x, val);
         return val.get(0);
     }
 
-//    virtual Batch<VecRef> trans(Batch<ConstVec> x, Batch<VecRef> to) const = 0;
+//    virtual Batch<Vec> trans(Batch<ConstVec> x, Batch<Vec> to) const = 0;
 };
 
 class AnyFuncC1 : public virtual AnyFunc, public virtual AnyTransC1 {
 public:
 
-    VecRef gradientRowTo(ConstVecRef x, VecRef to, int64_t index) const final {
+    Vec gradientRowTo(const Vec& x, Vec to, int64_t index) const final {
         assert(index == 0);
         return gradientTo(x, to);
     }
@@ -54,11 +52,11 @@ public:
         return impl_->dim();
     }
 
-    VecRef trans(ConstVecRef x, VecRef to) const final {
+    Vec trans(const Vec& x, Vec to) const final {
         return impl_->trans(x, to);
     }
 
-//    ConstVecRef trans(const Batch<Vec>& x, Batch<Vec>& to) const {
+//    const Vec& trans(const Batch<Vec>& x, Batch<Vec>& to) const {
 //        return impl_->trans(x, to);
 //    }
 
@@ -110,11 +108,11 @@ public:
         return impl_->dim();
     }
 
-    VecRef trans(ConstVecRef x, VecRef to) const final {
+    Vec trans(const Vec& x, Vec to) const final {
         return impl_->trans(x, to);
     }
 
-    VecRef gradientTo(ConstVecRef x, VecRef to) const {
+    Vec gradientTo(const Vec& x, Vec to) const {
         return impl_->gradientTo(x, to);
     }
 
@@ -179,13 +177,13 @@ public:
         return asFunc().ToTrans();
     }
 
-    double value(ConstVecRef x) const {
+    double value(const Vec& x) const {
         double result = 0;
         static_cast<const Impl*>(this)->valueTo(x, result);
         return result;
     }
 
-    VecRef trans(ConstVecRef x, VecRef to) const final {
+    Vec trans(const Vec& x, Vec to) const final {
         static_cast<const Impl*>(this)->trans(x, to);
         return to;
     }
@@ -214,7 +212,7 @@ public:
         return asFuncC1().ToTransC1();
     }
 
-    VecRef gradientTo(ConstVecRef x, VecRef to) const {
+    Vec gradientTo(const Vec& x, Vec to) const {
         return static_cast<const Impl*>(this)->gradient().trans(x, to);
     }
 

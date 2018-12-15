@@ -8,7 +8,7 @@
 #include <memory>
 
 
-VecRef AddVecTrans::trans(ConstVecRef x, VecRef to) const {
+Vec AddVecTrans::trans(const Vec& x, Vec to) const {
     assert(x.dim() == to.dim());
     VecTools::copyTo(x, to);
     VecTools::subtract(to, b_);

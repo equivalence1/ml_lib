@@ -6,17 +6,17 @@
 
 class AddVecTrans: public MapC1Stub<AddVecTrans> {
 public:
-    AddVecTrans(VecRef b)
+    AddVecTrans(const Vec& b)
     : MapC1Stub<AddVecTrans>(b.dim())
     , b_(b) {
 
     }
 
-    VecRef trans(ConstVecRef x, VecRef to) const final;
+    Vec trans(const Vec& x, Vec to) const final;
 
     Trans gradient() const final;
 
-    VecRef gradientRowTo(ConstVecRef, VecRef to, int64_t) const final {
+    Vec gradientRowTo(const Vec&, Vec to, int64_t) const final {
         assert(false);
         return to;
     }

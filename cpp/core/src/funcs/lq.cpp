@@ -11,12 +11,12 @@
 #include <core/vec_tools/transform.h>
 #include <iostream>
 
-DoubleRef Lq::valueTo(ConstVecRef x, DoubleRef to) const {
+DoubleRef Lq::valueTo(const Vec& x, DoubleRef to) const {
     to =  VecTools::distanceP(q_, x, b_);
     return to;
 }
 
-VecRef Lq::LqGrad::trans(ConstVecRef x, VecRef to) const {
+Vec Lq::LqGrad::trans(const Vec& x, Vec to) const {
     // p * sign(x - b) * | x - b | ^ {p - 1}
     VecTools::copyTo(x, to);
     VecTools::subtract(to, b_);

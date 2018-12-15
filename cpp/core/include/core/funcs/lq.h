@@ -21,14 +21,14 @@ public:
     public:
         LqGrad(
             double p,
-            ConstVecRef b)
+            const Vec& b)
             : TransStub<LqGrad>(b.dim(), b.dim())
               , q_(p)
               , b_(b) {
 
         }
 
-        VecRef trans(ConstVecRef x, VecRef to) const;
+        Vec trans(const Vec& x, Vec to) const;
 
     private:
         double q_;
@@ -39,14 +39,14 @@ public:
     Lq(const Lq& other) = default;
 
     Lq(double p,
-       ConstVecRef b)
+       const Vec& b)
         : FuncC1Stub<Lq>(b.dim())
           , q_(p)
           , b_(b) {
 
     }
 
-    DoubleRef valueTo(ConstVecRef x, DoubleRef to) const;
+    DoubleRef valueTo(const Vec& x, DoubleRef to) const;
 
     Trans gradient() const {
         return LqGrad(q_, b_);

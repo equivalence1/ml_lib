@@ -3,6 +3,7 @@
 #include "vec_ops.h"
 #include <core/vec.h>
 #include <vector>
+
 namespace Impl {
 
     class NonOwningVec : public VecOps<float, NonOwningVec>, public AnyVec {

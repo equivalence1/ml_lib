@@ -7,7 +7,7 @@
 
 
 
-VecRef PointwiseMultiply::trans(ConstVecRef x, VecRef to) const {
+Vec PointwiseMultiply::trans(const Vec& x, Vec to) const {
     VecTools::copyTo(x, to);
     VecTools::mul(param_, to);
     return to;

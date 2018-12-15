@@ -4,8 +4,8 @@
 
 namespace VecTools {
 
-    double sum2(ConstVecRef x);
+    double sum2(const Vec& x);
 
-    double sum(ConstVecRef x);
+    double sum(const Vec& x);
 
 }

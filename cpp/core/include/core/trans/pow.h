@@ -14,11 +14,11 @@ public:
 
     }
 
-    VecRef trans(ConstVecRef x, VecRef to) const final;
+    Vec trans(const Vec& x, Vec to) const final;
 
     Trans gradient() const final;
 
-    VecRef gradientRowTo(ConstVecRef, VecRef to, int64_t) const final {
+    Vec gradientRowTo(const Vec&, Vec to, int64_t) const final {
         assert(false);
         return to;
     }

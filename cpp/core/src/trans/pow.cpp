@@ -6,7 +6,7 @@
 
 
 // alpha x^k
-VecRef Pow::trans(ConstVecRef x, VecRef to) const {
+Vec Pow::trans(const Vec& x, Vec to) const {
     VecTools::mul(alpha_, VecTools::pow(k_, x, to));
     return to;
 }

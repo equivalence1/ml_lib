@@ -21,7 +21,7 @@ add_library(core
         include/core/optimizer.h
         include/core/optimizers/gradient_descent.h
         include/core/index_transformation.h
-        #        include/core/matrix.h
+#        include/core/matrix.h
 
         #
         include/core/vec_tools/fill.h

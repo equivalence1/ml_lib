@@ -5,14 +5,14 @@
 
 class Matrix {
 public:
-    Matrix(VecRef& x, int64_t nrows, int64_t ncols)
+    Matrix(Vec& x, int64_t nrows, int64_t ncols)
     : data_(x)
     , rows_(nrows)
     , cols_(ncols) {
 
     }
 
-    Matrix(ConstVecRef& x, int64_t nrows, int64_t ncols)
+    Matrix(const Vec&& x, int64_t nrows, int64_t ncols)
         : data_(x)
           , rows_(nrows)
           , cols_(ncols) {

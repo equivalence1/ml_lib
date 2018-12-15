@@ -1,7 +1,7 @@
 #include <core/trans/identity.h>
 #include <core/vec_tools/transform.h>
 
-VecRef IdentityMap::trans(ConstVecRef x, VecRef to) const {
+Vec IdentityMap::trans(const Vec& x, Vec to) const {
     VecTools::copyTo(x, to);
     return to;
 }

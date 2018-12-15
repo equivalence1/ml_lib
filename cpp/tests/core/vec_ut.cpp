@@ -95,7 +95,7 @@ TEST(OpsTest, Subtract) {
         b.set(i, 2 * i);
     }
 
-    Vec& res = VecTools::subtract(a, b);
+    Vec res = VecTools::subtract(a, b);
 
     for (auto i = 0; i < N; i++) {
         EXPECT_NEAR(res(i), -i, EPS);

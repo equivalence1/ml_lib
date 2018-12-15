@@ -4,13 +4,13 @@
 
 class PointwiseMultiply: public MapStub<PointwiseMultiply> {
 public:
-    explicit PointwiseMultiply(Vec param)
+    explicit PointwiseMultiply(const Vec& param)
     : MapStub<PointwiseMultiply>(param.dim())
     , param_(param) {
 
     }
 
-    VecRef trans(ConstVecRef x, VecRef to) const;
+    Vec trans(const Vec& x, Vec to) const;
 
 private:
     Vec param_;
