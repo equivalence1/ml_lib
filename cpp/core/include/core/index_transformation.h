@@ -23,7 +23,7 @@ public:
         return trans_->newDim();
     }
 protected:
-    IndexTransformation(ObjectPtr<AnyIndexTransformation>&& trans)
+    IndexTransformation(std::unique_ptr<AnyIndexTransformation>&& trans)
         : trans_(std::move(trans)) {
 
     }
@@ -31,15 +31,14 @@ private:
     template <class Impl>
     friend class IndexTransformationStub;
 private:
-    ObjectPtr<AnyIndexTransformation> trans_;
+    std::unique_ptr<AnyIndexTransformation> trans_;
 };
 
 template <class Impl>
 class IndexTransformationStub : public AnyIndexTransformation {
 public:
     operator IndexTransformation() const {
-        auto ptr = std::make_shared<Impl>(*static_cast<const Impl*>(this));
-        return IndexTransformation(std::static_pointer_cast<AnyIndexTransformation>(ptr));
+        return IndexTransformation(std::unique_ptr<AnyIndexTransformation>(new Impl(*static_cast<const Impl*>(this))));
     }
 };
 
