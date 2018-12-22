@@ -1,6 +1,7 @@
 #pragma once
 
 #include <core/trans.h>
+#include <core/vec_factory.h>
 
 class PointwiseMultiply: public MapStub<PointwiseMultiply> {
 public:

@@ -7,7 +7,7 @@
 
 class Optimizer {
 public:
-    virtual Vec optimize(FuncC1 f, Vec x0) const = 0;
+    virtual Vec optimize(const FuncC1& f, Vec x0) const = 0;
 
     virtual ~Optimizer() = default;
 

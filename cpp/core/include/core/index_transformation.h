@@ -11,34 +11,53 @@ public:
 
 class IndexTransformation : public AnyIndexTransformation {
 public:
+    IndexTransformation(const IndexTransformation& other) = default;
+
     int64_t forward(int64_t newIndex) const final {
-        return trans_->forward(newIndex);
+        return trans_ ? trans_->forward(newIndex) : newIndex;
     }
 
     int64_t backward(int64_t oldIndex) const final {
-        return trans_->backward(oldIndex);
+        return trans_ ? trans_->backward(oldIndex) : oldIndex;
     }
 
     int64_t newDim() const final {
-        return trans_->newDim();
+        return dim_;
     }
+
+    static IndexTransformation identity(int64_t dim) {
+        return IndexTransformation(dim);
+    }
+
+
 protected:
-    IndexTransformation(std::unique_ptr<AnyIndexTransformation>&& trans)
-        : trans_(std::move(trans)) {
+    IndexTransformation(std::shared_ptr<AnyIndexTransformation>&& trans)
+        : trans_(std::move(trans))
+        , dim_(trans_->newDim()) {
+
+    }
+
+    IndexTransformation(int64_t dim)
+    : dim_(dim) {
 
     }
 private:
+
     template <class Impl>
     friend class IndexTransformationStub;
 private:
-    std::unique_ptr<AnyIndexTransformation> trans_;
+    std::shared_ptr<AnyIndexTransformation> trans_;
+    int64_t dim_;
 };
+
+
 
 template <class Impl>
 class IndexTransformationStub : public AnyIndexTransformation {
 public:
     operator IndexTransformation() const {
-        return IndexTransformation(std::unique_ptr<AnyIndexTransformation>(new Impl(*static_cast<const Impl*>(this))));
+        auto indexTrans = std::make_shared<Impl>(*static_cast<const Impl*>(this));
+        return IndexTransformation(std::static_pointer_cast<AnyIndexTransformation>(indexTrans));
     }
 };
 
@@ -74,4 +93,4 @@ private:
 
 
 
-//IndexTransformation Combine(IndexTransformation left, IndexTransformation right);
+IndexTransformation Combine(IndexTransformation left, IndexTransformation right);

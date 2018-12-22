@@ -3,6 +3,7 @@
 #include <core/vec.h>
 #include <core/trans.h>
 #include <utility>
+#include <core/vec_factory.h>
 
 class FillConst : public TransC1Stub<FillConst> {
 public:

@@ -1,5 +1,5 @@
 #include <core/vec_tools/distance.h>
-
+#include <core/vec_tools/transform.h>
 #include <core/vec_tools/stats.h>
 
 #include <cmath>
@@ -7,33 +7,31 @@
 
 namespace VecTools {
 
-    double distanceP(double p, const Vec& left, const Vec& right) {
+    double dotProduct(const Vec& left, const Vec& right) {
         assert(left.dim() == right.dim());
-        double res = 0;
-        for (auto i = 0; i < left.dim(); i++) {
-            res += std::pow(std::abs(left(i) - right(i)), p);
-        }
-        return std::pow(res, 1/p);
+        auto result = at::dot(left, right);
+        return result.data<float>()[0];
+    }
+
+    double distanceLq(double q, const Vec& left, const Vec& right) {
+        assert(left.dim() == right.dim());
+        return std::pow(sum(abs(left - right) ^ q), 1.0 / q);
     }
 
     double distanceL2(const Vec& left, const Vec& right) {
-        return distanceP(2, left, right);
+        return distanceLq(2, left, right);
     }
 
     double distanceL1(const Vec& left, const Vec& right) {
-        return distanceP(1, left, right);
+        return distanceLq(1, left, right);
     }
 
-    double normP(double p, const Vec& v) {
-        double res = 0;
-        for (auto i = 0; i < v.dim(); i++) {
-            res += std::pow(std::abs(v(i)), p);
-        }
-        return std::pow(res, 1/p);
+    double lqNorm(double q, const Vec& v) {
+        return std::pow(sum(absCopy(v) ^ q), 1.0 / q);
     }
 
     double norm(const Vec& v) {
-        return normP(2, v);
+        return lqNorm(2, v);
     }
 
 }

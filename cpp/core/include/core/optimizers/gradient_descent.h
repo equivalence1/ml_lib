@@ -18,7 +18,7 @@ public:
 
     }
 
-    Vec optimize(FuncC1 f, Vec cursor) const override;
+    Vec optimize(const FuncC1& f, Vec cursor) const override;
 
 private:
     double eps_;

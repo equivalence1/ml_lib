@@ -6,17 +6,55 @@
 namespace VecTools {
 
     Vec copyTo(const Vec& from, Vec to) {
-        for (auto i = 0; i < from.dim(); i++) {
-            to.set(i, from(i));
-        }
+        to.data().copy_(from);
         return to;
     }
 
     Vec copy(const Vec& other) {
-        Vec x(other.dim());
-        copyTo(other, x);
+        return VecFactory::clone(other);
+    }
+
+
+    Vec subtract(Vec x, const Vec& y) {
+        x -= y;
         return x;
     }
 
+    Vec pow(double p, const Vec& from, Vec to) {
+        assert(from.dim() == to.dim());
+        at::pow_out(to, from, p);
+        return to;
+    }
+
+    Vec mul(const Vec& x, Vec y) {
+        assert(x.dim() == y.dim());
+        y *= x;
+        return y;
+    }
+
+    Vec mul(double alpha, Vec x) {
+        x.data() *= (float)alpha;
+        return x;
+    }
+
+    Vec pow(double p, Vec x) {
+        x.data().pow(p);
+        return x;
+    }
+
+    Vec sign(const Vec& x, Vec to) {
+        assert(x.dim() == to.dim());
+        at::sign_out(to, x);
+        return to;
+    }
+
+    Vec abs(Vec x) {
+        at::abs_(x.data());
+        return x;
+    }
+
+    Vec absCopy(const Vec& x) {
+        return abs(copy(x));
+    }
 
 }

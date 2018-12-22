@@ -4,6 +4,7 @@
 #include <core/func.h>
 
 #include <functional>
+#include <core/vec_factory.h>
 
 /**
  * || x - b ||_p^p

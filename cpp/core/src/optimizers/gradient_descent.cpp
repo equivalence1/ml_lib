@@ -6,7 +6,7 @@
 #include <cassert>
 #include <stdio.h>
 
-Vec GradientDescent::optimize(FuncC1 f, Vec cursor) const {
+Vec GradientDescent::optimize(const FuncC1& f, Vec cursor) const {
     const double step = 0.1;
     double dist = eps_ + 1;
     auto gradTrans = f.gradient();

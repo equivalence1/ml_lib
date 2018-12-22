@@ -1,79 +1,137 @@
-#include "vec_impls.h"
 #include <core/vec.h>
+#include <core/vec_factory.h>
 
-using namespace Impl;
-
-#if defined(CUDA)
-
-static void SetValue(CudaVec& vec, int64_t idx, double value) {
-    float val = value;
-    Cuda::CopyMemory(&val, vec.data() + idx, 1);;
+inline int64_t TotalSize(const torch::Tensor& tensor) {
+    int64_t size = 0;
+    for (auto dimSize : tensor.sizes()) {
+        size += dimSize;
+    }
+    return size;
 }
 
-static double GetValue(const CudaVec& vec, int64_t idx) {
-    //don't do this in production, just for test
-    float val;
-    Cuda::CopyMemory(vec.data() + idx, &val, 1);
-    return val;
-}
-
-#endif
-
-template <class T>
-static inline void SetValue(T& vec, int64_t idx, double value) {
-    vec.set(idx, value);
-}
-
-template <class T>
-static inline double GetValue(const T& vec, int64_t idx) {
-    return vec.get(idx);
-}
 
 void Vec::set(int64_t index, double value) {
     assert(!immutable_);
-
-    std::visit([&](auto instance) {
-        SetValue(*instance, index, value);
-    }, DynamicDispatch(anyVec()));
+    vec_.accessor<float, 1>()[index] = value;
 }
 
 double Vec::get(int64_t index) const {
-    return std::visit([&](auto instance) -> double {
-        return GetValue(*instance, index);
-    }, DynamicDispatch(anyVec()));
+    return vec_.accessor<float, 1>()[index];
 }
 
 int64_t Vec::dim() const {
-    auto vecVariant = DynamicDispatch(anyVec());
-    return std::visit([&](auto instance) -> int64_t {
-        return instance->dim();
-    }, vecVariant);
+    return TotalSize(vec_);
 }
 
 //
-//Vec::Vec(int64_t dim)
-//: Vec(std::make_shared<PlaceholderVec>(dim)) {
-//
-//}
-
-
-//TODO: should be placeholder
+////TODO: should be placeholder
 Vec::Vec(int64_t dim)
-    : Vec(std::make_shared<ArrayVec>(dim)) {
+    : vec_(torch::zeros({dim}, torch::TensorOptions()))
+    , immutable_(false) {
 
 }
-
 
 Vec Vec::slice(int64_t from, int64_t size) {
-    auto subvec = std::make_shared<SubVec>(Vec(*this),
-                                           SliceIndexTransformation(from, size));
-    return Vec(std::move(subvec));
+    assert(vec_.dim() == 1);
+    return Vec(vec_.slice(0, from, from + size), false);
 }
 
 
 Vec Vec::slice(int64_t from, int64_t size) const {
-    auto subvec = std::make_shared<SubVec>(Vec(*this),
-                                           SliceIndexTransformation(from, size));
-    return Vec(std::move(subvec), true);
+    return Vec(vec_.slice(0, from, from + size), true);
 }
 
+Vec& Vec::operator+=(const Vec& other) {
+    vec_ += other;
+    return *this;
+}
+Vec& Vec::operator-=(const Vec& other) {
+    vec_ -= other;
+    return *this;
+}
+Vec& Vec::operator*=(const Vec& other) {
+    vec_ *= other;
+    return *this;
+}
+Vec& Vec::operator/=(const Vec& other) {
+    vec_ /= other;
+    return *this;
+}
+Vec& Vec::operator+=(double value) {
+    vec_ += value;
+    return *this;
+}
+Vec& Vec::operator-=(double value) {
+    vec_ -= value;
+    return *this;
+}
+
+Vec& Vec::operator*=(double value) {
+    vec_ *= value;
+    return *this;
+}
+Vec& Vec::operator/=(double value) {
+    vec_ /= value;
+    return *this;
+}
+Vec& Vec::operator^=(const Vec& other) {
+    vec_.pow_(other);
+    return *this;
+}
+Vec& Vec::operator^=(double q) {
+    vec_.pow_(q);
+    return *this;
+}
+
+Vec operator+(const Vec& left, const Vec& right) {
+    auto result = VecFactory::uninitializedCopy(left);
+    at::add_out(result, left, right);
+    return result;
+}
+Vec operator-(const Vec& left, const Vec& right) {
+    auto result = VecFactory::uninitializedCopy(left);
+    at::sub_out(result, left, right);
+    return result;
+}
+Vec operator*(const Vec& left, const Vec& right) {
+    auto result = VecFactory::uninitializedCopy(left);
+    at::mul_out(result, left, right);
+    return result;
+}
+Vec operator/(const Vec& left, const Vec& right) {
+    auto result = VecFactory::uninitializedCopy(left);
+    at::div_out(result, left, right);
+    return result;
+}
+Vec operator^(const Vec& left, double q) {
+    auto result = VecFactory::uninitializedCopy(left);
+    at::pow_out(result, left, q);
+    return result;
+}
+
+Vec operator+(const Vec& left, double right) {
+    auto result = VecFactory::clone(left);
+    result += right;
+    return result;
+}
+Vec operator-(const Vec& left, double right) {
+    auto result = VecFactory::clone(left);
+    result -= right;
+    return result;
+}
+Vec operator*(const Vec& left, double right) {
+    auto result = VecFactory::clone(left);
+    result *= right;
+    return result;
+}
+
+Vec operator/(const Vec& left, double right) {
+    auto result = VecFactory::clone(left);
+    result /= right;
+    return result;
+}
+Vec operator^(const Vec& left, const Vec& right) {
+    auto result = VecFactory::clone(left);
+    result ^= right;
+    return result;
+}

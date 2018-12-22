@@ -41,3 +41,10 @@ We want host code to be c++17
 but cuda 10 still use all gcc/clang (xcode tools from 10.13 on macOs, where there is no cpp17), so building it a bit tricky
 
 cmake .. -DCMAKE_CUDA_HOST_COMPILER=/usr/bin/gcc-5 -DUSE_CUDA=true -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc
+
+
+
+PYTORCH
+https://pytorch.org/cppdocs/installing.html
+
+https://github.com/pytorch/pytorch/issues/14165

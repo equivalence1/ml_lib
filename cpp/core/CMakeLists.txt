@@ -5,6 +5,7 @@ project(core LANGUAGES CXX)
 add_library(core
         include/core/object.h
         include/core/vec.h
+        include/core/scalar.h
         include/core/trans.h
         include/core/func.h
         include/core/funcs/linear.h
@@ -21,7 +22,7 @@ add_library(core
         include/core/optimizer.h
         include/core/optimizers/gradient_descent.h
         include/core/index_transformation.h
-#        include/core/matrix.h
+        #        include/core/matrix.h
 
         #
         include/core/vec_tools/fill.h
@@ -32,23 +33,10 @@ add_library(core
 
         src/trans.cpp
         src/func.cpp
-        src/vec_impls.h
-        src/vec_impls.cpp
-        src/vec_ops.h
-        src/non_owning_vec.cpp
-        src/placeholder_vec.cpp
-        src/array_vec.h
-        src/subvec.h
-        src/cuda_vec.h
-        src/placeholder_vec.h
-        src/fixed_size_vec.h
-        src/non_owning_vec.h
         src/vec.cpp
         src/vec_factory.cpp
-        src/array_vec.cpp
-        src/cuda_vec.cpp
-        src/fixed_size_vec.cpp
-        src/vec_tools/ops.cpp
+        src/vec_factory.cpp
+        src/vec_tools/fill.cpp
         src/vec_tools/distance.cpp
         src/vec_tools/stats.cpp
         src/vec_tools/transform.cpp
@@ -70,14 +58,15 @@ add_library(core_kernels
         src/kernels/empty.h
         src/kernels/empty.cpp)
 
-maybe_enable_cuda(core_kernels)
 
+maybe_enable_cuda(core_kernels)
 
 enable_cxx17(core)
 maybe_enable_cuda(core)
 
-target_link_libraries(core util core_kernels)
+target_link_libraries(core "${TORCH_LIBRARIES}" util core_kernels)
 target_link_libraries(core_kernels util)
+
 
 target_include_directories(core INTERFACE
         PUBLIC $<INSTALL_INTERFACE:include>
@@ -100,8 +89,8 @@ install(TARGETS core_kernels EXPORT CoreKernelsConfig
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-install(EXPORT CoreConfig DESTINATION share/CoreConfig/cmake)
-install(EXPORT CoreKernelsConfig DESTINATION share/CoreKernelsConfig/cmake)
-export(TARGETS core FILE CoreConfig.cmake)
-export(TARGETS core_kernels FILE CoreKernelsConfig.cmake)
+#install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+#install(EXPORT CoreConfig DESTINATION share/CoreConfig/cmake)
+#install(EXPORT CoreKernelsConfig DESTINATION share/CoreKernelsConfig/cmake)
+#export(TARGETS core FILE CoreConfig.cmake)
+#export(TARGETS core_kernels FILE CoreKernelsConfig.cmake)

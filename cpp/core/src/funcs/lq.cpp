@@ -12,7 +12,7 @@
 #include <iostream>
 
 DoubleRef Lq::valueTo(const Vec& x, DoubleRef to) const {
-    to =  VecTools::distanceP(q_, x, b_);
+    to = VecTools::distanceLq(q_, x, b_);
     return to;
 }
 

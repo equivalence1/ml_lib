@@ -23,5 +23,5 @@ TEST(Optimizer, GradientDescentTest) {
 
     gd.optimize(distFunc, cursor);
 
-    EXPECT_LE(VecTools::distanceP(q, cursor, b), EPS);
+    EXPECT_LE(VecTools::distanceLq(q, cursor, b), EPS);
 }

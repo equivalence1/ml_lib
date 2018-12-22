@@ -10,5 +10,9 @@ enum class VecType {
 class VecFactory {
 public:
     static Vec create(VecType type, int64_t dim);
-    static Vec createRef(float* ptr, int64_t dim);
+
+    static Vec clone(const Vec& other);
+
+    static Vec uninitializedCopy(const Vec& other);
+
 };

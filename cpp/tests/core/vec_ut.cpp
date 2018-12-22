@@ -115,7 +115,7 @@ TEST(OpsTest, Exp) {
     VecTools::pow(exp, a, b);
 
     for (auto i = 0; i < N; i++) {
-        EXPECT_NEAR(b(i), std::pow(i, exp), EPS);
+        EXPECT_NEAR(b(i), std::pow((float)i, (float)exp), EPS);
     }
 }
 
@@ -129,10 +129,15 @@ TEST(OpsTest, Mul) {
         b.set(i, i);
     }
 
+    auto d = VecFactory::clone(b);
+    auto c = a * b;
     VecTools::mul(a, b);
+    d *= a;
 
     for (auto i = 0; i < N; i++) {
         EXPECT_NEAR(b(i), i * i, EPS);
+        EXPECT_NEAR(c(i), i * i, EPS);
+        EXPECT_NEAR(d(i), i * i, EPS);
     }
 }
 
