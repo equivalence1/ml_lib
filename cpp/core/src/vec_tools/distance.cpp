@@ -1,3 +1,4 @@
+#include <core/scalar.h>
 #include <core/vec_tools/distance.h>
 #include <core/vec_tools/transform.h>
 #include <core/vec_tools/stats.h>
@@ -9,8 +10,7 @@ namespace VecTools {
 
     double dotProduct(const Vec& left, const Vec& right) {
         assert(left.dim() == right.dim());
-        auto result = at::dot(left, right);
-        return result.data<float>()[0];
+        return Scalar(at::dot(left, right));
     }
 
     double distanceLq(double q, const Vec& left, const Vec& right) {
