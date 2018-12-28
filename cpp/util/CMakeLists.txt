@@ -6,6 +6,8 @@ project(util CXX)
 add_library(util
             include/util/cuda_wrappers.h
             include/util/exception.h
+            include/util/singleton.h
+            include/util/guard.h
 
             src/cuda_wrappers.cpp
             src/exception.cpp

@@ -15,9 +15,9 @@
 TEST(Trans, FillTransTest) {
     const int N = 10;
 
-    Vec a = VecFactory::create(VecType::Cpu, N);
-    Vec b = VecFactory::create(VecType::Cpu, N);
-    Vec c = VecFactory::create(VecType::Cpu, N);
+    Vec a = Vec(N);
+    Vec b = Vec(N);
+    Vec c = Vec(N);
     for (auto i = 0; i < N; i++) {
         a.set(i, 123.0 * i / 3);
         b.set(i, i);
@@ -35,9 +35,9 @@ TEST(Trans, FillTransTest) {
 TEST(Trans, AddVecTest) {
     const int N = 10;
 
-    Vec a = VecFactory::create(VecType::Cpu, N);
-    Vec b = VecFactory::create(VecType::Cpu, N);
-    Vec c = VecFactory::create(VecType::Cpu, N);
+    Vec a = Vec(N);
+    Vec b = Vec(N);
+    Vec c = Vec(N);
     for (auto i = 0; i < N; i++) {
         a.set(i, i);
         b.set(i, -i);
@@ -56,8 +56,8 @@ TEST(Trans, PowTest) {
     const int N = 10;
     const double exp = 2;
 
-    Vec a = VecFactory::create(VecType::Cpu, N);
-    Vec b = VecFactory::create(VecType::Cpu, N);
+    Vec a = Vec(N);
+    Vec b = Vec(N);
     for (auto i = 0; i < N; i++) {
         a.set(i, i * 1.0 / N);
         b.set(i, 100500);
@@ -74,9 +74,9 @@ TEST(Trans, PowTest) {
 TEST(Trans, PointwiseMulTest) {
     const int N = 10;
 
-    Vec a = VecFactory::create(VecType::Cpu, N);
-    Vec b = VecFactory::create(VecType::Cpu, N);
-    Vec c = VecFactory::create(VecType::Cpu, N);
+    Vec a = Vec(N);
+    Vec b = Vec(N);
+    Vec c = Vec(N);
     for (auto i = 0; i < N; i++) {
         a.set(i, 1.0 / (i + 1));
         b.set(i, i + 1);

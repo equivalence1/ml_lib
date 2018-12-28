@@ -23,13 +23,33 @@ int64_t Vec::dim() const {
     return TotalSize(vec_);
 }
 
+
+
+static inline torch::TensorOptions tensorOptionsOnDevice(const ComputeDevice device) {
+    switch (device.deviceType()) {
+        case ComputeType::Cpu: {
+            return torch::device(torch::DeviceType::CPU);
+        }
+        case ComputeType::Gpu: {
+            return torch::device(torch::DeviceType::CUDA);
+        }
+    }
+}
+
+
 //
 ////TODO: should be placeholder
 Vec::Vec(int64_t dim)
-    : vec_(torch::zeros({dim}, torch::TensorOptions()))
+    : vec_(torch::zeros({dim}, tensorOptionsOnDevice(CurrentDevice())))
     , immutable_(false) {
 
 }
+
+Vec::Vec(int64_t dim, const ComputeDevice& device)
+    : vec_(torch::zeros({dim}, tensorOptionsOnDevice(device)))
+      , immutable_(false) {
+}
+
 
 Vec Vec::slice(int64_t from, int64_t size) {
     assert(vec_.dim() == 1);
@@ -57,20 +77,20 @@ Vec& Vec::operator/=(const Vec& other) {
     vec_ /= other;
     return *this;
 }
-Vec& Vec::operator+=(double value) {
+Vec& Vec::operator+=(Scalar value) {
     vec_ += value;
     return *this;
 }
-Vec& Vec::operator-=(double value) {
+Vec& Vec::operator-=(Scalar value) {
     vec_ -= value;
     return *this;
 }
 
-Vec& Vec::operator*=(double value) {
+Vec& Vec::operator*=(Scalar value) {
     vec_ *= value;
     return *this;
 }
-Vec& Vec::operator/=(double value) {
+Vec& Vec::operator/=(Scalar value) {
     vec_ /= value;
     return *this;
 }
@@ -78,10 +98,11 @@ Vec& Vec::operator^=(const Vec& other) {
     vec_.pow_(other);
     return *this;
 }
-Vec& Vec::operator^=(double q) {
+Vec& Vec::operator^=(Scalar q) {
     vec_.pow_(q);
     return *this;
 }
+
 
 Vec operator+(const Vec& left, const Vec& right) {
     auto result = VecFactory::uninitializedCopy(left);
@@ -103,29 +124,29 @@ Vec operator/(const Vec& left, const Vec& right) {
     at::div_out(result, left, right);
     return result;
 }
-Vec operator^(const Vec& left, double q) {
+Vec operator^(const Vec& left, Scalar q) {
     auto result = VecFactory::uninitializedCopy(left);
     at::pow_out(result, left, q);
     return result;
 }
 
-Vec operator+(const Vec& left, double right) {
+Vec operator+(const Vec& left, Scalar right) {
     auto result = VecFactory::clone(left);
     result += right;
     return result;
 }
-Vec operator-(const Vec& left, double right) {
+Vec operator-(const Vec& left, Scalar right) {
     auto result = VecFactory::clone(left);
     result -= right;
     return result;
 }
-Vec operator*(const Vec& left, double right) {
+Vec operator*(const Vec& left, Scalar right) {
     auto result = VecFactory::clone(left);
     result *= right;
     return result;
 }
 
-Vec operator/(const Vec& left, double right) {
+Vec operator/(const Vec& left, Scalar right) {
     auto result = VecFactory::clone(left);
     result /= right;
     return result;

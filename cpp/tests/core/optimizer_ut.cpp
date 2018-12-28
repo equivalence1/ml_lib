@@ -13,10 +13,10 @@ TEST(Optimizer, GradientDescentTest) {
 
     GradientDescent gd(EPS);
 
-    auto cursor = VecFactory::create(VecType::Cpu, N);
+    auto cursor = Vec(N);
     VecTools::fill(1, cursor);
 
-    auto b = VecFactory::create(VecType::Cpu, N);
+    auto b = Vec(N);
     VecTools::fill(2, b);
 
     Lq distFunc(q, b);

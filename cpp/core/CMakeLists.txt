@@ -3,6 +3,7 @@ cmake_version()
 project(core LANGUAGES CXX)
 
 add_library(core
+        include/core/context.h
         include/core/object.h
         include/core/vec.h
         include/core/scalar.h
@@ -22,7 +23,7 @@ add_library(core
         include/core/optimizer.h
         include/core/optimizers/gradient_descent.h
         include/core/index_transformation.h
-        #        include/core/matrix.h
+        include/core/matrix.h
 
         #
         include/core/vec_tools/fill.h
@@ -30,7 +31,7 @@ add_library(core
         #        include/core/vec_tools/meta_info.h
         include/core/vec_tools/stats.h
         include/core/vec_tools/transform.h
-
+        src/context.cpp
         src/trans.cpp
         src/func.cpp
         src/vec.cpp
@@ -47,6 +48,7 @@ add_library(core
         src/trans/pow.cpp
         src/trans/identity.cpp
         src/trans/add_vec.cpp
+        src/matrix.cpp
         src/trans/pointwise_multiply.cpp
         src/optimizers/gradient_descent.cpp
         )

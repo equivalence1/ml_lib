@@ -16,7 +16,7 @@
 // ops
 
 TEST(OpsTest, Fill) {
-    Vec vec = VecFactory::create(VecType::Cpu, 100);
+    Vec vec = Vec(100);
 
     EXPECT_EQ(vec.dim(), 100);
     VecTools::fill(1, vec);
@@ -28,7 +28,7 @@ TEST(OpsTest, Fill) {
 
 
 TEST(OpsTest, SliceTest) {
-    Vec vec = VecFactory::create(VecType::Cpu, 100);
+    Vec vec = Vec(100);
 
     EXPECT_EQ(vec.dim(), 100);
     VecTools::fill(1, vec);
@@ -72,8 +72,8 @@ TEST(OpsTest, FillGpu) {
 #endif
 
 TEST(OpsTest, DotProduct) {
-    Vec a = VecFactory::create(VecType::Cpu, 10);
-    Vec b = VecFactory::create(VecType::Cpu, 10);
+    Vec a = Vec(10);
+    Vec b = Vec(10);
 
 
     EXPECT_EQ(a.dim(), 10);
@@ -87,8 +87,8 @@ TEST(OpsTest, DotProduct) {
 TEST(OpsTest, Subtract) {
     const int N = 10;
 
-    Vec a = VecFactory::create(VecType::Cpu, N);
-    Vec b = VecFactory::create(VecType::Cpu, N);
+    Vec a = Vec(N);
+    Vec b = Vec(N);
 
     for (auto i = 0; i < N; i++) {
         a.set(i, i);
@@ -106,12 +106,12 @@ TEST(OpsTest, Exp) {
     const int N = 10;
     const double exp = 2.33;
 
-    Vec a = VecFactory::create(VecType::Cpu, N);
+    Vec a = Vec(N);
     for (auto i = 0; i < N; i++) {
         a.set(i, i);
     }
 
-    Vec b = VecFactory::create(VecType::Cpu, N);
+    Vec b = Vec(N);
     VecTools::pow(exp, a, b);
 
     for (auto i = 0; i < N; i++) {
@@ -122,8 +122,8 @@ TEST(OpsTest, Exp) {
 TEST(OpsTest, Mul) {
     const int N = 10;
 
-    Vec a = VecFactory::create(VecType::Cpu, N);
-    Vec b = VecFactory::create(VecType::Cpu, N);
+    Vec a = Vec(N);
+    Vec b = Vec(N);
     for (auto i = 0; i < N; i++) {
         a.set(i, i);
         b.set(i, i);
@@ -146,7 +146,7 @@ TEST(OpsTest, Mul) {
 TEST(StatsTest, Sum) {
     const int N = 10;
 
-    Vec a = VecFactory::create(VecType::Cpu, N);
+    Vec a = Vec(N);
     for (auto i = 0; i < N; i++) {
         a.set(i, 3 * i);
     }
@@ -158,7 +158,7 @@ TEST(StatsTest, Sum) {
 TEST(StatsTest, Sum2) {
     const int N = 10;
 
-    Vec a = VecFactory::create(VecType::Cpu, N);
+    Vec a = Vec(N);
     for (auto i = 0; i < N; i++) {
         a.set(i, 3 * i);
     }
@@ -170,7 +170,7 @@ TEST(StatsTest, Sum2) {
 // distance
 
 TEST(DistanceTest, Norm) {
-    Vec a = VecFactory::create(VecType::Cpu, 2);
+    Vec a = Vec(2);
     a.set(0, 3);
     a.set(1, 4);
 
@@ -181,8 +181,8 @@ TEST(DistanceTest, Norm) {
 TEST(DistanceTest, DistanceL1) {
     const int N = 10;
 
-    Vec a = VecFactory::create(VecType::Cpu, N);
-    Vec b = VecFactory::create(VecType::Cpu, N);
+    Vec a = Vec(N);
+    Vec b = Vec(N);
 
     for (auto i = 0; i < N; i++) {
         if (i % 2) {
@@ -201,13 +201,13 @@ TEST(DistanceTest, DistanceL1) {
 }
 
 TEST(DistanceTest, DistanceL2) {
-    Vec a = VecFactory::create(VecType::Cpu, 4);
+    Vec a = Vec(4);
     a.set(0, 1);
     a.set(1, 0);
     a.set(2, 2);
     a.set(3, -1);
 
-    Vec b = VecFactory::create(VecType::Cpu, 4);
+    Vec b = Vec(4);
     b.set(0, 4);
     b.set(1, 0);
     b.set(2, 6);
@@ -222,8 +222,8 @@ TEST(DistanceTest, DistanceL2) {
 TEST(TransformTest, Copy) {
     const int N = 10;
 
-    Vec a = VecFactory::create(VecType::Cpu, N);
-    Vec b = VecFactory::create(VecType::Cpu, N);
+    Vec a = Vec(N);
+    Vec b = Vec(N);
     for (auto i = 0; i < N; i++) {
         a.set(i, i);
     }

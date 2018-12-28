@@ -1,5 +1,7 @@
 #pragma once
 
+#include "context.h"
+#include "scalar.h"
 #include <torch/torch.h>
 #include <cassert>
 #include <cstdint>
@@ -18,7 +20,7 @@ public:
     Vec(Vec& other) = default;
 
     Vec(const Vec& other)
-        : vec_(other.vec_)         
+        : vec_(other.vec_)
         , immutable_(true) {
     }
 
@@ -40,18 +42,21 @@ public:
     Vec& operator/=(const Vec& other);
 
 
-    Vec& operator+=(double value);
-    Vec& operator-=(double value);
-    Vec& operator*=(double value);
-    Vec& operator/=(double value);
+    Vec& operator+=(Scalar value);
+    Vec& operator-=(Scalar value);
+    Vec& operator*=(Scalar value);
+    Vec& operator/=(Scalar value);
 
 
     Vec& operator^=(const Vec& other);
-    Vec& operator^=(double q);
+    Vec& operator^=(Scalar q);
 
 
     int64_t dim() const;
-    
+
+    bool immutable() const {
+        return immutable_;
+    }
 
     operator const torch::Tensor&() const {
         return data();
@@ -71,7 +76,8 @@ public:
     }
 
 protected:
-   
+    explicit Vec(int64_t dim, const ComputeDevice& device);
+
     explicit Vec(const torch::Tensor& impl,
                  bool immutable = false)
         : vec_(impl)
@@ -93,12 +99,12 @@ Vec operator -(const Vec& left, const Vec& right);
 Vec operator *(const Vec& left, const Vec& right);
 Vec operator /(const Vec& left, const Vec& right);
 
-Vec operator +(const Vec& left, double right);
-Vec operator -(const Vec& left, double right);
-Vec operator *(const Vec& left, double right);
-Vec operator /(const Vec& left, double right);
+Vec operator +(const Vec& left, Scalar right);
+Vec operator -(const Vec& left, Scalar right);
+Vec operator *(const Vec& left, Scalar right);
+Vec operator /(const Vec& left, Scalar right);
 
 
 
-Vec operator ^(const Vec& left, double q);
+Vec operator ^(const Vec& left, Scalar q);
 Vec operator ^(const Vec& left, const Vec& right);
