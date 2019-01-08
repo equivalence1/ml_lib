@@ -7,9 +7,6 @@ Vec IdentityMap::trans(const Vec& x, Vec to) const {
     return to;
 }
 
-Trans IdentityMap::gradient() const {
-    return Detail::GradientAsTransStub<IdentityMap>(*this);
-}
 
 Vec IdentityMap::gradientRowTo(const Vec&, Vec to, int64_t row) const {
     VecTools::fill(0.0, to);

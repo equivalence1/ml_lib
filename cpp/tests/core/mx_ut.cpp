@@ -4,6 +4,9 @@
 
 #include <gtest/gtest.h>
 
+#include <memory>
+#include <cmath>
+#include <core/vec_factory.h>
 #include <core/mx_tools/ops.h>
 
 // TODO EPS is so big because we store in float

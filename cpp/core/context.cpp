@@ -13,10 +13,9 @@ namespace {
         }
 
         void setDevice(const ComputeDevice& device) {
-            with_guard(guard_)
-                {
-                    current_ = device;
-                }
+            with_guard(guard_) {
+                current_ = device;
+            }
         }
 
     private:

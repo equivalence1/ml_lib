@@ -205,6 +205,10 @@ public:
         return to;
     }
 
+    Trans gradient() const override {
+        return  Detail::GradientAsTransStub<Impl>(*static_cast<const Impl*>(this));
+    }
+
     TransC1Stub(int64_t xdim, int64_t ydim)
         : TransStub<Impl>(xdim, ydim) {
 

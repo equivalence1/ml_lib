@@ -27,6 +27,7 @@ private:
 };
 
 const ComputeDevice& CurrentDevice();
+
 void SetDevice(const ComputeDevice& device);
 
 class ComputeDeviceGuard {

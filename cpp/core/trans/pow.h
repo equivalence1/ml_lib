@@ -17,8 +17,6 @@ public:
 
     Vec trans(const Vec& x, Vec to) const final;
 
-    Trans gradient() const final;
-
     Vec gradientRowTo(const Vec&, Vec to, int64_t) const final;
 
 private:

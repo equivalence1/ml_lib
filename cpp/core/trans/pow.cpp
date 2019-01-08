@@ -1,4 +1,4 @@
-#include <core/trans/pow.h>
+#include "pow.h"
 #include <core/vec_tools/transform.h>
 
 #include <core/vec_tools/fill.h>
@@ -10,9 +10,6 @@ Vec Pow::trans(const Vec& x, Vec to) const {
     return to;
 }
 
-Trans Pow::gradient() const {
-    return Detail::GradientAsTransStub<Pow>(*this);
-}
 
 Vec Pow::gradientRowTo(const Vec& x, Vec to, int64_t row) const {
     VecTools::fill(0, to);

@@ -69,6 +69,7 @@ public:
     operator Trans() const {
         return asTrans();
     }
+
 protected:
     template <class T, class ... Args>
     friend Func CreateFunc(Args&& ... args);
