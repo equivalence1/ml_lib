@@ -3,62 +3,66 @@ cmake_version()
 project(core LANGUAGES CXX)
 
 add_library(core
-        include/core/context.h
-        include/core/object.h
-        include/core/vec.h
-        include/core/scalar.h
-        include/core/trans.h
-        include/core/func.h
-        include/core/funcs/linear.h
-        include/core/funcs/lq.h
-        include/core/vec_factory.h
-        include/core/batch.h
-        include/core/trans/fill.h
-        include/core/trans/pow.h
-        include/core/trans/identity.h
-        include/core/trans/add_vec.h
-        include/core/trans/pointwise_multiply.h
+        context.h
+        object.h
+        vec.h
+        scalar.h
+        trans.h
+        func.h
+        funcs/linear.h
+        funcs/lq.h
+        vec_factory.h
+        batch.h
+        trans/linear_trans.h
+        trans/fill.h
+        trans/pow.h
+        trans/identity.h
+        trans/add_vec.h
+        trans/pointwise_multiply.h
 
-        include/core/trans/compose.h
-        include/core/optimizer.h
-        include/core/optimizers/gradient_descent.h
-        include/core/index_transformation.h
-        include/core/matrix.h
+        trans/compose.h
+        optimizer.h
+        optimizers/gradient_descent.h
+        index_transformation.h
+        matrix.h
+        mx_tools/ops.h
 
         #
-        include/core/vec_tools/fill.h
-        include/core/vec_tools/distance.h
-        #        include/core/vec_tools/meta_info.h
-        include/core/vec_tools/stats.h
-        include/core/vec_tools/transform.h
-        src/context.cpp
-        src/trans.cpp
-        src/func.cpp
-        src/vec.cpp
-        src/vec_factory.cpp
-        src/vec_factory.cpp
-        src/vec_tools/fill.cpp
-        src/vec_tools/distance.cpp
-        src/vec_tools/stats.cpp
-        src/vec_tools/transform.cpp
-        src/funcs/linear.cpp
-        src/funcs/lq.cpp
-        src/trans/fill.cpp
-        src/trans/compose.cpp
-        src/trans/pow.cpp
-        src/trans/identity.cpp
-        src/trans/add_vec.cpp
-        src/matrix.cpp
-        src/trans/pointwise_multiply.cpp
-        src/optimizers/gradient_descent.cpp
+        vec_tools/fill.h
+        vec_tools/distance.h
+        #        vec_tools/meta_info.h
+        vec_tools/stats.h
+        vec_tools/transform.h
+        context.cpp
+        trans.cpp
+        func.cpp
+        vec.cpp
+        vec_factory.cpp
+        vec_factory.cpp
+        vec_tools/fill.cpp
+        vec_tools/distance.cpp
+        vec_tools/stats.cpp
+        vec_tools/transform.cpp
+        funcs/linear.cpp
+        funcs/lq.cpp
+        trans/fill.cpp
+        trans/linear_trans.cpp
+        mx_tools/ops.cpp
+        trans/compose.cpp
+        trans/pow.cpp
+        trans/identity.cpp
+        trans/add_vec.cpp
+        matrix.cpp
+        trans/pointwise_multiply.cpp
+        optimizers/gradient_descent.cpp
         )
 
 add_library(core_kernels
-        src/kernels/fill.cuh
-        src/kernels/fill.cu
+        kernels/fill.cuh
+        kernels/fill.cu
 
-        src/kernels/empty.h
-        src/kernels/empty.cpp)
+        kernels/empty.h
+        kernels/empty.cpp)
 
 
 maybe_enable_cuda(core_kernels)
@@ -72,13 +76,13 @@ target_link_libraries(core_kernels util)
 
 target_include_directories(core INTERFACE
         PUBLIC $<INSTALL_INTERFACE:include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../>
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/
         )
 
 target_include_directories(core_kernels INTERFACE
         PUBLIC $<INSTALL_INTERFACE:include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/kernels>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/kernels>
         )
 
 install(TARGETS core EXPORT CoreConfig

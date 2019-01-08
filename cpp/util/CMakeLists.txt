@@ -4,13 +4,13 @@ project(util CXX)
 
 
 add_library(util
-            include/util/cuda_wrappers.h
-            include/util/exception.h
-            include/util/singleton.h
-            include/util/guard.h
+            cuda_wrappers.h
+            exception.h
+            singleton.h
+            guard.h
 
-            src/cuda_wrappers.cpp
-            src/exception.cpp
+            cuda_wrappers.cpp
+            exception.cpp
 )
 
 enable_cxx14(util)
@@ -21,8 +21,8 @@ set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
 target_include_directories(util INTERFACE
         PUBLIC $<INSTALL_INTERFACE:include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        PRIVATE  ${CMAKE_CURRENT_SOURCE_DIR}/src
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../>
+        PRIVATE  ${CMAKE_CURRENT_SOURCE_DIR}/
         )
 
 
