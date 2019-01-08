@@ -2,11 +2,6 @@
 
 #include <core/vec_tools/fill.h>
 #include <core/vec_tools/transform.h>
-#include <core/vec_factory.h>
-#include <core/trans/fill.h>
-
-#include <memory>
-
 
 Vec AddVecTrans::trans(const Vec& x, Vec to) const {
     assert(x.dim() == to.dim());
@@ -18,7 +13,6 @@ Vec AddVecTrans::trans(const Vec& x, Vec to) const {
 Trans AddVecTrans::gradient() const {
     return Detail::GradientAsTransStub<AddVecTrans>(*this);
 }
-
 
 Vec AddVecTrans::gradientRowTo(const Vec& x, Vec to, int64_t row) const {
     VecTools::fill(0, to);

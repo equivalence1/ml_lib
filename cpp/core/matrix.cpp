@@ -1,6 +1,5 @@
 #include "matrix.h"
 
-
 Scalar Mx::get(int64_t x, int64_t y) const {
     return vec_.get(seqIndex(x, y));
 }

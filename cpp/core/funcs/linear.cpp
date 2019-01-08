@@ -1,11 +1,5 @@
 #include <core/funcs/linear.h>
 
-#include <core/trans/fill.h>
-
-#include <memory>
-#include <cassert>
-
-
 Trans Linear::gradient() const {
     return FillVec(param_, param_.dim());
 }

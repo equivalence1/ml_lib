@@ -1,4 +1,4 @@
-#include <util/cuda_wrappers.h>
+
 #include <iostream>
 
 #if defined(CUDA)

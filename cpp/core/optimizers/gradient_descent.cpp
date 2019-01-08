@@ -3,9 +3,6 @@
 #include <core/vec_tools/transform.h>
 #include <core/vec_tools/distance.h>
 
-#include <cassert>
-#include <stdio.h>
-
 Vec GradientDescent::optimize(const FuncC1& f, Vec cursor) const {
     const double step = 0.1;
     double dist = eps_ + 1;

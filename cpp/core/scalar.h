@@ -8,22 +8,21 @@
 #include <utility>
 #include <functional>
 
-
 class Scalar {
 public:
 
     Scalar(const torch::Scalar& val)
-    : value_(val) {
+        : value_(val) {
 
     }
 
     Scalar(double val)
-    : value_(torch::Scalar(val)) {
+        : value_(torch::Scalar(val)) {
 
     }
 
     Scalar(const torch::Tensor& tensor)
-    : value_(tensor) {
+        : value_(tensor) {
         assert(tensor.dim() == 0);
     }
 

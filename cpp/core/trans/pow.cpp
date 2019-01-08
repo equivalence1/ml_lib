@@ -1,7 +1,6 @@
 #include <core/trans/pow.h>
 #include <core/vec_tools/transform.h>
 
-#include <cassert>
 #include <core/vec_tools/fill.h>
 
 // alpha x^k

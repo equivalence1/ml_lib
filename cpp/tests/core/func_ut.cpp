@@ -1,16 +1,8 @@
 #include <core/vec.h>
-#include <core/vec_factory.h>
-#include <core/vec_tools/fill.h>
 #include <core/funcs/linear.h>
-#include <util/exception.h>
 #include <core/funcs/lq.h>
 
 #include <gtest/gtest.h>
-
-#include <cassert>
-#include <cmath>
-
-#include <stdio.h>
 
 #define EPS 1e-5
 
@@ -20,7 +12,6 @@ TEST(FuncTests, Linear) {
     double bias = 1;
     param.set(0, -2);
     param.set(1, 3);
-
 
     Vec x = Vec(2);
     x.set(0, 10);

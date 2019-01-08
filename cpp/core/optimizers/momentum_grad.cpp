@@ -7,7 +7,8 @@
 #include <cassert>
 #include <stdio.h>
 
-MomentumGrad::MomentumGrad(int64_t vecSize, double learningRate, double momentum):
+MomentumGrad::MomentumGrad(int64_t vecSize, double learningRate, double momentum)
+    :
     learningRate(learningRate), momentum(momentum), gradBuf(vecSize) {
     VecTools::fill(0, gradBuf);
 }

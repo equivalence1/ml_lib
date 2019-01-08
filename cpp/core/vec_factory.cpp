@@ -1,7 +1,4 @@
 #include "vec_factory.h"
-#include "vec.h"
-#include <util/exception.h>
-
 
 Vec VecFactory::create(ComputeDevice device, int64_t dim) {
     return Vec(dim, device);

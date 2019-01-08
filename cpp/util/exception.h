@@ -4,7 +4,7 @@
 #include <string>
 #include <sstream>
 
-class Exception: public std::exception {
+class Exception : public std::exception {
 public:
     Exception() = default;
 
@@ -20,7 +20,6 @@ public:
         buf_ = s.str();
         return *this;
     }
-
 
 private:
     mutable std::string buf_;

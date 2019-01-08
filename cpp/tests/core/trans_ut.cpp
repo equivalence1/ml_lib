@@ -2,12 +2,8 @@
 #include <core/trans/add_vec.h>
 #include <core/trans/pow.h>
 #include <core/trans/pointwise_multiply.h>
-#include <core/trans/compose.h>
-#include <core/trans/fill.h>
 
 #include <gtest/gtest.h>
-
-#include <cmath>
 
 // TODO EPS is so big because we store in float
 #define EPS 1e-5

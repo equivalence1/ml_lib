@@ -7,9 +7,6 @@
 
 #include <gtest/gtest.h>
 
-#include <memory>
-#include <cmath>
-
 // TODO EPS is so big because we store in float
 #define EPS 1e-5
 
@@ -24,8 +21,6 @@ TEST(OpsTest, Fill) {
         EXPECT_EQ(vec(i), 1);
     }
 }
-
-
 
 TEST(OpsTest, SliceTest) {
     Vec vec = Vec(100);
@@ -57,7 +52,6 @@ TEST(OpsTest, SliceTest) {
     }
 }
 
-
 #if defined(CUDA)
 TEST(OpsTest, FillGpu) {
     const auto n = 10000;
@@ -74,7 +68,6 @@ TEST(OpsTest, FillGpu) {
 TEST(OpsTest, DotProduct) {
     Vec a = Vec(10);
     Vec b = Vec(10);
-
 
     EXPECT_EQ(a.dim(), 10);
     EXPECT_EQ(b.dim(), 10);
@@ -115,7 +108,7 @@ TEST(OpsTest, Exp) {
     VecTools::pow(exp, a, b);
 
     for (auto i = 0; i < N; i++) {
-        EXPECT_NEAR(b(i), std::pow((float)i, (float)exp), EPS);
+        EXPECT_NEAR(b(i), std::pow((float) i, (float) exp), EPS);
     }
 }
 

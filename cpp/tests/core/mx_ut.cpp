@@ -4,9 +4,6 @@
 
 #include <gtest/gtest.h>
 
-#include <memory>
-#include <cmath>
-#include <core/vec_factory.h>
 #include <core/mx_tools/ops.h>
 
 // TODO EPS is so big because we store in float
@@ -31,7 +28,6 @@ TEST(MxOpsTest, Fill) {
 
     VecTools::makeSequence(0, 1, mx);
 
-
     for (int32_t i = 0; i < 100; ++i) {
         EXPECT_EQ(vec(i), i);
         int32_t x = i % 10;
@@ -53,16 +49,12 @@ TEST(MxOpsTest, Fill) {
 
 }
 
-
-
-
 TEST(MxOpsTest, TestMultiply) {
 
     Vec vec(100);
     EXPECT_EQ(vec.dim(), 100);
     VecTools::makeSequence(0, 1.0 / 8, vec);
     Mx mx(10, 100);
-
 
     std::vector<double> refResult(10);
     {
@@ -72,7 +64,7 @@ TEST(MxOpsTest, TestMultiply) {
                 const auto val = c * 1.34;
                 ++c;
                 mx.set(j, i, val);
-                refResult[i] +=  val *  vec.get(j);
+                refResult[i] += val * vec.get(j);
             }
         }
     }

@@ -3,11 +3,11 @@
 #include <core/trans.h>
 #include <core/vec_factory.h>
 
-class PointwiseMultiply: public MapStub<PointwiseMultiply> {
+class PointwiseMultiply : public MapStub<PointwiseMultiply> {
 public:
     explicit PointwiseMultiply(const Vec& param)
-    : MapStub<PointwiseMultiply>(param.dim())
-    , param_(param) {
+        : MapStub<PointwiseMultiply>(param.dim())
+          , param_(param) {
 
     }
 

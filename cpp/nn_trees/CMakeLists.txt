@@ -4,7 +4,7 @@ project(nn_introduction)
 # compiler-related
 set(CMAKE_CXX_STANDARD 17)
 
-option(USE_CUDA  "Build with CUDA")
+option(USE_CUDA "Build with CUDA")
 set(CUDA_COMPUTE_CAPABILITIES "" CACHE STRING
         "Space separated list of compute versions to be built against, e.g. '35 61'")
 
@@ -18,7 +18,6 @@ include(GNUInstallDirs)
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpedantic -Wall -O3 -march=native")
 
 # TODO(equivalence1): move all dependency search to separate file
-
 
 
 set(PYTHON_PREFIX /usr/local/lib/python3.7)

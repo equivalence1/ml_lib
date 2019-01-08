@@ -38,7 +38,6 @@ namespace Private {
         return *Private::SingletonImpl<T>();
     }
 
-
     template <class T>
     class TlsSingletonImpl {
     public:
@@ -73,7 +72,6 @@ namespace Private {
         return *Private::TlsSingletonImpl<T>();
     }
 }
-
 
 template <class T>
 inline T& Singleton() {

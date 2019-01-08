@@ -4,7 +4,6 @@
 #include <iostream>
 #include <math.h>
 
-
 class layer_fwd {
 public:
     virtual ~layer_fwd() = default;
@@ -27,9 +26,17 @@ public:
 };
 
 class convolution_layer_fwd :
-        public layer_fwd {
+    public layer_fwd {
 public:
-    convolution_layer_fwd(mkldnn::memory::dims& src_tz, mkldnn::memory& src_memory, mkldnn::memory::desc& src_md, mkldnn::engine& cpu_engine, int kernel, int dims, int padding, int stride);
+    convolution_layer_fwd(
+        mkldnn::memory::dims& src_tz,
+        mkldnn::memory& src_memory,
+        mkldnn::memory::desc& src_md,
+        mkldnn::engine& cpu_engine,
+        int kernel,
+        int dims,
+        int padding,
+        int stride);
     ~convolution_layer_fwd() = default;
 
     mkldnn::softmax_forward::primitive_desc* softmax_pd_();
@@ -67,14 +74,17 @@ public:
     mkldnn::memory dst_memory;
     mkldnn::convolution_forward fwd;
 
-
 };
 
 class relu_layer_fwd
-        : public layer_fwd {
+    : public layer_fwd {
 public:
 
-    relu_layer_fwd(mkldnn::memory::dims& src_tz, mkldnn::memory& src_memory, mkldnn::memory::desc& src_md, mkldnn::engine& cpu_engine);
+    relu_layer_fwd(
+        mkldnn::memory::dims& src_tz,
+        mkldnn::memory& src_memory,
+        mkldnn::memory::desc& src_md,
+        mkldnn::engine& cpu_engine);
     ~relu_layer_fwd() = default;
 
     mkldnn::softmax_forward::primitive_desc* softmax_pd_();
@@ -100,10 +110,14 @@ public:
 };
 
 class softmax_layer_fwd
-        : public layer_fwd {
+    : public layer_fwd {
 public:
 
-    softmax_layer_fwd(mkldnn::memory::dims& src_tz, mkldnn::memory& src_memory, mkldnn::memory::desc& src_md, mkldnn::engine& cpu_engine);
+    softmax_layer_fwd(
+        mkldnn::memory::dims& src_tz,
+        mkldnn::memory& src_memory,
+        mkldnn::memory::desc& src_md,
+        mkldnn::engine& cpu_engine);
     ~softmax_layer_fwd() = default;
 
     mkldnn::softmax_forward::primitive_desc* softmax_pd_();
@@ -136,9 +150,15 @@ public:
 };
 
 class convolution_layer_bwd :
-        public layer_bwd {
+    public layer_bwd {
 public:
-    convolution_layer_bwd(mkldnn::memory& diff_dst_memory, mkldnn::memory& src_memory, mkldnn::memory::desc& src_md, mkldnn::memory::dims& src_tz, layer_fwd* fwd, mkldnn::engine& cpu_engine);
+    convolution_layer_bwd(
+        mkldnn::memory& diff_dst_memory,
+        mkldnn::memory& src_memory,
+        mkldnn::memory::desc& src_md,
+        mkldnn::memory::dims& src_tz,
+        layer_fwd* fwd,
+        mkldnn::engine& cpu_engine);
     mkldnn::memory& diff_src_memory_();
     void push_primitive(std::vector<mkldnn::primitive>& bwd_net);
     std::vector<float> conv_user_diff_weights_buffer;
@@ -159,9 +179,15 @@ public:
 };
 
 class relu_layer_bwd :
-        public layer_bwd {
+    public layer_bwd {
 public:
-    relu_layer_bwd(mkldnn::memory& diff_dst_memory, mkldnn::memory& src_memory, mkldnn::memory::desc& src_md, mkldnn::memory::dims& src_tz, layer_fwd* fwd, mkldnn::engine& cpu_engine);
+    relu_layer_bwd(
+        mkldnn::memory& diff_dst_memory,
+        mkldnn::memory& src_memory,
+        mkldnn::memory::desc& src_md,
+        mkldnn::memory::dims& src_tz,
+        layer_fwd* fwd,
+        mkldnn::engine& cpu_engine);
     mkldnn::memory& diff_src_memory_();
     void push_primitive(std::vector<mkldnn::primitive>& bwd_net);
     mkldnn::memory::desc diff_dst_md;
@@ -172,9 +198,15 @@ public:
 };
 
 class softmax_layer_bwd :
-        public layer_bwd {
+    public layer_bwd {
 public:
-    softmax_layer_bwd(mkldnn::memory& diff_dst_memory, mkldnn::memory& src_memory, mkldnn::memory::desc& src_md, mkldnn::memory::dims& src_tz, layer_fwd* fwd, mkldnn::engine& cpu_engine);
+    softmax_layer_bwd(
+        mkldnn::memory& diff_dst_memory,
+        mkldnn::memory& src_memory,
+        mkldnn::memory::desc& src_md,
+        mkldnn::memory::dims& src_tz,
+        layer_fwd* fwd,
+        mkldnn::engine& cpu_engine);
     mkldnn::memory& diff_src_memory_();
     void push_primitive(std::vector<mkldnn::primitive>& bwd_net);
     mkldnn::memory::desc diff_dst_md;
@@ -183,7 +215,6 @@ public:
     mkldnn::memory diff_src_memory;
     mkldnn::softmax_backward bwd;
 };
-
 
 class input_data {
 public:

@@ -14,45 +14,43 @@ public:
 
     Mx(Vec& x, int64_t nrows, int64_t ncols, MatrixLayout layout = MatrixLayout::RowMajor)
         : vec_(x)
-        , layout_(layout)
-        , rows_(nrows)
-        , cols_(ncols) {
+          , layout_(layout)
+          , rows_(nrows)
+          , cols_(ncols) {
     }
 
-    Mx(const Vec& x,
-       int64_t nrows,
-       int64_t ncols,
-       MatrixLayout layout = MatrixLayout::RowMajor
-       )
-    : vec_(x)
-    , layout_(layout)
-    , rows_(nrows)
-    , cols_(ncols) {
+    Mx(
+        const Vec& x,
+        int64_t nrows,
+        int64_t ncols,
+        MatrixLayout layout = MatrixLayout::RowMajor
+    )
+        : vec_(x)
+          , layout_(layout)
+          , rows_(nrows)
+          , cols_(ncols) {
         assert(vec_.dim() == rows_ * cols_);
     }
 
     Mx(const Mx& other)
-    : Mx(other.vec_, other.rows_, other.cols_, other.layout_) {
+        : Mx(other.vec_, other.rows_, other.cols_, other.layout_) {
 
     }
 
-
-
-    Mx(int64_t nrows,
-       int64_t ncols,
-       MatrixLayout layout = MatrixLayout::RowMajor)
-    : vec_(nrows * ncols)
-    , layout_(layout)
-    , rows_(nrows)
-    , cols_(ncols) {
+    Mx(
+        int64_t nrows,
+        int64_t ncols,
+        MatrixLayout layout = MatrixLayout::RowMajor)
+        : vec_(nrows * ncols)
+          , layout_(layout)
+          , rows_(nrows)
+          , cols_(ncols) {
         assert(vec_.dim() == rows_ * cols_);
     }
-
 
     Mx& set(int64_t x, int64_t y, Scalar val);
 
     Scalar get(int64_t x, int64_t y) const;
-
 
     //TODO(noxoomo): should this be implicit?
     operator Vec() {
@@ -60,7 +58,7 @@ public:
     }
 
     operator Vec() const {
-        return  vec_;
+        return vec_;
     }
 
     Mx& operator+=(const Mx& other);
@@ -72,7 +70,6 @@ public:
     Mx& operator/=(Scalar value);
 
     Mx& operator^=(Scalar q);
-
 
     Vec row(int64_t idx);
     Vec row(int64_t idx) const;

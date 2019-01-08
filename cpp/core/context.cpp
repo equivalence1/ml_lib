@@ -1,7 +1,6 @@
 #include "context.h"
 #include <util/singleton.h>
 #include <util/guard.h>
-#include <mutex>
 #include <c10/core/TensorOptions.h>
 
 //TODO(noxoomo): i think context should be thread-local
@@ -14,9 +13,10 @@ namespace {
         }
 
         void setDevice(const ComputeDevice& device) {
-            with_guard(guard_) {
-                current_ = device;
-            }
+            with_guard(guard_)
+                {
+                    current_ = device;
+                }
         }
 
     private:

@@ -8,8 +8,9 @@
 #include <stdio.h>
 #include <cmath>
 
-Adam::Adam(int64_t vecSize, double learningRate, double betta1, double betta2, double eps):
-        betta1(betta1), betta2(betta2), learningRate(learningRate), eps(eps), betta1Pow(1), betta2Pow(1), vD(0),sD(0) {
+Adam::Adam(int64_t vecSize, double learningRate, double betta1, double betta2, double eps)
+    :
+    betta1(betta1), betta2(betta2), learningRate(learningRate), eps(eps), betta1Pow(1), betta2Pow(1), vD(0), sD(0) {
     VecTools::fill(0, vD);
     VecTools::fill(0, sD);
 }
@@ -33,7 +34,9 @@ Vec Adam::optimize(Batch<FuncC1> f, Vec cursor) const {
     for (int64_t i = 0; i < cursor.dim(); i++) {
         vD.set(i, betta1 * vD.get(i) + (1 - betta1) * grad.get(i));
         sD.set(i, betta2 * sD.get(i) + (1 - betta2) * (grad.get(i) * grad.get(i)));
-        cursor.set(i, cursor.get(i) - learningRate * vD.get(i) / ((1 - betta1Pow) * (std::sqrt(sD.get(i) / (1 - betta2Pow)) + eps)));
+        cursor.set(i,
+                   cursor.get(i)
+                       - learningRate * vD.get(i) / ((1 - betta1Pow) * (std::sqrt(sD.get(i) / (1 - betta2Pow)) + eps)));
 
     }
 }

@@ -3,7 +3,6 @@
 #include "context.h"
 #include "vec.h"
 
-
 class VecFactory {
 public:
     static Vec create(ComputeDevice device, int64_t dim);

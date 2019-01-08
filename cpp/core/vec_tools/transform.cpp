@@ -1,6 +1,5 @@
 #include <core/vec_tools/transform.h>
 
-#include <core/vec.h>
 #include <core/vec_factory.h>
 
 namespace VecTools {
@@ -32,7 +31,7 @@ namespace VecTools {
     }
 
     Vec mul(Scalar alpha, Vec x) {
-        x.data() *= (float)alpha;
+        x.data() *= (float) alpha;
         return x;
     }
 

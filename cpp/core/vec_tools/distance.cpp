@@ -3,9 +3,6 @@
 #include <core/vec_tools/transform.h>
 #include <core/vec_tools/stats.h>
 
-#include <cmath>
-#include <cassert>
-
 namespace VecTools {
 
     Scalar dotProduct(const Vec& left, const Vec& right) {

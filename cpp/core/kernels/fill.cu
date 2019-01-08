@@ -24,7 +24,7 @@ namespace Cuda {
             }
         }
 
-        #define FILL_BUFFER(Type)\
+#define FILL_BUFFER(Type)\
         template void FillBuffer<Type>(Type* buffer, Type value, int64_t size, StreamRef stream);
 
         FILL_BUFFER(float);

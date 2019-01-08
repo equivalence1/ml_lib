@@ -1,10 +1,5 @@
 #include <core/vec_tools/stats.h>
 
-#include <core/scalar.h>
-#include <core/vec.h>
-
-#include <cmath>
-
 namespace VecTools {
 
     Scalar sum2(const Vec& x) {

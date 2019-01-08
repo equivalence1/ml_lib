@@ -10,7 +10,6 @@
 #include <utility>
 #include <functional>
 
-
 class Vec {
 public:
     explicit Vec(int64_t dim);
@@ -21,7 +20,7 @@ public:
 
     Vec(const Vec& other)
         : vec_(other.vec_)
-        , immutable_(true) {
+          , immutable_(true) {
     }
 
     void set(int64_t index, double value);
@@ -41,16 +40,13 @@ public:
     Vec& operator*=(const Vec& other);
     Vec& operator/=(const Vec& other);
 
-
     Vec& operator+=(Scalar value);
     Vec& operator-=(Scalar value);
     Vec& operator*=(Scalar value);
     Vec& operator/=(Scalar value);
 
-
     Vec& operator^=(const Vec& other);
     Vec& operator^=(Scalar q);
-
 
     int64_t dim() const;
 
@@ -79,10 +75,11 @@ protected:
 
     explicit Vec(int64_t dim, const ComputeDevice& device);
 
-    explicit Vec(const torch::Tensor& impl,
-                 bool immutable = false)
+    explicit Vec(
+        const torch::Tensor& impl,
+        bool immutable = false)
         : vec_(impl)
-        , immutable_(immutable) {
+          , immutable_(immutable) {
 
     }
 
@@ -92,16 +89,15 @@ protected:
     friend class VecFactory;
 };
 
+Vec operator+(const Vec& left, const Vec& right);
+Vec operator-(const Vec& left, const Vec& right);
+Vec operator*(const Vec& left, const Vec& right);
+Vec operator/(const Vec& left, const Vec& right);
 
-Vec operator +(const Vec& left, const Vec& right);
-Vec operator -(const Vec& left, const Vec& right);
-Vec operator *(const Vec& left, const Vec& right);
-Vec operator /(const Vec& left, const Vec& right);
+Vec operator+(const Vec& left, Scalar right);
+Vec operator-(const Vec& left, Scalar right);
+Vec operator*(const Vec& left, Scalar right);
+Vec operator/(const Vec& left, Scalar right);
 
-Vec operator +(const Vec& left, Scalar right);
-Vec operator -(const Vec& left, Scalar right);
-Vec operator *(const Vec& left, Scalar right);
-Vec operator /(const Vec& left, Scalar right);
-
-Vec operator ^(const Vec& left, Scalar q);
-Vec operator ^(const Vec& left, const Vec& right);
+Vec operator^(const Vec& left, Scalar q);
+Vec operator^(const Vec& left, const Vec& right);

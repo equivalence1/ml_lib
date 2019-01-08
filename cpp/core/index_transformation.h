@@ -29,28 +29,26 @@ public:
         return IndexTransformation(dim);
     }
 
-
 protected:
     IndexTransformation(std::shared_ptr<AnyIndexTransformation>&& trans)
         : trans_(std::move(trans))
-        , dim_(trans_->newDim()) {
+          , dim_(trans_->newDim()) {
 
     }
 
     IndexTransformation(int64_t dim)
-    : dim_(dim) {
+        : dim_(dim) {
 
     }
 private:
 
     template <class Impl>
-    friend class IndexTransformationStub;
+    friend
+    class IndexTransformationStub;
 private:
     std::shared_ptr<AnyIndexTransformation> trans_;
     int64_t dim_;
 };
-
-
 
 template <class Impl>
 class IndexTransformationStub : public AnyIndexTransformation {
@@ -90,7 +88,5 @@ private:
     int64_t offset_ = 0;
     int64_t size_ = 0;
 };
-
-
 
 IndexTransformation Combine(IndexTransformation left, IndexTransformation right);

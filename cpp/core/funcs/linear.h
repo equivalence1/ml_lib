@@ -6,9 +6,9 @@
 class Linear : public FuncC1Stub<Linear> {
 public:
     Linear(const Vec& param, double bias)
-    :FuncC1Stub<Linear>(param.dim())
-    , param_(param)
-    , bias_(bias){
+        : FuncC1Stub<Linear>(param.dim())
+          , param_(param)
+          , bias_(bias) {
 
     }
 

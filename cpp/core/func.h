@@ -94,14 +94,11 @@ private:
 
 };
 
-
 template <class T, class ... Args>
 inline Func CreateFunc(Args&& ... args) {
     auto trans = std::make_shared<T>(std::forward(args)...);
     return Func(std::static_pointer_cast<AnyFunc>(trans));
 }
-
-
 
 class FuncC1 : public AnyFuncC1 {
 public:
@@ -126,8 +123,6 @@ public:
         return impl_->gradient();
     }
 
-
-
     operator TransC1() const {
         return asTransC1();
     }
@@ -148,7 +143,6 @@ protected:
 private:
     ObjectPtr<AnyFuncC1> impl_;
 };
-
 
 template <class T, class ... Args>
 inline FuncC1 CreateFuncC1(Args&& ... args) {

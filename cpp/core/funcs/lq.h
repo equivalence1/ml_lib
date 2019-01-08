@@ -39,8 +39,9 @@ public:
 public:
     Lq(const Lq& other) = default;
 
-    Lq(double p,
-       const Vec& b)
+    Lq(
+        double p,
+        const Vec& b)
         : FuncC1Stub<Lq>(b.dim())
           , q_(p)
           , b_(b) {

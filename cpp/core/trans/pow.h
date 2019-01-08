@@ -4,13 +4,14 @@
 
 class Pow : public MapC1Stub<Pow> {
 public:
-    Pow(double k,
+    Pow(
+        double k,
         int64_t dim,
         double alpha = 1
-        )
+    )
         : MapC1Stub<Pow>(dim)
-        , k_(k)
-        , alpha_(alpha) {
+          , k_(k)
+          , alpha_(alpha) {
 
     }
 

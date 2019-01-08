@@ -4,10 +4,10 @@
 #include "nntree/tensor.h"
 
 namespace nntree {
-namespace core {
+    namespace core {
 
-void LeastSquares(Tensor<double>& X, Tensor<double>& y, Tensor<double>& res);
-void LeastSquares(DataSet<double, double>& ds, Tensor<double>& res);
+        void LeastSquares(Tensor<double>& X, Tensor<double>& y, Tensor<double>& res);
+        void LeastSquares(DataSet<double, double>& ds, Tensor<double>& res);
 
-}
+    }
 }

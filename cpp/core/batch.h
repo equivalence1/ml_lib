@@ -13,7 +13,7 @@ struct Batch {
     std::vector<T> batch_;
 
     Batch(std::initializer_list<T> list)
-    : batch_(list) {
+        : batch_(list) {
 
     }
 

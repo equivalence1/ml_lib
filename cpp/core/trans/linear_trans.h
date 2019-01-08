@@ -5,8 +5,7 @@
 #include <utility>
 #include <core/vec_factory.h>
 
-
-class LinearTrans  : public TransC1Stub<LinearTrans> {
+class LinearTrans : public TransC1Stub<LinearTrans> {
 public:
     LinearTrans(
         const Mx& mx)

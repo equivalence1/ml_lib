@@ -15,7 +15,7 @@ namespace {
         std::lock_guard<T> guard_;
 
         explicit LockWrapper(T& x)
-        : guard_(x) {
+            : guard_(x) {
 
         }
         operator bool() const {
@@ -33,10 +33,9 @@ namespace {
 
 }
 
-
 template <class T>
 static inline LockWrapper<T> make_guard(T& x) {
-    return  LockWrapper<T>(x);
+    return LockWrapper<T>(x);
 }
 
 /*
@@ -51,20 +50,16 @@ static inline LockWrapper<T> make_guard(T& x) {
         CONCAT(THIS_IS_GUARD, __LINE__)                      \
             :
 
-
-
 namespace Private {
     template <typename F>
     class ScopeGuard {
     public:
         ScopeGuard(const F& function)
-            : Function_{function}
-        {
+            : Function_{function} {
         }
 
         ScopeGuard(F&& function)
-            : Function_{std::move(function)}
-        {
+            : Function_{std::move(function)} {
         }
 
         ScopeGuard(ScopeGuard&&) = default;
@@ -80,7 +75,7 @@ namespace Private {
 
     struct MakeGuardHelper {
         template <class F>
-        ScopeGuard<F> operator | (F&& function) const {
+        ScopeGuard<F> operator|(F&& function) const {
             return std::forward<F>(function);
         }
     };

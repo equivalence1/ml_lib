@@ -5,11 +5,10 @@ enum class ComputeType {
     Gpu
 };
 
-
-class ComputeDevice  {
+class ComputeDevice {
 public:
-    ComputeDevice (ComputeType type)
-    : deviceType_(type) {
+    ComputeDevice(ComputeType type)
+        : deviceType_(type) {
 
     }
 
@@ -17,29 +16,26 @@ public:
         return deviceType_;
     }
 
-    bool operator==(const ComputeDevice & rhs) const {
+    bool operator==(const ComputeDevice& rhs) const {
         return deviceType_ == rhs.deviceType_;
     }
-    bool operator!=(const ComputeDevice & rhs) const {
+    bool operator!=(const ComputeDevice& rhs) const {
         return !(rhs == *this);
     }
 private:
     ComputeType deviceType_;
 };
 
-
 const ComputeDevice& CurrentDevice();
 void SetDevice(const ComputeDevice& device);
-
-
 
 class ComputeDeviceGuard {
 
 public:
 
     ComputeDeviceGuard(const ComputeDevice& toUse)
-    : prev_(CurrentDevice())
-    , current_(toUse) {
+        : prev_(CurrentDevice())
+          , current_(toUse) {
         SetDevice(current_);
 
     }

@@ -9,7 +9,6 @@ inline int64_t TotalSize(const torch::Tensor& tensor) {
     return size;
 }
 
-
 void Vec::set(int64_t index, double value) {
     assert(!immutable_);
     vec_.accessor<float, 1>()[index] = value;
@@ -39,12 +38,11 @@ static inline torch::TensorOptions tensorOptionsOnDevice(const ComputeDevice dev
     return baseOptions;
 }
 
-
 //
 ////TODO: should be placeholder
 Vec::Vec(int64_t dim)
     : vec_(torch::zeros({dim}, tensorOptionsOnDevice(CurrentDevice())))
-    , immutable_(false) {
+      , immutable_(false) {
 
 }
 
@@ -53,12 +51,10 @@ Vec::Vec(int64_t dim, const ComputeDevice& device)
       , immutable_(false) {
 }
 
-
 Vec Vec::slice(int64_t from, int64_t size) {
     assert(vec_.dim() == 1);
     return Vec(vec_.slice(0, from, from + size), false);
 }
-
 
 Vec Vec::slice(int64_t from, int64_t size) const {
     return Vec(vec_.slice(0, from, from + size), true);
@@ -105,7 +101,6 @@ Vec& Vec::operator^=(Scalar q) {
     vec_.pow_(q);
     return *this;
 }
-
 
 Vec operator+(const Vec& left, const Vec& right) {
     auto result = VecFactory::uninitializedCopy(left);

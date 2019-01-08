@@ -4,11 +4,11 @@
 #include <core/trans.h>
 #include <core/vec.h>
 
-class AddVecTrans: public MapC1Stub<AddVecTrans> {
+class AddVecTrans : public MapC1Stub<AddVecTrans> {
 public:
     AddVecTrans(const Vec& b)
-    : MapC1Stub<AddVecTrans>(b.dim())
-    , b_(b) {
+        : MapC1Stub<AddVecTrans>(b.dim())
+          , b_(b) {
 
     }
 

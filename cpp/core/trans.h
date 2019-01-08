@@ -24,12 +24,11 @@ public:
 //    virtual Batch<Vec> trans(Batch<ConstVec> x, Batch<Vec> to) const = 0;
 };
 
-
-class Trans  : public AnyTrans {
+class Trans : public AnyTrans {
 public:
 
     int64_t xdim() const final {
-        return  impl_->xdim();
+        return impl_->xdim();
     }
 
     int64_t ydim() const final {
@@ -51,8 +50,8 @@ protected:
     friend class Func;
     friend class TransC1;
 
-    template<class T, class ...Args>
-    friend Trans CreateTrans(Args&&... args);
+    template <class T, class ...Args>
+    friend Trans CreateTrans(Args&& ... args);
 
     Trans(ObjectPtr<AnyTrans>&& impl)
         : impl_(std::move(impl)) {
@@ -66,9 +65,8 @@ private:
     ObjectPtr<AnyTrans> impl_;
 };
 
-
 template <class T, class ... Args>
-inline Trans CreateTrans(Args&&... args) {
+inline Trans CreateTrans(Args&& ... args) {
     auto trans = std::make_shared<T>(std::forward<Args>(args)...);
     return Trans(std::static_pointer_cast<AnyTrans>(trans));
 }
@@ -82,9 +80,7 @@ public:
     virtual Trans gradient() const = 0;
 };
 
-
-
-class TransC1 : public  AnyTransC1 {
+class TransC1 : public AnyTransC1 {
 public:
 
     operator Trans() const {
@@ -92,7 +88,7 @@ public:
     }
 
     int64_t xdim() const final {
-        return  impl_->xdim();
+        return impl_->xdim();
     }
 
     int64_t ydim() const final {
@@ -115,7 +111,7 @@ public:
     }
 
     Trans gradient() const final {
-       return impl_->gradient();
+        return impl_->gradient();
     }
 
 protected:
@@ -130,13 +126,11 @@ private:
     ObjectPtr<AnyTransC1> impl_;
 };
 
-
 template <class T, class ... Args>
-inline TransC1 CreateTransC1(Args&&... args) {
+inline TransC1 CreateTransC1(Args&& ... args) {
     auto trans = std::make_shared<T>(std::forward(args)...);
     return TransC1(std::static_pointer_cast<AnyTransC1>(trans));
 }
-
 
 template <class Impl>
 class TransStub : public virtual AnyTrans {
@@ -146,8 +140,8 @@ public:
     }
 
     TransStub(int64_t xdim, int64_t ydim)
-    : xdim_(xdim)
-    , ydim_(ydim) {
+        : xdim_(xdim)
+          , ydim_(ydim) {
 
     }
 
@@ -168,15 +162,13 @@ template <class Impl>
 class MapStub : public TransStub<Impl> {
 public:
     MapStub(int64_t dim)
-    : TransStub<Impl>(dim, dim) {
+        : TransStub<Impl>(dim, dim) {
 
     }
 };
 
-
 template <class T>
 inline constexpr bool isC1Trans = std::is_convertible_v<T, TransC1>;
-
 
 namespace Detail {
 
@@ -184,8 +176,8 @@ namespace Detail {
     class GradientAsTransStub : public TransStub<GradientAsTransStub<TransC1Impl>> {
     public:
         GradientAsTransStub(const TransC1Impl& impl)
-        : TransStub<GradientAsTransStub<TransC1Impl>>(impl.xdim(), impl.xdim() * impl.ydim())
-        , trans_(impl) {
+            : TransStub<GradientAsTransStub<TransC1Impl>>(impl.xdim(), impl.xdim() * impl.ydim())
+              , trans_(impl) {
 
         }
 
@@ -200,7 +192,7 @@ namespace Detail {
 }
 
 template <class Impl>
-class TransC1Stub : public TransStub<Impl>,  public AnyTransC1 {
+class TransC1Stub : public TransStub<Impl>, public AnyTransC1 {
 public:
     operator TransC1() const {
         return CreateTransC1<Impl>(*static_cast<const Impl*>(this));
@@ -214,11 +206,10 @@ public:
     }
 
     TransC1Stub(int64_t xdim, int64_t ydim)
-    : TransStub<Impl>(xdim, ydim) {
+        : TransStub<Impl>(xdim, ydim) {
 
     }
 };
-
 
 template <class Impl>
 class MapC1Stub : public TransC1Stub<Impl> {
