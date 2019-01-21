@@ -11,6 +11,8 @@ add_library(util
 
         cuda_wrappers.cpp
         exception.cpp
+        parallel_executor.h
+        parallel_executor.cpp
         )
 
 enable_cxx14(util)
@@ -18,6 +20,8 @@ maybe_enable_cuda(util)
 
 set(CMAKE_CUDA_STANDARD 14)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+
+target_link_libraries(util "${TORCH_LIBRARIES}")
 
 target_include_directories(util INTERFACE
         PUBLIC $<INSTALL_INTERFACE:include>
@@ -31,6 +35,6 @@ install(TARGETS util EXPORT UtilConfig
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-install(EXPORT UtilConfig DESTINATION share/UtilConfig/cmake)
-export(TARGETS util FILE UtilConfig.cmake)
+#install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+#install(EXPORT UtilConfig DESTINATION share/UtilConfig/cmake)
+#export(TARGETS util FILE UtilConfig.cmake)

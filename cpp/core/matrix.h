@@ -7,7 +7,7 @@ enum class MatrixLayout {
     RowMajor
 };
 
-class Mx {
+class Mx  {
 public:
     Mx(Mx&& other) = default;
     Mx(Mx& other) = default;
@@ -19,8 +19,7 @@ public:
           , cols_(ncols) {
     }
 
-    Mx(
-        const Vec& x,
+    Mx(const Vec& x,
         int64_t nrows,
         int64_t ncols,
         MatrixLayout layout = MatrixLayout::RowMajor
@@ -37,10 +36,9 @@ public:
 
     }
 
-    Mx(
-        int64_t nrows,
-        int64_t ncols,
-        MatrixLayout layout = MatrixLayout::RowMajor)
+    Mx(int64_t nrows,
+       int64_t ncols,
+       MatrixLayout layout = MatrixLayout::RowMajor)
         : vec_(nrows * ncols)
           , layout_(layout)
           , rows_(nrows)
@@ -74,9 +72,14 @@ public:
     Vec row(int64_t idx);
     Vec row(int64_t idx) const;
 
-//    Vec col(int64_t idx);
-//    Vec col(int64_t idx) const;
 
+    template <class Visitor>
+    void iterateOverColumn(int64_t columnIdx, Visitor&& visitor) const {
+        ConstArrayRef<float> data = vec_.arrayRef();
+        for (int64_t i = 0; i < ydim(); ++i) {
+            visitor(i, data[seqIndex(columnIdx, i)]);
+        }
+    }
 
     int64_t xdim() const {
         return cols_;

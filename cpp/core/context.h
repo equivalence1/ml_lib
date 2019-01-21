@@ -1,18 +1,18 @@
 #pragma once
 
-enum class ComputeType {
+enum class ComputeDeviceType {
     Cpu,
     Gpu
 };
 
 class ComputeDevice {
 public:
-    ComputeDevice(ComputeType type)
+    ComputeDevice(ComputeDeviceType type)
         : deviceType_(type) {
 
     }
 
-    ComputeType deviceType() const {
+    ComputeDeviceType deviceType() const {
         return deviceType_;
     }
 
@@ -23,7 +23,7 @@ public:
         return !(rhs == *this);
     }
 private:
-    ComputeType deviceType_;
+    ComputeDeviceType deviceType_;
 };
 
 const ComputeDevice& CurrentDevice();

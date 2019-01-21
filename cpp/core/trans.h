@@ -9,11 +9,7 @@
 #include <optional>
 #include <functional>
 
-class Trans;
-class TransC1;
-
-//TODO(noxoomo): batch trans
-class AnyTrans : public Object {
+class Trans : public Object {
 public:
     virtual int64_t xdim() const = 0;
 
@@ -21,127 +17,60 @@ public:
 
     virtual Vec trans(const Vec& x, Vec to) const = 0;
 
-//    virtual Batch<Vec> trans(Batch<ConstVec> x, Batch<Vec> to) const = 0;
-};
-
-class Trans : public AnyTrans {
-public:
-
-    int64_t xdim() const final {
-        return impl_->xdim();
+    operator std::unique_ptr<Trans>() const {
+        return cloneUnique();
     }
 
-    int64_t ydim() const final {
-        return impl_->ydim();
+    operator std::shared_ptr<Trans>() const {
+        return cloneShared();
     }
-
-    Vec trans(const Vec& x, Vec to) const final {
-        return impl_->trans(x, to);
-    }
-
-//    const Vec& trans(const Batch<Vec>& x, Batch<Vec>& to) const {
-//        return Impl_->trans(x, to);
-//    }
-
-
-
 protected:
-    friend class Func;
-    friend class Func;
-    friend class TransC1;
 
-    template <class T, class ...Args>
-    friend Trans CreateTrans(Args&& ... args);
+    virtual std::unique_ptr<Trans> cloneUnique() const = 0;
 
-    Trans(ObjectPtr<AnyTrans>&& impl)
-        : impl_(std::move(impl)) {
+    virtual std::shared_ptr<Trans> cloneShared() const = 0;
 
-    }
-
-    const AnyTrans* instance() const {
-        return impl_.get();
-    }
-private:
-    ObjectPtr<AnyTrans> impl_;
 };
 
-template <class T, class ... Args>
-inline Trans CreateTrans(Args&& ... args) {
-    auto trans = std::make_shared<T>(std::forward<Args>(args)...);
-    return Trans(std::static_pointer_cast<AnyTrans>(trans));
-}
-
-class AnyTransC1 : public virtual AnyTrans {
+class TransC1 : public virtual Trans {
 public:
     virtual Mx gradientTo(const Vec& x, Mx to) const = 0;
 
     virtual Vec gradientRowTo(const Vec& x, Vec to, int64_t index) const = 0;
 
-    virtual Trans gradient() const = 0;
-};
+    virtual std::unique_ptr<Trans> gradient() const = 0;
 
-class TransC1 : public AnyTransC1 {
-public:
-
-    operator Trans() const {
-        return Trans(std::static_pointer_cast<AnyTrans>(impl_));
+    operator std::unique_ptr<TransC1>() const {
+        return cloneUniqueC1();
     }
 
-    int64_t xdim() const final {
-        return impl_->xdim();
-    }
-
-    int64_t ydim() const final {
-        return impl_->ydim();
-    }
-
-    Vec trans(const Vec& x, Vec to) const final {
-        return impl_->trans(x, to);
-    }
-
-    //TOOD(noxoomo): make to Mx (Mx will be casted to to)
-    //this one to func
-    Mx gradientTo(const Vec& x, Mx to) const final {
-        return impl_->gradientTo(x, to);
-    }
-
-    Vec gradientRowTo(const Vec& x, Vec to, int64_t index) const final {
-        impl_->gradientRowTo(x, to, index);
-        return to;
-    }
-
-    Trans gradient() const final {
-        return impl_->gradient();
+    operator std::shared_ptr<TransC1>() const {
+        return cloneSharedC1();
     }
 
 protected:
-    friend class FuncC1;
 
-    TransC1(ObjectPtr<AnyTransC1> impl)
-        : impl_(std::move(impl)) {
+    virtual std::unique_ptr<TransC1> cloneUniqueC1() const = 0;
 
-    }
+    virtual std::shared_ptr<TransC1> cloneSharedC1() const = 0;
 
-private:
-    ObjectPtr<AnyTransC1> impl_;
+
 };
 
-template <class T, class ... Args>
-inline TransC1 CreateTransC1(Args&& ... args) {
-    auto trans = std::make_shared<T>(std::forward(args)...);
-    return TransC1(std::static_pointer_cast<AnyTransC1>(trans));
-}
 
 template <class Impl>
-class TransStub : public virtual AnyTrans {
+class TransStub : public virtual Trans {
 public:
-    operator Trans() const {
-        return CreateTrans<Impl>(*static_cast<const Impl*>(this));
-    }
 
     TransStub(int64_t xdim, int64_t ydim)
         : xdim_(xdim)
           , ydim_(ydim) {
+
+    }
+
+    TransStub(const TransStub& other)
+    : xdim_(other.xdim_)
+    , ydim_(other.ydim_) {
 
     }
 
@@ -151,6 +80,14 @@ public:
 
     int64_t ydim() const final {
         return ydim_;
+    }
+protected:
+    std::unique_ptr<Trans> cloneUnique() const final {
+        return std::unique_ptr<Trans>(new Impl(*static_cast<const Impl*>(this)));
+    }
+
+    std::shared_ptr<Trans> cloneShared() const final {
+        return std::make_shared<Impl>(*static_cast<const Impl*>(this));
     }
 
 private:
@@ -192,11 +129,8 @@ namespace Detail {
 }
 
 template <class Impl>
-class TransC1Stub : public TransStub<Impl>, public AnyTransC1 {
+class TransC1Stub : public TransC1, public TransStub<Impl> {
 public:
-    operator TransC1() const {
-        return CreateTransC1<Impl>(*static_cast<const Impl*>(this));
-    }
 
     Mx gradientTo(const Vec& x, Mx to) const override {
         for (int64_t row = 0; row < ydim(); ++row) {
@@ -205,13 +139,22 @@ public:
         return to;
     }
 
-    Trans gradient() const override {
-        return  Detail::GradientAsTransStub<Impl>(*static_cast<const Impl*>(this));
+    std::unique_ptr<Trans> gradient() const override {
+        return Detail::GradientAsTransStub<Impl>(*static_cast<const Impl*>(this));
     }
 
     TransC1Stub(int64_t xdim, int64_t ydim)
         : TransStub<Impl>(xdim, ydim) {
 
+    }
+protected:
+
+    std::unique_ptr<TransC1> cloneUniqueC1() const final {
+        return std::unique_ptr<TransC1>(new Impl(*static_cast<const Impl*>(this)));
+    }
+
+    std::shared_ptr<TransC1> cloneSharedC1() const final {
+        return std::make_shared<Impl>(*static_cast<const Impl*>(this));
     }
 };
 

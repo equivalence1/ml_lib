@@ -2,6 +2,7 @@
 #include <util/singleton.h>
 #include <util/guard.h>
 #include <c10/core/TensorOptions.h>
+#include <util/parallel_executor.h>
 
 //TODO(noxoomo): i think context should be thread-local
 namespace {
@@ -19,7 +20,7 @@ namespace {
         }
 
     private:
-        ComputeDevice current_ = ComputeDevice(ComputeType::Cpu);
+        ComputeDevice current_ = ComputeDevice(ComputeDeviceType::Cpu);
         std::mutex guard_;
     };
 }
@@ -31,3 +32,4 @@ const ComputeDevice& CurrentDevice() {
 void SetDevice(const ComputeDevice& device) {
     Singleton<Context>().setDevice(device);
 }
+

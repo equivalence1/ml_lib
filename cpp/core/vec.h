@@ -9,6 +9,7 @@
 #include <memory>
 #include <utility>
 #include <functional>
+#include <util/array_ref.h>
 
 class Vec {
 public:
@@ -19,9 +20,15 @@ public:
     Vec(Vec& other) = default;
 
     Vec(const Vec& other)
-        : vec_(other.vec_)
-          , immutable_(true) {
+        : vec_(other.vec_) {
     }
+
+    explicit Vec(int64_t dim, const ComputeDevice& device);
+
+    explicit Vec(const torch::Tensor& impl)
+        : vec_(impl) {
+    }
+
 
     void set(int64_t index, double value);
 
@@ -50,10 +57,6 @@ public:
 
     int64_t dim() const;
 
-    bool immutable() const {
-        return immutable_;
-    }
-
     operator const torch::Tensor&() const {
         return data();
     }
@@ -67,25 +70,31 @@ public:
     }
 
     torch::Tensor& data() {
-        assert(!immutable_);
         return vec_;
     }
 
-protected:
-
-    explicit Vec(int64_t dim, const ComputeDevice& device);
-
-    explicit Vec(
-        const torch::Tensor& impl,
-        bool immutable = false)
-        : vec_(impl)
-          , immutable_(immutable) {
-
+    bool isContiguous() const {
+        return vec_.is_contiguous();
     }
 
-    torch::Tensor vec_;
-    bool immutable_ = true;
+    ArrayRef<float> arrayRef() {
+        assert(vec_.is_contiguous());
+        return ArrayRef<float>(vec_.data<float>(), dim());
+    }
 
+
+    ConstArrayRef<float> arrayRef() const {
+        assert(vec_.is_contiguous());
+        return ConstArrayRef<float>(vec_.data<float>(), dim());
+    }
+
+    bool operator==(const Vec& other) const {
+        return vec_.equal(other.vec_);
+    }
+
+    ComputeDevice device() const;
+protected:
+    torch::Tensor vec_;
     friend class VecFactory;
 };
 

@@ -1,16 +1,10 @@
 #include "vec.h"
 #include "vec_factory.h"
+#include "torch_helpers.h"
 
-inline int64_t TotalSize(const torch::Tensor& tensor) {
-    int64_t size = 0;
-    for (auto dimSize : tensor.sizes()) {
-        size += dimSize;
-    }
-    return size;
-}
+
 
 void Vec::set(int64_t index, double value) {
-    assert(!immutable_);
     vec_.accessor<float, 1>()[index] = value;
 }
 
@@ -19,45 +13,27 @@ double Vec::get(int64_t index) const {
 }
 
 int64_t Vec::dim() const {
-    return TotalSize(vec_);
-}
-
-static inline torch::TensorOptions tensorOptionsOnDevice(const ComputeDevice device) {
-    torch::TensorOptions baseOptions = [&]() {
-        switch (device.deviceType()) {
-            case ComputeType::Cpu: {
-                return torch::device(torch::DeviceType::CPU);
-            }
-            case ComputeType::Gpu: {
-                return torch::device(torch::DeviceType::CUDA);
-            }
-        }
-    }();
-    baseOptions = baseOptions.requires_grad(false);
-    baseOptions = baseOptions.dtype(torch::ScalarType::Float);
-    return baseOptions;
+    return TorchHelpers::totalSize(vec_);
 }
 
 //
 ////TODO: should be placeholder
 Vec::Vec(int64_t dim)
-    : vec_(torch::zeros({dim}, tensorOptionsOnDevice(CurrentDevice())))
-      , immutable_(false) {
+    : vec_(torch::zeros({dim}, TorchHelpers::tensorOptionsOnDevice(CurrentDevice()))) {
 
 }
 
 Vec::Vec(int64_t dim, const ComputeDevice& device)
-    : vec_(torch::zeros({dim}, tensorOptionsOnDevice(device)))
-      , immutable_(false) {
+    : vec_(torch::zeros({dim}, TorchHelpers::tensorOptionsOnDevice(device))) {
 }
 
 Vec Vec::slice(int64_t from, int64_t size) {
     assert(vec_.dim() == 1);
-    return Vec(vec_.slice(0, from, from + size), false);
+    return Vec(vec_.slice(0, from, from + size));
 }
 
 Vec Vec::slice(int64_t from, int64_t size) const {
-    return Vec(vec_.slice(0, from, from + size), true);
+    return Vec(vec_.slice(0, from, from + size));
 }
 
 Vec& Vec::operator+=(const Vec& other) {
@@ -100,6 +76,10 @@ Vec& Vec::operator^=(const Vec& other) {
 Vec& Vec::operator^=(Scalar q) {
     vec_.pow_(q);
     return *this;
+}
+
+ComputeDevice Vec::device() const {
+    return TorchHelpers::getDevice(vec_);
 }
 
 Vec operator+(const Vec& left, const Vec& right) {

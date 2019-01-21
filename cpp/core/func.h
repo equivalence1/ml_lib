@@ -14,7 +14,7 @@ using DoubleRef = double&;
 using ConstDoubleRef = const double&;
 
 //TODO(noxoomo): batch trans
-class AnyFunc : public virtual AnyTrans {
+class Func : public virtual Trans {
 public:
     virtual int64_t dim() const = 0;
 
@@ -28,10 +28,33 @@ public:
         return val.get(0);
     }
 
-//    virtual Batch<Vec> trans(Batch<ConstVec> x, Batch<Vec> to) const = 0;
+    operator std::unique_ptr<Func>() const {
+        return cloneUniqueFunc();
+    }
+
+    operator std::shared_ptr<Func>() const {
+        return cloneSharedFunc();
+    }
+
+    //    virtual Batch<Vec> trans(Batch<ConstVec> x, Batch<Vec> to) const = 0;
+
+protected:
+
+    virtual std::unique_ptr<Func> cloneUniqueFunc() const = 0;
+
+    virtual std::shared_ptr<Func> cloneSharedFunc() const = 0;
+
+    virtual std::unique_ptr<Trans> cloneUnique() const override {
+        return std::unique_ptr<Trans>(cloneUniqueFunc().release());
+    }
+
+    virtual std::shared_ptr<Trans> cloneShared() const override {
+        return std::dynamic_pointer_cast<Trans>(cloneSharedFunc());
+    }
+
 };
 
-class AnyFuncC1 : public virtual AnyFunc, public virtual AnyTransC1 {
+class FuncC1 : public virtual Func, public virtual TransC1 {
 public:
 
     virtual Vec gradientTo(const Vec& x, Vec to) const = 0;
@@ -45,114 +68,31 @@ public:
         return gradientTo(x, to);
     }
 
-};
-
-class Func : public AnyFunc {
-public:
-
-    int64_t xdim() const final {
-        return dim();
+    operator std::unique_ptr<FuncC1>() const {
+        return cloneUniqueFuncC1();
     }
 
-    int64_t dim() const final {
-        return impl_->dim();
-    }
-
-    Vec trans(const Vec& x, Vec to) const final {
-        return impl_->trans(x, to);
-    }
-
-//    const Vec& trans(const Batch<Vec>& x, Batch<Vec>& to) const {
-//        return impl_->trans(x, to);
-//    }
-
-    operator Trans() const {
-        return asTrans();
-    }
-
-protected:
-    template <class T, class ... Args>
-    friend Func CreateFunc(Args&& ... args);
-
-    Trans asTrans() const {
-        return Trans(std::static_pointer_cast<AnyTrans>(impl_));
-    }
-
-    Func(ObjectPtr<AnyFunc>&& impl)
-        : impl_(std::move(impl)) {
-
-    }
-
-    const AnyFunc* instance() const {
-        return impl_.get();
-    }
-
-    ObjectPtr<AnyFunc> impl() const {
-        return impl_;
-    }
-private:
-    ObjectPtr<AnyFunc> impl_;
-
-};
-
-template <class T, class ... Args>
-inline Func CreateFunc(Args&& ... args) {
-    auto trans = std::make_shared<T>(std::forward(args)...);
-    return Func(std::static_pointer_cast<AnyFunc>(trans));
-}
-
-class FuncC1 : public AnyFuncC1 {
-public:
-
-    int64_t xdim() const final {
-        return dim();
-    }
-
-    int64_t dim() const final {
-        return impl_->dim();
-    }
-
-    Vec trans(const Vec& x, Vec to) const final {
-        return impl_->trans(x, to);
-    }
-
-    Vec gradientTo(const Vec& x, Vec to) const {
-        return impl_->gradientTo(x, to);
-    }
-
-    Trans gradient() const {
-        return impl_->gradient();
-    }
-
-    operator TransC1() const {
-        return asTransC1();
+    operator std::shared_ptr<FuncC1>() const {
+        return cloneSharedFuncC1();
     }
 protected:
-    template <class T, class... Args>
-    friend FuncC1 CreateFuncC1(Args&& ... args);
+    virtual std::unique_ptr<FuncC1> cloneUniqueFuncC1() const = 0;
 
-    TransC1 asTransC1() const {
-        auto asc1 = std::dynamic_pointer_cast<AnyTransC1>(impl_);
-        return TransC1(asc1);
+    virtual std::shared_ptr<FuncC1> cloneSharedFuncC1() const = 0;
+
+    virtual std::unique_ptr<TransC1> cloneUniqueC1() const override {
+        return std::unique_ptr<TransC1>(cloneUniqueFuncC1().release());
     }
 
-    FuncC1(ObjectPtr<AnyFuncC1> impl)
-        : impl_(std::move(impl)) {
-
+    virtual std::shared_ptr<TransC1> cloneSharedC1() const override {
+        return std::dynamic_pointer_cast<TransC1>(cloneSharedFuncC1());
     }
 
-private:
-    ObjectPtr<AnyFuncC1> impl_;
 };
 
-template <class T, class ... Args>
-inline FuncC1 CreateFuncC1(Args&& ... args) {
-    auto func = std::make_shared<T>(std::forward<Args>(args)...);
-    return FuncC1(std::static_pointer_cast<AnyFuncC1>(func));
-}
 
 template <class Impl>
-class FuncStub : public virtual AnyFunc {
+class FuncStub : public virtual Func {
 public:
     FuncStub(int64_t dim)
         : dim_(dim) {
@@ -167,13 +107,6 @@ public:
         return dim_;
     }
 
-    operator Func() const {
-        return asFunc();
-    }
-
-    operator Trans() const {
-        return asFunc().ToTrans();
-    }
 
     double value(const Vec& x) const {
         double result = 0;
@@ -187,37 +120,38 @@ public:
     }
 
 private:
-    Func asFunc() const {
-        return CreateFunc<Impl>(*static_cast<const Impl*>(this));
+
+    virtual std::unique_ptr<Func> cloneUniqueFunc() const {
+        return std::unique_ptr<Func>(new Impl(*static_cast<const Impl*>(this)));
     }
+
+    virtual std::shared_ptr<Func> cloneSharedFunc() const {
+        return std::static_pointer_cast<Func>(std::make_shared<Impl>(*static_cast<const Impl*>(this)));
+    }
+
 private:
     int64_t dim_;
 };
 
 template <class Impl>
-class FuncC1Stub : public FuncStub<Impl>, virtual public AnyFuncC1 {
+class FuncC1Stub : public FuncC1, public FuncStub<Impl> {
 public:
     FuncC1Stub(int64_t dim)
         : FuncStub<Impl>(dim) {
 
     }
 
-    operator FuncC1() const {
-        return asFuncC1();
-    }
-
-    operator TransC1() const {
-        return asFuncC1().ToTransC1();
-    }
-
     Vec gradientTo(const Vec& x, Vec to) const {
-        return static_cast<const Impl*>(this)->gradient().trans(x, to);
+        return static_cast<const Impl*>(this)->gradient()->trans(x, to);
     }
 
-private:
+protected:
+    virtual std::unique_ptr<FuncC1> cloneUniqueFuncC1() const final {
+        return std::unique_ptr<FuncC1>(new Impl(*static_cast<const Impl*>(this)));
+    }
 
-    FuncC1 asFuncC1() const {
-        return CreateFuncC1<Impl>(*static_cast<const Impl*>(this));
+    virtual std::shared_ptr<FuncC1> cloneSharedFuncC1() const final {
+        return std::static_pointer_cast<FuncC1>(std::make_shared<Impl>(*static_cast<const Impl*>(this)));
     }
 };
 

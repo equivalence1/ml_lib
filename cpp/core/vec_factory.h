@@ -11,4 +11,7 @@ public:
 
     static Vec uninitializedCopy(const Vec& other);
 
+    //will not copy data if vec is already on this device
+    static Vec toDevice(const Vec& vec, const ComputeDevice& device);
+
 };

@@ -1,0 +1,3 @@
+GPU decision tree code computations primitives (histograms and other gpu code) is heavily influenced by catboost GBDT implementations and reuse gpu computation primitives
+
+CatBoost code is available under APACHE2 License, license text is available at https://github.com/catboost

@@ -1,0 +1,135 @@
+#pragma once
+
+#include "grid.h"
+#include "dataset.h"
+#include <torch/torch.h>
+#include <core/buffer.h>
+#include <util/array_ref.h>
+
+struct FeaturesBundle {
+    int32_t firstFeature_ = 0;
+    int32_t lastFeature_ = 0;
+    int32_t groupOffset_ = 0;
+
+    int32_t groupSize() const {
+        return lastFeature_ - firstFeature_;
+    };
+};
+
+class BinarizedDataSet : public Object {
+public:
+    GridPtr gridPtr() const {
+        return grid_;
+    }
+
+    const Grid& grid() const {
+        return *grid_;
+    }
+
+    int64_t groupCount() const {
+        return groups_.size();
+    }
+
+
+    const FeaturesBundle& featuresBundle(int64_t groupIdx) const {
+        return groups_[groupIdx];
+    }
+
+    ConstArrayRef<uint8_t> group(int64_t groupIdx) const {
+       return ConstArrayRef<uint8_t>(data_.arrayRef().data() + groups_[groupIdx].groupOffset_ * samplesCount_,
+                                     groups_[groupIdx].groupSize()  * samplesCount_);
+    }
+
+
+    int64_t samplesCount() const {
+        return samplesCount_;
+    }
+
+    template <class Visitor>
+    void visitFeature(int64_t fIndex, Visitor&& visitor) const {
+        int64_t groupIdx =  featureToGroup_.at(fIndex);
+        const auto& groupInfo = groups_[groupIdx];
+        auto groupBundle = group(groupIdx);
+        const int64_t fIndexInGroup = fIndex - groupInfo.firstFeature_;
+        for (int64_t i = 0; i < samplesCount_; ++i) {
+            visitor(i, groupBundle[i * groupInfo.groupSize() + fIndexInGroup]);
+        }
+    }
+
+private:
+    ArrayRef<uint8_t> group(int64_t groupIdx) {
+        return ArrayRef<uint8_t>(data_.arrayRef().data() + groups_[groupIdx].groupOffset_ * samplesCount_,
+                                 groups_[groupIdx].groupSize() * samplesCount_);
+    }
+
+
+    template <class Visitor>
+    void updateLineForGroup(int64_t groupIdx, int64_t line, Visitor&& updater) {
+        ConstArrayRef<int32_t> featureIds = groupToFeatures[groupIdx];
+        ArrayRef<uint8_t> groupRef = group(groupIdx);
+        const auto groupSize = groups_[groupIdx].groupSize();
+        auto lineBins = ArrayRef<uint8_t>(groupRef.data() + line * groupSize, groupSize);
+        updater(featureIds, lineBins);
+    }
+
+
+    BinarizedDataSet(const DataSet& owner,
+        GridPtr grid,
+        int64_t samplesCount,
+        std::vector<FeaturesBundle>&& groups)
+        : owner_(owner)
+        , grid_(grid)
+        , samplesCount_(samplesCount)
+        , groups_(std::move(groups))
+        , data_(Buffer<uint8_t>::create(samplesCount * groups_.back().groupOffset_ + groups_.back().groupSize())) {
+        data_.fill(0);
+        featureToGroup_.resize(grid_->nzFeaturesCount());
+        groupToFeatures.resize(groups_.size());
+
+        for (int32_t groupIdx = 0; groupIdx < groups_.size(); ++groupIdx) {
+            const auto& group  = groups_[groupIdx];
+            for (int32_t f=  group.firstFeature_; f < group.lastFeature_; ++f) {
+                featureToGroup_[f] = groupIdx;
+                groupToFeatures[groupIdx].push_back(f);
+            }
+        }
+
+    }
+
+    const DataSet& owner() const {
+        return owner_;
+    }
+
+    friend std::unique_ptr<BinarizedDataSet> binarize(const DataSet& ds, GridPtr grid, int32_t maxGroupSize);
+private:
+    const DataSet& owner_;
+    GridPtr grid_;
+    int64_t samplesCount_;
+    std::vector<FeaturesBundle> groups_;
+    std::vector<int32_t> featureToGroup_;
+    std::vector<std::vector<int32_t>> groupToFeatures;
+    Buffer<uint8_t> data_;
+
+};
+
+
+void createGroups(const Grid& grid, int32_t maxGroupSize, std::vector<FeaturesBundle>* bundles);
+
+inline std::vector<FeaturesBundle> createGroups(const Grid& grid, int32_t maxGroupSize) {
+    std::vector<FeaturesBundle> groups;
+    createGroups(grid, maxGroupSize, &groups);
+    return groups;
+}
+
+std::unique_ptr<BinarizedDataSet> binarize(const DataSet& ds, GridPtr grid, int32_t maxGroupSize = 32);
+
+
+
+
+inline const BinarizedDataSet& cachedBinarize(const DataSet& ds, GridPtr grid, int32_t maxGroupSize = 32) {
+    return ds.computeOrGet<Grid, BinarizedDataSet>(std::move(grid), [&](const DataSet& ds, GridPtr ptr) -> std::unique_ptr<BinarizedDataSet> {
+        return binarize(ds, ptr, maxGroupSize);
+    });
+}
+
+

@@ -15,7 +15,12 @@ public:
 
 //easy to switch for intrusive, if we'll need it
 template <class T>
-using ObjectPtr = std::shared_ptr<T>;
+using SharedPtr = std::shared_ptr<T>;
+
+//easy to switch for intrusive, if we'll need it
+template <class T>
+using UniquePtr = std::unique_ptr<T>;
 
 template <class T>
-using ObjectConstPtr = std::shared_ptr<const T>;
+using SharedConstPtr = std::shared_ptr<const T>;
+

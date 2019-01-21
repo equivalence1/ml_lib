@@ -27,3 +27,8 @@ private:
 
 
 //TODO: source line for exceptions
+
+
+#define VERIFY(Condition, Message)\
+    if (!Condition)  \
+        throw Exception() << "Verify failed: " << message;
