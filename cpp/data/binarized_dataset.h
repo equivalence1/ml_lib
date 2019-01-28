@@ -111,7 +111,7 @@ private:
         , grid_(grid)
         , samplesCount_(samplesCount)
         , groups_(std::move(groups))
-        , data_(Buffer<uint8_t>::create(samplesCount * (groups_.back().groupOffset_ + groups_.back().groupSize())) {
+        , data_(Buffer<uint8_t>::create(samplesCount * (groups_.back().groupOffset_ + groups_.back().groupSize()))) {
         data_.fill(0);
         featureToGroup_.resize(grid_->nzFeaturesCount());
         groupToFeatures.resize(groups_.size());
