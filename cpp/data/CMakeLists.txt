@@ -11,6 +11,7 @@ add_library(data
         grid_builder.cpp
         grid_builder.h
         histgogram.h
+        histogram.cpp
         load_data.h
         load_data.cpp
 )

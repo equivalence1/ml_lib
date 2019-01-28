@@ -5,13 +5,13 @@
 #include <utility>
 #include <core/vec_factory.h>
 
-class FillConst : public TransC1Stub<FillConst> {
+class FillConst : public Stub<TransC1, FillConst> {
 public:
     FillConst(
         double value,
         int64_t xdim,
         int64_t ydim)
-        : TransC1Stub<FillConst>(xdim, ydim)
+        : Stub<TransC1, FillConst>(xdim, ydim)
           , value_(value) {
 
     }
@@ -28,12 +28,12 @@ private:
     double value_ = 0;
 };
 
-class FillVec : public TransC1Stub<FillVec> {
+class FillVec : public Stub<TransC1, FillVec> {
 public:
     FillVec(
         const Vec& params,
         int64_t xdim)
-        : TransC1Stub<FillVec>(xdim, params.dim())
+        : Stub<TransC1, FillVec>(xdim, params.dim())
           , params_(params) {
 
     }

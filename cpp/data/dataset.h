@@ -39,6 +39,9 @@ public:
         return data_.row(line);
     }
 
+    Vec target() const {
+        return target_;
+    }
 private:
     Mx data_;
     Vec target_;

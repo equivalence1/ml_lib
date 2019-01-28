@@ -10,7 +10,9 @@ Mx& Mx::set(int64_t x, int64_t y, Scalar val) {
 }
 
 int64_t Mx::seqIndex(int64_t x, int64_t y) const {
-    return y * cols_ + x;;
+    assert(x < cols_);
+    assert(y < rows_);
+    return y * cols_ + x;
 }
 Mx& Mx::operator+=(const Mx& other) {
     this->vec_ += other.vec_;

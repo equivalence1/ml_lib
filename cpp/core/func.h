@@ -52,7 +52,55 @@ protected:
         return std::dynamic_pointer_cast<Trans>(cloneSharedFunc());
     }
 
+
+public:
+
+
 };
+
+
+template <class Impl>
+class Stub<Func, Impl> : public virtual Func {
+public:
+    Stub(int64_t dim)
+    : dim_(dim) {
+
+    }
+
+    int64_t dim() const final {
+        return dim_;
+    }
+
+    int64_t xdim() const final {
+        return dim_;
+    }
+
+
+    double value(const Vec& x) const {
+        double result = 0;
+        static_cast<const Impl*>(this)->valueTo(x, result);
+        return result;
+    }
+
+    Vec trans(const Vec& x, Vec to) const final {
+        static_cast<const Impl*>(this)->trans(x, to);
+        return to;
+    }
+
+private:
+
+    virtual std::unique_ptr<Func> cloneUniqueFunc() const {
+        return std::unique_ptr<Func>(new Impl(*static_cast<const Impl*>(this)));
+    }
+
+    virtual std::shared_ptr<Func> cloneSharedFunc() const {
+        return std::static_pointer_cast<Func>(std::make_shared<Impl>(*static_cast<const Impl*>(this)));
+    }
+
+private:
+    int64_t dim_;
+};
+
 
 class FuncC1 : public virtual Func, public virtual TransC1 {
 public:
@@ -91,53 +139,13 @@ protected:
 };
 
 
-template <class Impl>
-class FuncStub : public virtual Func {
-public:
-    FuncStub(int64_t dim)
-        : dim_(dim) {
 
-    }
-
-    int64_t dim() const final {
-        return dim_;
-    }
-
-    int64_t xdim() const final {
-        return dim_;
-    }
-
-
-    double value(const Vec& x) const {
-        double result = 0;
-        static_cast<const Impl*>(this)->valueTo(x, result);
-        return result;
-    }
-
-    Vec trans(const Vec& x, Vec to) const final {
-        static_cast<const Impl*>(this)->trans(x, to);
-        return to;
-    }
-
-private:
-
-    virtual std::unique_ptr<Func> cloneUniqueFunc() const {
-        return std::unique_ptr<Func>(new Impl(*static_cast<const Impl*>(this)));
-    }
-
-    virtual std::shared_ptr<Func> cloneSharedFunc() const {
-        return std::static_pointer_cast<Func>(std::make_shared<Impl>(*static_cast<const Impl*>(this)));
-    }
-
-private:
-    int64_t dim_;
-};
 
 template <class Impl>
-class FuncC1Stub : public FuncC1, public FuncStub<Impl> {
+class Stub<FuncC1, Impl> : public virtual FuncC1, public Stub<Func, Impl> {
 public:
-    FuncC1Stub(int64_t dim)
-        : FuncStub<Impl>(dim) {
+    Stub(int64_t dim)
+        : Stub<Func, Impl>(dim) {
 
     }
 
@@ -156,3 +164,11 @@ protected:
 };
 
 
+
+
+//TODO(noxoomo)
+//class FuncC2 : public virtual FuncC1 {
+//public:
+//
+//
+//};

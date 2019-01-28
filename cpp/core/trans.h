@@ -59,16 +59,16 @@ protected:
 
 
 template <class Impl>
-class TransStub : public virtual Trans {
+class Stub<Trans, Impl> : public virtual Trans {
 public:
 
-    TransStub(int64_t xdim, int64_t ydim)
+    Stub(int64_t xdim, int64_t ydim)
         : xdim_(xdim)
           , ydim_(ydim) {
 
     }
 
-    TransStub(const TransStub& other)
+    Stub(const Stub& other)
     : xdim_(other.xdim_)
     , ydim_(other.ydim_) {
 
@@ -96,10 +96,10 @@ private:
 };
 
 template <class Impl>
-class MapStub : public TransStub<Impl> {
+class MapStub : public Stub<Trans, Impl> {
 public:
     MapStub(int64_t dim)
-        : TransStub<Impl>(dim, dim) {
+        : Stub<Trans, Impl>(dim, dim) {
 
     }
 };
@@ -110,10 +110,10 @@ inline constexpr bool isC1Trans = std::is_convertible_v<T, TransC1>;
 namespace Detail {
 
     template <class TransC1Impl>
-    class GradientAsTransStub : public TransStub<GradientAsTransStub<TransC1Impl>> {
+    class GradientAsTransStub : public Stub<Trans, GradientAsTransStub<TransC1Impl>> {
     public:
         GradientAsTransStub(const TransC1Impl& impl)
-            : TransStub<GradientAsTransStub<TransC1Impl>>(impl.xdim(), impl.xdim() * impl.ydim())
+            : Stub<Trans, GradientAsTransStub<TransC1Impl>>(impl.xdim(), impl.xdim() * impl.ydim())
               , trans_(impl) {
 
         }
@@ -129,7 +129,7 @@ namespace Detail {
 }
 
 template <class Impl>
-class TransC1Stub : public TransC1, public TransStub<Impl> {
+class Stub<TransC1, Impl> : public virtual TransC1, public Stub<Trans, Impl> {
 public:
 
     Mx gradientTo(const Vec& x, Mx to) const override {
@@ -143,8 +143,8 @@ public:
         return Detail::GradientAsTransStub<Impl>(*static_cast<const Impl*>(this));
     }
 
-    TransC1Stub(int64_t xdim, int64_t ydim)
-        : TransStub<Impl>(xdim, ydim) {
+    Stub(int64_t xdim, int64_t ydim)
+        : Stub<Trans, Impl>(xdim, ydim) {
 
     }
 protected:
@@ -159,10 +159,10 @@ protected:
 };
 
 template <class Impl>
-class MapC1Stub : public TransC1Stub<Impl> {
+class MapC1Stub : public Stub<TransC1, Impl> {
 public:
     MapC1Stub(int64_t dim)
-        : TransC1Stub<Impl>(dim, dim) {
+        : Stub<TransC1, Impl>(dim, dim) {
 
     }
 };

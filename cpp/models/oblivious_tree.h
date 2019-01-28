@@ -6,26 +6,26 @@
 #include <core/func.h>
 
 
-class ObliviousTree final : public BinOptimizedModelStub<ObliviousTree> {
+class ObliviousTree final : public Stub<BinOptimizedModel, ObliviousTree> {
 public:
 
     ObliviousTree(GridPtr grid,
                   std::vector<BinaryFeature> binFeatures,
                   Vec leaves
                   )
-      : BinOptimizedModelStub<ObliviousTree>(grid->origFeaturesCount(), 1)
+      : Stub<BinOptimizedModel, ObliviousTree>(grid->origFeaturesCount(), 1)
       , grid_(std::move(grid))
       , splits_(std::move(binFeatures))
-      , leaves_(VecFactory::clone(leaves)) {
+      , leaves_(leaves) {
 
     }
 
 
-    ObliviousTree(const ObliviousTree& other)
-    : BinOptimizedModelStub<ObliviousTree>(other)
+    ObliviousTree(const ObliviousTree& other, double scale = 1.0)
+    : Stub<BinOptimizedModel, ObliviousTree>(other)
     , grid_(other.grid_)
     , splits_(other.splits_)
-    , leaves_(other.leaves_) {
+    , leaves_(scale == 1.0  ? other.leaves_ : VecFactory::clone(other.leaves_) * scale) {
 
     }
 
@@ -33,9 +33,13 @@ public:
         return *grid_;
     }
 
-    Vec trans(const Vec& x, Vec to) const override;
+    GridPtr gridPtr() const override {
+        return grid_;
+    }
 
-    void applyToBds(const BinarizedDataSet& ds, Mx to) const override;
+    void appendTo(const Vec& x, Vec to) const override;
+
+    void applyToBds(const BinarizedDataSet& ds, Mx to, ApplyType type) const override;
 
     void applyBinarizedRow(const Buffer<uint8_t>& x, Vec to) const;
 

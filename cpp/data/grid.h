@@ -62,7 +62,7 @@ public:
     ConstArrayRef<Feature> nzFeatures() const {
         return ConstArrayRef<Feature>(features_);
     }
-    
+
     ConstArrayRef<float> borders(int64_t fIndex) const {
         return borders_[fIndex];
     }
@@ -74,7 +74,11 @@ public:
         return binFeatures_.size();
     }
 
-    int64_t binCount(int32_t fIndex) const {
+    ConstArrayRef<int64_t> binFeatureOffsets() const {
+        return binFeatureOffsets_;
+    }
+
+    int64_t conditionsCount(int32_t fIndex) const {
         return features_[fIndex].conditionsCount_;
     }
 
@@ -92,6 +96,10 @@ public:
         , binFeatures_(std::move(binFeatures))
         , features_(std::move(features))
         , borders_(std::move(borders)) {
+        binFeatureOffsets_.resize(features_.size());
+        for (int64_t i = 1; i < features_.size(); ++i) {
+            binFeatureOffsets_[i] = binFeatureOffsets_[i - 1] + features_[i - 1].conditionsCount_;
+        }
 
     }
 
@@ -100,6 +108,7 @@ private:
     std::vector<BinaryFeature> binFeatures_;
     std::vector<Feature> features_;
     std::vector<std::vector<float>> borders_;
+    std::vector<int64_t> binFeatureOffsets_;
 };
 
 

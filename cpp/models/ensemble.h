@@ -2,23 +2,40 @@
 
 #include "model.h"
 
-class Ensemble : public Model {
+class Ensemble : public Stub<Model, Ensemble> {
 public:
 
     Ensemble(std::vector<ModelPtr>&& models)
-    : models_(std::move(models)) {
+    : Stub<Model, Ensemble>(
+        models.front()->xdim(),
+        models.front()->ydim())
+    , models_(std::move(models)) {
 
     }
 
-    void append(const DataSet& ds, Vec* to) const override {
+    Ensemble(const Ensemble& other, double scale)
+    : Stub<Model, Ensemble>(other.xdim(), other.ydim())
+    , models_(other.models_)
+    , scale_(other.scale_ * scale){
+    }
+
+    void appendTo(const Vec& x, Vec to) const override;
+
+    void appendToDs(const DataSet& ds, Mx to) const override {
         for (const auto& model : models_) {
             model->append(ds, to);
         }
+        if (scale_ != 1.0) {
+            to *= scale_;
+        }
     }
 
-    void apply(const DataSet& ds, Vec* to) const override {
+    void applyToDs(const DataSet& ds, Mx to) const override {
         for (const auto& model : models_) {
             model->append(ds, to);
+        }
+        if (scale_ != 1.0) {
+            to *= scale_;
         }
     }
 
@@ -26,8 +43,8 @@ public:
         return models_.size();
     }
 
-private:
 
 private:
-    std::vector<std::unique_ptr<Model>> models_;
+    std::vector<ModelPtr> models_;
+    double scale_ = 1.0;
 };

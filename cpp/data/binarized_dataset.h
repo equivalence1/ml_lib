@@ -56,6 +56,36 @@ public:
         }
     }
 
+
+    template <class Visitor>
+    void visitGroups(Visitor&& visitor) const {
+        for (int32_t groupId = 0; groupId < groups_.size(); ++groupId) {
+            const auto& groupInfo = groups_[groupId];
+            auto groupBundle = group(groupId);
+            visitor(groupInfo, groupBundle);
+        }
+    }
+
+
+    template <class Visitor>
+    void visitFeature(int64_t fIndex, ConstArrayRef<int32_t> indices, Visitor&& visitor) const {
+        int64_t groupIdx =  featureToGroup_.at(fIndex);
+        const auto& groupInfo = groups_[groupIdx];
+        auto groupBundle = group(groupIdx);
+        const int64_t fIndexInGroup = fIndex - groupInfo.firstFeature_;
+        for (int64_t i = 0; i < indices.size(); ++i) {
+            visitor(i, groupBundle[indices[i] * groupInfo.groupSize() + fIndexInGroup]);
+        }
+    }
+
+
+    ConstArrayRef<int32_t> binOffsets() const {
+        return binOffsets_;
+    }
+
+    int32_t totalBins() const {
+        return binOffsets_.back();
+    }
 private:
     ArrayRef<uint8_t> group(int64_t groupIdx) {
         return ArrayRef<uint8_t>(data_.arrayRef().data() + groups_[groupIdx].groupOffset_ * samplesCount_,
@@ -94,6 +124,13 @@ private:
             }
         }
 
+        int32_t cursor = 0;
+        for (int32_t fIndex = 0; fIndex < grid_->nzFeaturesCount(); ++fIndex) {
+            binOffsets_.push_back(cursor);
+            cursor += grid_->conditionsCount(fIndex) + 1;
+        }
+        binOffsets_.push_back(cursor);
+
     }
 
     const DataSet& owner() const {
@@ -110,6 +147,8 @@ private:
     std::vector<std::vector<int32_t>> groupToFeatures;
     Buffer<uint8_t> data_;
 
+    std::vector<int32_t> binOffsets_;
+
 };
 
 
@@ -121,12 +160,11 @@ inline std::vector<FeaturesBundle> createGroups(const Grid& grid, int32_t maxGro
     return groups;
 }
 
-std::unique_ptr<BinarizedDataSet> binarize(const DataSet& ds, GridPtr grid, int32_t maxGroupSize = 32);
+std::unique_ptr<BinarizedDataSet> binarize(const DataSet& ds, GridPtr grid, int32_t maxGroupSize = 8);
 
 
 
-
-inline const BinarizedDataSet& cachedBinarize(const DataSet& ds, GridPtr grid, int32_t maxGroupSize = 32) {
+inline const BinarizedDataSet& cachedBinarize(const DataSet& ds, GridPtr grid, int32_t maxGroupSize = 8) {
     return ds.computeOrGet<Grid, BinarizedDataSet>(std::move(grid), [&](const DataSet& ds, GridPtr ptr) -> std::unique_ptr<BinarizedDataSet> {
         return binarize(ds, ptr, maxGroupSize);
     });

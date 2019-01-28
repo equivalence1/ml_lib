@@ -5,6 +5,7 @@ project(models LANGUAGES CXX)
 add_library(models
         bin_optimized_model.h
         ensemble.h
+        ensemble.cpp
         model.h
         oblivious_tree.h
         oblivious_tree.cpp

@@ -15,15 +15,15 @@
 
 
 
-class Lq : public FuncC1Stub<Lq> {
+class Lq : public Stub<FuncC1, Lq> {
 public:
 
-    class LqGrad : public TransStub<LqGrad> {
+    class LqGrad : public Stub<Trans, LqGrad> {
     public:
         LqGrad(
             double p,
             const Vec& b)
-            : TransStub<LqGrad>(b.dim(), b.dim())
+            : Stub<Trans, LqGrad>(b.dim(), b.dim())
               , q_(p)
               , b_(b) {
 
@@ -42,7 +42,7 @@ public:
     Lq(
         double p,
         const Vec& b)
-        : FuncC1Stub<Lq>(b.dim())
+        : Stub<FuncC1, Lq>(b.dim())
           , q_(p)
           , b_(b) {
 

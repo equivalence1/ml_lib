@@ -30,5 +30,6 @@ private:
 
 
 #define VERIFY(Condition, Message)\
-    if (!Condition)  \
-        throw Exception() << "Verify failed: " << message;
+    if (!(Condition))  {\
+        throw Exception() << __FILE__ << ":" << __LINE__ << ". Verify failed: " << Message;\
+    }

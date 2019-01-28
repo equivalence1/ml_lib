@@ -22,7 +22,7 @@ TEST(FeaturesTxt, ApplyFloatAndBinarizedOtTest) {
         auto grid = buildGrid(ds, config);
 
         for (int32_t i = 0; i < grid->nzFeaturesCount(); ++i) {
-            EXPECT_LE(grid->binCount(i), 33);
+            EXPECT_LE(grid->conditionsCount(i), 33);
         }
 
         auto bds = cachedBinarize(ds, grid, groupSize);
@@ -30,7 +30,7 @@ TEST(FeaturesTxt, ApplyFloatAndBinarizedOtTest) {
         for (int32_t firstF = 0; firstF < grid->nzFeaturesCount(); firstF += 6) {
             std::vector<BinaryFeature> features;
             for (int32_t i = firstF; i < std::min<int32_t>(firstF + 6, grid->nzFeaturesCount()); ++i) {
-                features.emplace_back(i, grid->binCount(i) / 2);
+                features.emplace_back(i, grid->conditionsCount(i) / 2);
             }
             Vec values(64);
             for (int64_t i = 0; i < 64; ++i) {

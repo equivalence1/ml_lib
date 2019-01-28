@@ -3,10 +3,10 @@
 #include <core/func.h>
 #include <trans/fill.h>
 
-class Linear : public FuncC1Stub<Linear> {
+class Linear : public Stub<FuncC1, Linear> {
 public:
     Linear(const Vec& param, double bias)
-        : FuncC1Stub<Linear>(param.dim())
+        : Stub<FuncC1, Linear>(param.dim())
           , param_(param)
           , bias_(bias) {
 

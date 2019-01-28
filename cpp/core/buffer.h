@@ -1,6 +1,5 @@
-#include <utility>
-
 #pragma once
+#include <utility>
 
 #include "torch_helpers.h"
 #include <torch/torch.h>
@@ -9,10 +8,18 @@ template <class T>
 class Buffer  {
 public:
 
-//    Buffer(uint64_t size, const ComputeDevice& device)
-//    : data_(TorchHelpers::tensorOptionsOnDevice(device, torch::ScalarType.)) {
-//
-//    }
+    //TODO(noxoomo): should not clear memory  and this won't work with multiGPU
+    explicit Buffer(int64_t size)
+    : data_(torch::zeros({static_cast<int64_t>(size * sizeof(T))}, TorchHelpers::tensorOptionsOnDevice(CurrentDevice(),
+                                                                     torch::ScalarType::Byte))) {
+
+    }
+
+
+    Buffer()
+    : Buffer(0) {
+
+    }
 
     ArrayRef<T> arrayRef() {
         return ArrayRef<T>(reinterpret_cast<T*>(data_.data<uint8_t>()), size());
@@ -39,9 +46,18 @@ public:
         return TorchHelpers::getDevice(data_);
     }
 
+    Buffer copy() const {
+        return Buffer(data_.clone());
+    }
+
     int64_t size() const {
         return  TorchHelpers::totalSize(data_) / sizeof(T);
     }
+
+    void Swap(Buffer<T> other) {
+        std::swap(data_, other.data_);
+    }
+
 private:
 
     Buffer(torch::Tensor data)

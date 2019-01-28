@@ -17,7 +17,7 @@ void ObliviousTree::applyBinarizedRow(const Buffer<uint8_t>& x, Vec to) const {
     to.set(0, static_cast<float>(leaves_.get(bin)));
 }
 
-void ObliviousTree::applyToBds(const BinarizedDataSet& ds, Mx to) const {
+void ObliviousTree::applyToBds(const BinarizedDataSet& ds, Mx to, ApplyType type) const {
     assert(to.ydim() == ds.samplesCount());
     auto bins = Buffer<uint32_t>::create(ds.samplesCount());
     bins.fill(0);
@@ -33,14 +33,24 @@ void ObliviousTree::applyToBds(const BinarizedDataSet& ds, Mx to) const {
         });
     }
 
-    //TODO(noxoomo): this is gather primitive
-    for (int64_t i = 0; i < binsArray.size(); ++i) {
-        to.set(0, i, leaves_.get(binsArray[i]));
+
+    ArrayRef<float> dstArray = static_cast<Vec>(to).arrayRef();
+    ConstArrayRef<float> leavesRef = leaves_.arrayRef();
+
+    if (type == ApplyType::Set) {
+        //TODO(noxoomo): this is gather primitive
+        for (int64_t i = 0; i < binsArray.size(); ++i) {
+            dstArray[i] = leavesRef[binsArray[i]];
+        }
+    } else {
+        for (int64_t i = 0; i < binsArray.size(); ++i) {
+            dstArray[i] += leavesRef[binsArray[i]];
+        }
     }
 }
 
 
-Vec ObliviousTree::trans(const Vec& x, Vec to) const {
+void ObliviousTree::appendTo(const Vec& x, Vec to) const {
     assert(x.device().deviceType() == ComputeDeviceType::Cpu);
     assert(to.device().deviceType() == ComputeDeviceType::Cpu);
     assert(to.dim() == 1);
@@ -56,6 +66,5 @@ Vec ObliviousTree::trans(const Vec& x, Vec to) const {
         }
     }
 
-    to.set(0, static_cast<float>(leaves_.get(bin)));
-    return to;
+    to += leaves_.get(bin);
 }

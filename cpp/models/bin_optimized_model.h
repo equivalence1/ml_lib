@@ -4,52 +4,72 @@
 #include <data/dataset.h>
 #include <data/binarized_dataset.h>
 
+
 class BinOptimizedModel : public virtual Model {
 public:
     using Model::apply;
+    using Model::append;
 
     void apply(const BinarizedDataSet& ds, Mx to) const {
-        applyToBds(ds, to);
+        applyToBds(ds, to, ApplyType::Set);
     }
 
-     operator std::unique_ptr<BinOptimizedModel>() const {
-        return cloneBinModelUnique();
-     }
+    void append(const BinarizedDataSet& ds, Mx to) const {
+        applyToBds(ds, to, ApplyType::Append);
+    }
+
+    virtual GridPtr gridPtr() const = 0;
+
+    operator std::unique_ptr<BinOptimizedModel>() const {
+        return cloneBinModelUnique(1.0);
+    }
 
     operator std::shared_ptr<BinOptimizedModel>() const {
-        return cloneBinModelShared();
+        return cloneBinModelShared(1.0);
     }
 
 protected:
-    virtual void applyToBds(const BinarizedDataSet& ds, Mx to) const = 0;
 
-protected:
-    virtual std::unique_ptr<BinOptimizedModel> cloneBinModelUnique() const  = 0;
 
-    virtual std::shared_ptr<BinOptimizedModel> cloneBinModelShared() const  = 0;
+    virtual void applyToBds(const BinarizedDataSet& ds, Mx to, ApplyType type) const = 0;
 
-    virtual std::unique_ptr<Model> cloneModelUnique() const {
-        return std::unique_ptr<BinOptimizedModel>(cloneBinModelUnique().release());
+    virtual void applyToDs(const DataSet& ds, Mx to) const {
+        const auto& bds = cachedBinarize(ds, gridPtr(), 1);
+        applyToBds(bds, to, ApplyType::Set);
     }
 
-    virtual std::shared_ptr<Model> cloneModelShared() const {
-        return std::static_pointer_cast<Model>(cloneBinModelShared());
+    virtual void appendToDs(const DataSet& ds, Mx to) const {
+        const auto& bds = cachedBinarize(ds, gridPtr(), 1);
+        applyToBds(bds, to, ApplyType::Append);
+    }
+
+protected:
+    virtual std::unique_ptr<BinOptimizedModel> cloneBinModelUnique(double scale) const  = 0;
+
+    virtual std::shared_ptr<BinOptimizedModel> cloneBinModelShared(double scale) const  = 0;
+
+    virtual std::unique_ptr<Model> cloneModelUnique(double scale) const {
+        return std::unique_ptr<BinOptimizedModel>(cloneBinModelUnique(scale).release());
+    }
+
+    virtual std::shared_ptr<Model> cloneModelShared(double scale) const {
+        return std::static_pointer_cast<Model>(cloneBinModelShared(scale));
     }
 };
 
 
 
 template <class Impl>
-class BinOptimizedModelStub : public BinOptimizedModel, public TransStub<Impl> {
+class Stub<BinOptimizedModel, Impl> : public virtual BinOptimizedModel, public Stub<Trans, Impl> {
 public:
 
-    BinOptimizedModelStub(int64_t xdim, int64_t ydim)
-    : TransStub<Impl>(xdim, ydim) {
+    Stub(int64_t xdim, int64_t ydim)
+    : Stub<Trans, Impl>(xdim, ydim) {
 
     }
 
-    BinOptimizedModelStub(const Impl& other)
-    : TransStub<Impl>(other) {
+    Stub(const Impl& other)
+    : Stub<Trans, Impl>(other) {
 
     }
 
@@ -61,11 +81,11 @@ public:
     }
 
 protected:
-    std::unique_ptr<BinOptimizedModel> cloneBinModelUnique() const override {
-        return std::unique_ptr<BinOptimizedModel>(new Impl(*static_cast<const Impl*>(this)));
+    std::unique_ptr<BinOptimizedModel> cloneBinModelUnique(double scale) const override {
+        return std::unique_ptr<BinOptimizedModel>(new Impl(*static_cast<const Impl*>(this), scale));
     }
 
-    std::shared_ptr<BinOptimizedModel> cloneBinModelShared() const override {
-        return std::static_pointer_cast<BinOptimizedModel>(std::make_shared<Impl>(*static_cast<const Impl*>(this)));
+    std::shared_ptr<BinOptimizedModel> cloneBinModelShared(double scale) const override {
+        return std::static_pointer_cast<BinOptimizedModel>(std::make_shared<Impl>(*static_cast<const Impl*>(this), scale));
     }
 };

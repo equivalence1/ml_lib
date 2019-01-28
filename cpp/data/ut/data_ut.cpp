@@ -31,7 +31,7 @@ TEST(FeaturesTxt, TesGrid) {
         auto grid = buildGrid(ds, config);
 
         for (int32_t i = 0; i < grid->nzFeaturesCount(); ++i) {
-            EXPECT_LE(grid->binCount(i), 33);
+            EXPECT_LE(grid->conditionsCount(i), 33);
         }
     }
 
@@ -41,7 +41,7 @@ TEST(FeaturesTxt, TesGrid) {
         auto grid = buildGrid(ds, config);
 
         for (int32_t i = 0; i < grid->nzFeaturesCount(); ++i) {
-            EXPECT_LE(grid->binCount(i), 128);
+            EXPECT_LE(grid->conditionsCount(i), 128);
         }
     }
 
@@ -60,7 +60,7 @@ TEST(FeaturesTxt, TesBinarize) {
             auto grid = buildGrid(ds, config);
 
             for (int32_t i = 0; i < grid->nzFeaturesCount(); ++i) {
-                EXPECT_LE(grid->binCount(i), 33);
+                EXPECT_LE(grid->conditionsCount(i), 33);
             }
 
             auto bds = binarize(ds, grid, groupSize);

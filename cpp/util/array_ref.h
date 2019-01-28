@@ -1,6 +1,6 @@
 #pragma once
 
-
+#include "exception.h"
 
 //copy-paste from torch: i don't need all functionality, but need const refs
 namespace Detail {
@@ -43,6 +43,9 @@ namespace Detail {
             : Data(vec.data()), Length(vec.size()) {}
 
         constexpr ArrayRef(const std::vector<std::remove_const_t<T>>& vec)
+            : Data(vec.data()), Length(vec.size()) {}
+
+        constexpr ArrayRef(ArrayRef<std::remove_const_t<T>> vec)
             : Data(vec.data()), Length(vec.size()) {}
         /// @}
         /// @name Simple Operations
@@ -91,14 +94,14 @@ namespace Detail {
         }
 
         /// front - Get the first element.
-        const T& front() const {
-            AT_CHECK(!empty(), "ArrayRef: attempted to access front() of empty list");
+        const std::remove_const_t<T>& front() const {
+            VERIFY(!empty(), "ArrayRef: attempted to access front() of empty list");
             return Data[0];
         }
 
         /// back - Get the last element.
-        AT_CPP14_CONSTEXPR const T& back() const {
-            AT_CHECK(!empty(), "ArrayRef: attempted to access back() of empty list");
+        constexpr const std::remove_const_t<T>& back() const {
+            VERIFY(!empty(), "ArrayRef: attempted to access back() of empty list");
             return Data[Length - 1];
         }
 
@@ -109,15 +112,13 @@ namespace Detail {
 
         /// slice(n, m) - Chop off the first N elements of the array, and keep M
         /// elements in the array.
-        ArrayRef<T> slice(size_t N, size_t M) const {
-            AT_CHECK(
-                N + M <= size(),
-                "ArrayRef: invalid slice, N = ",
-                N,
-                "; M = ",
-                M,
-                "; size = ",
-                size());
+        ArrayRef<const T> slice(size_t N, size_t M) const {
+            VERIFY(N + M <= size(),  "ArrayRef: invalid slice, N = " << N << "; M = " << M << "; size = " << size());
+            return ArrayRef<const T>(data() + N, M);
+        }
+
+        ArrayRef<T> slice(size_t N, size_t M) {
+            VERIFY(N + M <= size(),  "ArrayRef: invalid slice, N = " << N << "; M = " << M << "; size = " << size());
             return ArrayRef<T>(data() + N, M);
         }
 
@@ -129,7 +130,7 @@ namespace Detail {
         /// @}
         /// @name Operator Overloads
         /// @{
-        constexpr const T& operator[](size_t Index) const {
+        constexpr const std::remove_const_t<T>& operator[](size_t Index) const {
             return Data[Index];
         }
 
@@ -138,12 +139,12 @@ namespace Detail {
         }
 
         /// Vector compatibility
-        const T& at(size_t Index) const {
-            AT_CHECK(
+        const std::remove_const_t<T>& at(size_t Index) const {
+            VERIFY(
                 Index < Length,
-                "ArrayRef: invalid index Index = ",
-                Index,
-                "; Length = ",
+                "ArrayRef: invalid index Index = " <<
+                Index <<
+                "; Length = " <<
                 Length);
             return Data[Index];
         }
@@ -167,21 +168,21 @@ namespace Detail {
         /// @}
     };
 
-    template <typename T>
-    std::ostream& operator<<(std::ostream & out, ArrayRef<T> list) {
-        int i = 0;
-        out << "[";
-        for(auto e : list) {
-            if (i++ > 0)
-                out << ", ";
-            out << e;
-        }
-        out << "]";
-        return out;
-    }
+//    template <typename T>
+//    std::ostream& operator<<(std::ostream & out, ArrayRef<T> list) {
+//        int i = 0;
+//        out << "[";
+//        for(auto e : list) {
+//            if (i++ > 0)
+//                out << ", ";
+//            out << e;
+//        }
+//        out << "]";
+//        return out;
+//    }
 
 
-    using IntList = ArrayRef<int64_t>;
+//    using IntList = ArrayRef<int64_t>;
 
 }
 

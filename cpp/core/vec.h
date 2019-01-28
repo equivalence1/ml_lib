@@ -15,6 +15,11 @@ class Vec {
 public:
     explicit Vec(int64_t dim);
 
+    Vec()
+    : Vec(0) {
+
+    }
+
     Vec(Vec&& other) = default;
 
     Vec(Vec& other) = default;

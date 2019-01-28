@@ -26,7 +26,6 @@ DataSet loadFeaturesTxt(const std::string& file) {
 //weight
         parseTokens>>tempString;
 
-        parseTokens>>tempString;
 
         std::vector<float> lineFeatures(std::istream_iterator<float>{parseTokens},
                                         std::istream_iterator<float>());

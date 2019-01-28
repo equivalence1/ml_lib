@@ -5,11 +5,11 @@
 #include <utility>
 #include <core/vec_factory.h>
 
-class LinearTrans : public TransC1Stub<LinearTrans> {
+class LinearTrans : public Stub<TransC1, LinearTrans> {
 public:
     LinearTrans(
         const Mx& mx)
-        : TransC1Stub<LinearTrans>(mx.xdim(), mx.ydim())
+        : Stub<TransC1, LinearTrans>(mx.xdim(), mx.ydim())
           , mx_(mx) {
 
     }

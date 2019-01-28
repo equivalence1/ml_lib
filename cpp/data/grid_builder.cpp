@@ -88,6 +88,9 @@ std::vector<float> buildBorders(const BinarizationConfig& config, Vec* vals) {
     if (vals->dim()) {
         auto sortedFeature = VecFactory::toDevice(VecTools::sort(*vals), ComputeDevice(ComputeDeviceType::Cpu));
         auto data = sortedFeature.arrayRef();
+        for (int32_t i = 1; i < data.size(); ++i) {
+            assert(data[i] >= data[i - 1]);
+        }
         const uint32_t dim = static_cast<uint32_t>(sortedFeature.dim());
         using It = decltype(data.begin());
         std::priority_queue<FeatureBin<It>> splits;
