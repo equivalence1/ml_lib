@@ -127,6 +127,10 @@ namespace Detail {
             return slice(N, size() - N);
         }
 
+        constexpr ArrayRef<T> slice(size_t N) {
+            return slice(N, size() - N);
+        }
+
         /// @}
         /// @name Operator Overloads
         /// @{

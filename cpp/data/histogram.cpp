@@ -1,2 +1,2 @@
-#include "histgogram.h"
+#include "histogram.h"
 

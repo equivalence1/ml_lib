@@ -138,6 +138,7 @@ GridPtr buildGrid(const DataSet& ds, const BinarizationConfig& config) {
             }
             ++nzFeatureId;
         }
+
     }
 
     return std::make_shared<Grid>(

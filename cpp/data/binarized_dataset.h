@@ -160,11 +160,11 @@ inline std::vector<FeaturesBundle> createGroups(const Grid& grid, int32_t maxGro
     return groups;
 }
 
-std::unique_ptr<BinarizedDataSet> binarize(const DataSet& ds, GridPtr grid, int32_t maxGroupSize = 8);
+std::unique_ptr<BinarizedDataSet> binarize(const DataSet& ds, GridPtr grid, int32_t maxGroupSize = 32);
 
 
 
-inline const BinarizedDataSet& cachedBinarize(const DataSet& ds, GridPtr grid, int32_t maxGroupSize = 8) {
+inline const BinarizedDataSet& cachedBinarize(const DataSet& ds, GridPtr grid, int32_t maxGroupSize = 32) {
     return ds.computeOrGet<Grid, BinarizedDataSet>(std::move(grid), [&](const DataSet& ds, GridPtr ptr) -> std::unique_ptr<BinarizedDataSet> {
         return binarize(ds, ptr, maxGroupSize);
     });

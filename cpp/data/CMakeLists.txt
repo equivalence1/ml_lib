@@ -10,7 +10,7 @@ add_library(data
         grid.cpp
         grid_builder.cpp
         grid_builder.h
-        histgogram.h
+        histogram.h
         histogram.cpp
         load_data.h
         load_data.cpp

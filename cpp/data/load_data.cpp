@@ -23,22 +23,26 @@ DataSet loadFeaturesTxt(const std::string& file) {
         parseTokens >>t;
 //url
         parseTokens>>tempString;
-//weight
+//gid
         parseTokens>>tempString;
 
 
-        std::vector<float> lineFeatures(std::istream_iterator<float>{parseTokens},
-                                        std::istream_iterator<float>());
+        std::vector<double> lineFeatures(std::istream_iterator<double>{parseTokens},
+                                        std::istream_iterator<double>());
         if (linesCount == 0) {
             fCount = lineFeatures.size();
         } else {
             assert(lineFeatures.size() == fCount);
         }
 
-        pool.insert(pool.end(), lineFeatures.begin(), lineFeatures.end());
+        for (auto val : lineFeatures) {
+            pool.push_back(val);
+        }
         target.push_back(t);
         ++linesCount;
     }
+    std::cout << "read  #" << linesCount << " lines" << std::endl;
+    std::cout << "fCount  #" << fCount << std::endl;
 
     auto data = VecFactory::create(ComputeDeviceType::Cpu, pool.size());
     ArrayRef<float> dst = data.arrayRef();

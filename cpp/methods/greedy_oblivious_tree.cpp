@@ -1,7 +1,7 @@
 #include "greedy_oblivious_tree.h"
 #include <core/vec.h>
 #include <core/buffer.h>
-#include <data/histgogram.h>
+#include <data/histogram.h>
 #include <data/grid.h>
 #include <data/binarized_dataset.h>
 #include <targets/l2.h>
@@ -238,6 +238,7 @@ namespace {
 ModelPtr GreedyObliviousTree::fit(const DataSet& dataSet,
                                   const Target& target) {
     const auto& binarized = cachedBinarize(dataSet, grid_);
+
 
     using StatBasedTarget = StatBasedLoss<L2Stat>;
     const auto& l2Target = dynamic_cast<const StatBasedTarget&>(target);
