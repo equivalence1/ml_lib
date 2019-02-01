@@ -21,7 +21,7 @@ inline std::unique_ptr<EmpiricalTargetFactory> createWeakTarget() {
 }
 int main(int /*argc*/, char* /*argv*/[]) {
     auto start = std::chrono::system_clock::now();
-    torch::set_num_threads(1);
+//    torch::set_num_threads(1);
 //    auto ds = loadFeaturesTxt("/Users/noxoomo/Projects/moscow_learn_200k.tsv");
 //    auto test = loadFeaturesTxt("/Users/noxoomo/Projects/moscow_test.tsv");
     auto ds = loadFeaturesTxt("train.tsv");

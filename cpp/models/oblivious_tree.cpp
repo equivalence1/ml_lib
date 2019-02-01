@@ -30,7 +30,7 @@ void ObliviousTree::applyToBds(const BinarizedDataSet& ds, Mx to, ApplyType type
             if (bin > binFeature.conditionId_) {
                 binsArray[lineIdx] |= (1 << i);
             }
-        });
+        }, true);
     }
 
 
@@ -39,13 +39,13 @@ void ObliviousTree::applyToBds(const BinarizedDataSet& ds, Mx to, ApplyType type
 
     if (type == ApplyType::Set) {
         //TODO(noxoomo): this is gather primitive
-        for (int64_t i = 0; i < binsArray.size(); ++i) {
+        parallelFor(0, binsArray.size(), [&](int64_t i) {
             dstArray[i] = leavesRef[binsArray[i]];
-        }
+        });
     } else {
-        for (int64_t i = 0; i < binsArray.size(); ++i) {
+        parallelFor(0, binsArray.size(), [&](int64_t i) {
             dstArray[i] += leavesRef[binsArray[i]];
-        }
+        });
     }
 }
 

@@ -39,14 +39,14 @@ namespace {
                              indicesRef,
                              [&](int32_t i, uint8_t bin) {
                 binsRef[i] |= (bin  > feature.conditionId_) << level_;
-            });
+            }, /*parallel*/ true);
             ++level_;
 
             std::vector<DataPartition> newLeaves;
             newLeaves.resize(1 << level_);
 
             for (int32_t bin : binsRef) {
-                newLeaves[bin].Size++;
+                ++newLeaves[bin].Size;
             }
 
             std::vector<int64_t> writeOffsets(newLeaves.size());
@@ -66,13 +66,17 @@ namespace {
             auto nextBinsRef = nextBins.arrayRef();
 
 
+            std::vector<int64_t> sorted(binsRef.size());
             for (uint32_t i = 0; i < binsRef.size(); ++i) {
-                int64_t writeOffset = writeOffsets[binsRef[i]]++;
+               sorted[i] = writeOffsets[binsRef[i]]++;
+            }
 
+            parallelFor(0, binsRef.size(), [&](int64_t i) {
+                int64_t writeOffset = sorted[i];
                 nextBinsRef[writeOffset] = binsRef[i];
                 nextIndicesRef[writeOffset] = indicesRef[i];
                 nextStatRef[writeOffset] = statRef[i];
-            }
+            });
 
             stat_.Swap(nextStat);
             indices_.Swap(nextIndices);
@@ -94,9 +98,8 @@ namespace {
 
             for (int64_t leaf = 0; leaf < (1 << level_); ++leaf) {
                 auto leafHistogram = histograms_->arrayRef().slice(leaf * ds_.totalBins(), ds_.totalBins());
-
                 const auto nzFeaturesCount = ds_.grid().nzFeaturesCount();
-                for (int64_t f = 0; f < nzFeaturesCount; ++f) {
+                parallelFor(0, nzFeaturesCount, [&](int64_t f) {
                     const int32_t conditions =  ds_.grid().conditionsCount(f);
                     int32_t bins = conditions + 1;
 
@@ -110,7 +113,7 @@ namespace {
                         right -= featureHistogram[bin];
                         visitor(seqCondition + bin, left, right);
                     }
-                }
+                });
             }
         }
 

@@ -48,13 +48,19 @@ public:
     }
 
     template <class Visitor>
-    void visitFeature(int64_t fIndex, Visitor&& visitor) const {
+    void visitFeature(int64_t fIndex, Visitor&& visitor, bool parallel = false) const {
         int64_t groupIdx =  featureToGroup_.at(fIndex);
         const auto& groupInfo = groups_[groupIdx];
         auto groupBundle = group(groupIdx);
         const int64_t fIndexInGroup = fIndex - groupInfo.firstFeature_;
-        for (int64_t i = 0; i < samplesCount_; ++i) {
-            visitor(i, groupBundle[i * groupInfo.groupSize() + fIndexInGroup]);
+        if (parallel) {
+            parallelFor(0, samplesCount_, [&](int64_t i) {
+                visitor(i, groupBundle[i * groupInfo.groupSize() + fIndexInGroup]);
+            });
+        } else {
+            for (int64_t i = 0; i < samplesCount_; ++i) {
+                visitor(i, groupBundle[i * groupInfo.groupSize() + fIndexInGroup]);
+            }
         }
     }
 
@@ -70,13 +76,19 @@ public:
 
 
     template <class Visitor>
-    void visitFeature(int64_t fIndex, ConstArrayRef<int32_t> indices, Visitor&& visitor) const {
+    void visitFeature(int64_t fIndex, ConstArrayRef<int32_t> indices, Visitor&& visitor, bool parallel = false) const {
         int64_t groupIdx =  featureToGroup_.at(fIndex);
         const auto& groupInfo = groups_[groupIdx];
         auto groupBundle = group(groupIdx);
         const int64_t fIndexInGroup = fIndex - groupInfo.firstFeature_;
-        for (int64_t i = 0; i < indices.size(); ++i) {
-            visitor(i, groupBundle[indices[i] * groupInfo.groupSize() + fIndexInGroup]);
+        if (parallel) {
+            parallelFor(0, indices.size(), [&](int64_t i) {
+                visitor(i, groupBundle[indices[i] * groupInfo.groupSize() + fIndexInGroup]);
+            });
+        } else {
+            for (int64_t i = 0; i < indices.size(); ++i) {
+                visitor(i, groupBundle[indices[i] * groupInfo.groupSize() + fIndexInGroup]);
+            }
         }
     }
 
@@ -162,11 +174,11 @@ inline std::vector<FeaturesBundle> createGroups(const Grid& grid, int32_t maxGro
     return groups;
 }
 
-std::unique_ptr<BinarizedDataSet> binarize(const DataSet& ds, GridPtr grid, int32_t maxGroupSize = 32);
+std::unique_ptr<BinarizedDataSet> binarize(const DataSet& ds, GridPtr grid, int32_t maxGroupSize = 16);
 
 
 
-inline const BinarizedDataSet& cachedBinarize(const DataSet& ds, GridPtr grid, int32_t maxGroupSize = 32) {
+inline const BinarizedDataSet& cachedBinarize(const DataSet& ds, GridPtr grid, int32_t maxGroupSize = 16) {
     return ds.computeOrGet<Grid, BinarizedDataSet>(std::move(grid), [&](const DataSet& ds, GridPtr ptr) -> std::unique_ptr<BinarizedDataSet> {
         auto start = std::chrono::system_clock::now();
         auto binarized = binarize(ds, ptr, maxGroupSize);
