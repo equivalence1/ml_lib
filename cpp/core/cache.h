@@ -36,7 +36,7 @@ struct ObjectWeakPtr {
 
 namespace std {
     template <>
-    struct std::hash<ObjectWeakPtr> {
+    struct hash<ObjectWeakPtr> {
 
         size_t operator()(const ObjectWeakPtr& ptr) const {
             return ptr.hash_;
@@ -51,7 +51,7 @@ public:
 
     template <class From, class To, class Builder>
     const To& computeOrGet(std::shared_ptr<From> source, Builder&& builder) const {
-        ObjectWeakPtr weakSource = std::static_pointer_cast<Object>(source);
+        uint64_t weakSource = (uint64_t)(source.get());// std::static_pointer_cast<Object>(source);
         if (!cache_.count(weakSource)) {
             cache_[weakSource] = std::unique_ptr<Object>(builder(*static_cast<const T*>(this), source).release());
         }
@@ -60,18 +60,18 @@ public:
         return *dynamic_cast<const To*>(result);
     }
 
-    void clearExpired() const {
-        std::unordered_map<ObjectWeakPtr, std::shared_ptr<Object>> notExpired;
-        for (auto [keyPtr, valuePtr] : cache_) {
-            if (!keyPtr.expired()) {
-                notExpired[keyPtr] = std::move(valuePtr);
-            }
-        }
-        cache_.swap(notExpired);
-    }
+//    void clearExpired() const {
+//        std::unordered_map<ObjectWeakPtr, std::shared_ptr<Object>> notExpired;
+//        for (auto [keyPtr, valuePtr] : cache_) {
+//            if (!keyPtr.expired()) {
+//                notExpired[keyPtr] = std::move(valuePtr);
+//            }
+//        }
+//        cache_.swap(notExpired);
+//    }
 
 private:
-    mutable std::unordered_map<ObjectWeakPtr, std::unique_ptr<Object>> cache_;
+    mutable std::unordered_map<uint64_t, std::unique_ptr<Object>> cache_;
 };
 
 

@@ -2,6 +2,8 @@
 
 #include <cstdint>
 #include <vector>
+#include <array>
+#include <cassert>
 #include <util/array_ref.h>
 
 
@@ -12,14 +14,14 @@ template <class AdditiveStat,
     class I,
     int64_t BundleSize = 4,
     int64_t N = 8>
-void buidHistograms(
+void buildHistograms(
     ConstArrayRef<AdditiveStat> statistics,
     ConstArrayRef<I> binLoadIndices,
     ConstArrayRef<int32_t> binOffsets,
     ConstArrayRef<uint8_t> data,
     ArrayRef<AdditiveStat> dst) {
     std::array<int32_t, BundleSize * N> localBins;
-    std::array<AdditiveStat, N> localStat;
+//    std::array<AdditiveStat, N> localStat;
 
     const auto size = static_cast<const int64_t>(binLoadIndices.size());
 
@@ -30,13 +32,13 @@ void buidHistograms(
                 localBins[b * N + k] = data[loadIdx * BundleSize + b];
             }
         }
-        for (int64_t k = 0; k < N; ++k) {
-            localStat[k] = statistics[i + k];
-        }
+//        for (int64_t k = 0; k < N; ++k) {
+//            localStat[k] = statistics[i + k];
+//        }
 
         for (int64_t b = 0; b < BundleSize; ++b) {
             for (int64_t k = 0; k < N; ++k) {
-                dst[binOffsets[b] + localBins[b * N + k]] += localStat[k];
+                dst[binOffsets[b] + localBins[b * N + k]] +=  statistics[i + k];
             }
         }
     }
@@ -53,7 +55,7 @@ void buidHistograms(
 template <class AdditiveStat,
         class I,
         int64_t N = 4>
-void buidHistograms(
+void buildHistograms(
     int32_t bundleSize,
     ConstArrayRef<AdditiveStat> statistics,
     ConstArrayRef<I> binLoadIndices,
@@ -63,10 +65,10 @@ void buidHistograms(
 
     assert(bundleSize <= 64);
     #define DISPATCH(sz)\
-    buidHistograms<AdditiveStat, I, sz, N>(statistics, binLoadIndices, binOffsets, data, dst);
+    buildHistograms<AdditiveStat, I, sz, N>(statistics, binLoadIndices, binOffsets, data, dst);
 
     #define DISPATCH_GE32(sz)\
-    buidHistograms<AdditiveStat, I, sz + 32, N>(statistics, binLoadIndices, binOffsets, data, dst);
+    buildHistograms<AdditiveStat, I, sz + 32, N>(statistics, binLoadIndices, binOffsets, data, dst);
 
 
     if (bundleSize > 32) {

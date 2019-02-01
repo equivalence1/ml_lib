@@ -31,8 +31,6 @@ protected:
         }
     }
 
-
-
 private:
 
     std::vector<std::weak_ptr<Inner>> listeners_;
@@ -50,7 +48,7 @@ public:
 
     void operator()(const Model& model) override {
         model.append(ds_, cursor_);
-        if (iter_++ % 10 == 0) {
+        if (iter_ % 10 == 0) {
             std::cout << "iter " << iter_<<": ";
             for (int32_t i = 0; i < metrics_.size(); ++i) {
                 std::cout << metricName[i] << "=" << metrics_[i]->value(cursor_);
@@ -60,6 +58,7 @@ public:
             }
             std::cout << std::endl;
         }
+        ++iter_;
     }
 
     void addMetric(const Func& func, const std::string& name) {

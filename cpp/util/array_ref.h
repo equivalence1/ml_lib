@@ -44,13 +44,17 @@ namespace Detail {
 
         constexpr ArrayRef(const std::vector<std::remove_const_t<T>>& vec)
             : Data(vec.data()), Length(vec.size()) {}
-
-        constexpr ArrayRef(ArrayRef<std::remove_const_t<T>> vec)
-            : Data(vec.data()), Length(vec.size()) {}
+//
+//        constexpr ArrayRef(const ArrayRef<std::remove_const_t<T>>& vec)
+//            : Data(vec.data()), Length(vec.size()) {}
         /// @}
         /// @name Simple Operations
         /// @{
 
+
+        operator ArrayRef<const T>() const {
+            return ArrayRef<const T>(Data, Length);
+        }
 
         constexpr iterator begin() const {
             return Data;

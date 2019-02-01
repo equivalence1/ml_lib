@@ -87,7 +87,7 @@ namespace {
 
         template <class Visitor>
         void visitSplits(Visitor&& visitor) {
-            buildHistograms();
+            buildHists();
             auto binFeatureOffsets = ds_.grid().binFeatureOffsets();
             auto binOffsets = ds_.binOffsets();
             auto leaves_stats_ref = leaves_stats_.arrayRef();
@@ -130,7 +130,7 @@ namespace {
 
     private:
 
-        void buildHistograms() {
+        void buildHists() {
             if (histograms_ != nullptr) {
                 return;
             }
@@ -154,7 +154,7 @@ namespace {
                 std::iota(partsToBuild.begin(), partsToBuild.end(), 0);
             }
 
-            buildHistograms(partsToBuild, histograms_->arrayRef());
+            buildHistogramsForParts(partsToBuild, histograms_->arrayRef());
 
             if (prevHistograms_ != nullptr) {
 
@@ -186,7 +186,7 @@ namespace {
 
         }
 
-        void buildHistograms(ConstArrayRef<int32_t> partIds, ArrayRef<Stat> dst) const {
+        void buildHistogramsForParts(ConstArrayRef<int32_t> partIds, ArrayRef<Stat> dst) const {
             for (int32_t i = 0; i < partIds.size(); ++i) {
                 const int32_t partId = partIds[i];
                 const auto& part = leaves_[partId];
@@ -195,13 +195,13 @@ namespace {
 
                 ds_.visitGroups([&](const FeaturesBundle& bundle,
                                     ConstArrayRef<uint8_t> data) {
-                    buidHistograms(bundle.groupSize(),
-                        stat,
-                        indices,
-                        ds_.binOffsets().slice(bundle.firstFeature_, bundle.groupSize()),
-                        data,
-                        dst.slice(ds_.totalBins() * i, ds_.totalBins())
-                        );
+                    buildHistograms(bundle.groupSize(),
+                                    stat,
+                                    indices,
+                                    ds_.binOffsets().slice(bundle.firstFeature_, bundle.groupSize()),
+                                    data,
+                                    dst.slice(ds_.totalBins() * i, ds_.totalBins())
+                    );
 
                 });
             }

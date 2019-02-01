@@ -166,7 +166,11 @@ std::unique_ptr<BinarizedDataSet> binarize(const DataSet& ds, GridPtr grid, int3
 
 inline const BinarizedDataSet& cachedBinarize(const DataSet& ds, GridPtr grid, int32_t maxGroupSize = 32) {
     return ds.computeOrGet<Grid, BinarizedDataSet>(std::move(grid), [&](const DataSet& ds, GridPtr ptr) -> std::unique_ptr<BinarizedDataSet> {
-        return binarize(ds, ptr, maxGroupSize);
+        auto start = std::chrono::system_clock::now();
+        auto binarized = binarize(ds, ptr, maxGroupSize);
+        std::cout << "binarization time " << std::chrono::duration<double>(std::chrono::system_clock::now() - start).count()
+                  << std::endl;
+        return binarized;
     });
 }
 
