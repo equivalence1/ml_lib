@@ -5,6 +5,7 @@
 #include <vec_tools/transform.h>
 #include <vec_tools/distance.h>
 #include <vec_tools/stats.h>
+#include <util/parallel_executor.h>
 
 struct L2Stat {
     using Numeric = double;
@@ -148,18 +149,17 @@ public:
         auto nzTargetsRef = nzTargets_.arrayRef();
         auto nzWeightsRef = nzWeights_.dim() ? nzWeights_.arrayRef() : ConstArrayRef<float>((const float*)nullptr, (size_t)0u);
 
-
         ArrayRef<L2Stat> statsRef = stats->arrayRef();
-        if (nzWeightsRef.size()) {
-            for (int32_t i = 0; i < nzTargets_.dim(); ++i) {
+        if (!nzWeightsRef.empty()) {
+            parallelFor(0, nzTargetsRef.size(), [&](int64_t i) {
                 statsRef[i].Sum = nzTargetsRef[i];
                 statsRef[i].Weight = nzWeightsRef[i];
-            }
+            });
         } else {
-            for (int32_t i = 0; i < nzTargets_.dim(); ++i) {
+            parallelFor(0, nzTargetsRef.size(), [&](int64_t i) {
                 statsRef[i].Sum = nzTargetsRef[i];
                 statsRef[i].Weight = 1.0;
-            }
+            });
         }
     }
 

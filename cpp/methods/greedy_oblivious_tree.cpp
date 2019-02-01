@@ -7,6 +7,7 @@
 #include <targets/l2.h>
 #include <models/oblivious_tree.h>
 #include <util/parallel_executor.h>
+#include <util/guard.h>
 namespace {
 
     struct DataPartition {
@@ -138,7 +139,8 @@ namespace {
                 return;
             }
 
-            histograms_.reset(new Buffer<Stat>((1 << level_) * ds_.totalBins()));
+            const auto totalBins = ds_.totalBins();
+            histograms_.reset(new Buffer<Stat>((1 << level_) * totalBins));
 
             std::vector<int32_t> partsToBuild;
 //
@@ -165,28 +167,39 @@ namespace {
                 auto histograms = histograms_->arrayRef();
                 auto prevHistograms = prevHistograms_->arrayRef();
 
-                for (int32_t i = 0; i < 1 << (level_ - 1); ++i) {
-                    int32_t leftPart = i;
-                    int32_t rightPart = i | (1 <<  (level_ - 1));
+                auto& executor = GlobalThreadPool();
+                const int64_t numBlocks = executor.numThreads();
+                const int64_t blockSize = (totalBins + numBlocks - 1) / numBlocks;
 
-                    for (int64_t bin = 0; bin < ds_.totalBins(); ++bin) {
-                        auto minPartStat = histograms[ds_.totalBins() * i + bin];
-                        auto prevStat = prevHistograms[ds_.totalBins() * i + bin];
-                        auto maxPartStat = prevStat - minPartStat;
+                for (int64_t blockId = 0; blockId < numBlocks; ++blockId) {
+                    executor.enqueue([&, blockId]() {
+                        int64_t firstBin = std::min<int64_t>(blockId * blockSize, totalBins);
+                        int64_t lastBin = std::min<int64_t>((blockId + 1) * blockSize, totalBins);
 
-                        if (leaves_[leftPart].Size < leaves_[rightPart].Size) {
-                            histograms[ds_.totalBins() * leftPart + bin] = minPartStat;
-                            histograms[ds_.totalBins() * rightPart + bin] = maxPartStat;
-                        } else {
-                            histograms[ds_.totalBins() * rightPart + bin] = minPartStat;
-                            histograms[ds_.totalBins() * leftPart + bin] = maxPartStat;
+                        for (int32_t i = 0; i < 1 << (level_ - 1); ++i) {
+                            int32_t leftPart = i;
+                            int32_t rightPart = i | (1 << (level_ - 1));
+
+                            for (int64_t bin = firstBin; bin < lastBin; ++bin) {
+                                auto minPartStat = histograms[totalBins * i + bin];
+                                auto prevStat = prevHistograms[totalBins * i + bin];
+                                auto maxPartStat = prevStat - minPartStat;
+
+                                if (leaves_[leftPart].Size < leaves_[rightPart].Size) {
+                                    histograms[totalBins * leftPart + bin] = minPartStat;
+                                    histograms[totalBins * rightPart + bin] = maxPartStat;
+                                } else {
+                                    histograms[totalBins * rightPart + bin] = minPartStat;
+                                    histograms[totalBins * leftPart + bin] = maxPartStat;
+                                }
+                            }
                         }
-                    }
+                    });
                 }
+                executor.waitComplete();
 
                 prevHistograms_.reset();
             }
-
         }
 
         void buildHistogramsForParts(ConstArrayRef<int32_t> partIds, ArrayRef<Stat> dst) const {
@@ -224,9 +237,30 @@ namespace {
             auto binsRef = bins_.arrayRef();
             auto statRef = stat_.arrayRef();
             auto leaves_stats_ref = leaves_stats_.arrayRef();
-            for (uint32_t i = 0; i < binsRef.size(); ++i) {
-                leaves_stats_ref[binsRef[i]] += statRef[i];
+            std::mutex lock;
+            auto& executor = GlobalThreadPool();
+            const int64_t numBlocks = executor.numThreads();
+            const int64_t blockSize = (binsRef.size() + numBlocks - 1) / numBlocks;
+
+            for (int64_t blockId = 0; blockId < numBlocks; ++blockId) {
+                executor.enqueue([&, blockId]() {
+                     int64_t start = blockId * blockSize;
+                     int64_t end = std::min<int64_t>((blockId + 1) * blockSize, binsRef.size());
+                     std::vector<Stat> tmp(leaves_.size());
+                     for (int64_t i = start; i < end; ++i) {
+                         tmp[binsRef[i]] += statRef[i];
+                     }
+
+                     with_guard(lock)
+                     {
+                         for (int64_t i = 0; i < leaves_.size(); ++i) {
+                             leaves_stats_ref[i] += tmp[i];
+                         }
+                     }
+                 }
+                );
             }
+            executor.waitComplete();
         }
     private:
 
