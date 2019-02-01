@@ -5,6 +5,7 @@
 #include <torch/torch.h>
 #include <core/buffer.h>
 #include <util/array_ref.h>
+#include <util/parallel_executor.h>
 
 struct FeaturesBundle {
     int32_t firstFeature_ = 0;
@@ -18,6 +19,7 @@ struct FeaturesBundle {
 
 class BinarizedDataSet : public Object {
 public:
+
     GridPtr gridPtr() const {
         return grid_;
     }

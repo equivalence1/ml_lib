@@ -6,7 +6,7 @@
 #include <data/binarized_dataset.h>
 #include <targets/l2.h>
 #include <models/oblivious_tree.h>
-
+#include <util/parallel_executor.h>
 namespace {
 
     struct DataPartition {
@@ -187,24 +187,33 @@ namespace {
         }
 
         void buildHistogramsForParts(ConstArrayRef<int32_t> partIds, ArrayRef<Stat> dst) const {
+            auto& threadPool = GlobalThreadPool();
             for (int32_t i = 0; i < partIds.size(); ++i) {
                 const int32_t partId = partIds[i];
                 const auto& part = leaves_[partId];
                 ConstArrayRef<int32_t> indices = indices_.arrayRef().slice(part.Offset, part.Size);
                 ConstArrayRef<Stat> stat = stat_.arrayRef().slice(part.Offset, part.Size);
 
-                ds_.visitGroups([&](const FeaturesBundle& bundle,
-                                    ConstArrayRef<uint8_t> data) {
-                    buildHistograms(bundle.groupSize(),
-                                    stat,
-                                    indices,
-                                    ds_.binOffsets().slice(bundle.firstFeature_, bundle.groupSize()),
-                                    data,
-                                    dst.slice(ds_.totalBins() * i, ds_.totalBins())
-                    );
+                ds_.visitGroups([dst, this, indices, stat, i, &threadPool](
+                    FeaturesBundle bundle,
+                    ConstArrayRef<uint8_t> data) {
 
+//                    const int64_t minIndicesToBuildParallel = 4096;
+                    auto binOffsets = ds_.binOffsets().slice(bundle.firstFeature_, bundle.groupSize());
+                    ArrayRef<Stat> dstForBundle = dst.slice(ds_.totalBins() * i, ds_.totalBins());
+
+                    threadPool.enqueue([=]() {
+                        buildHistograms(bundle.groupSize(),
+                                        stat,
+                                        indices,
+                                        binOffsets,
+                                        data,
+                                        dstForBundle
+                        );
+                    });
                 });
-            }
+            };
+            threadPool.waitComplete();
         }
 
         void updateLeavesStats() {

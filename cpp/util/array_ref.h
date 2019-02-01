@@ -51,6 +51,12 @@ namespace Detail {
         /// @name Simple Operations
         /// @{
 
+        constexpr ArrayRef(const ArrayRef& other)
+        : Data(other.Data)
+        , Length(other.Length) {
+
+        }
+
 
         operator ArrayRef<const T>() const {
             return ArrayRef<const T>(Data, Length);
@@ -63,8 +69,6 @@ namespace Detail {
             return Data + Length;
         }
 
-        // These are actually the same as iterator, since ArrayRef only
-        // gives you const iterators.
         constexpr const_iterator cbegin() const {
             return Data;
         }
@@ -84,11 +88,7 @@ namespace Detail {
             return Length == 0;
         }
 
-        constexpr const T* data() const {
-            return Data;
-        }
-
-        constexpr T* data() {
+        constexpr T* data() const {
             return Data;
         }
 
@@ -98,13 +98,13 @@ namespace Detail {
         }
 
         /// front - Get the first element.
-        const std::remove_const_t<T>& front() const {
+        constexpr T& front() const {
             VERIFY(!empty(), "ArrayRef: attempted to access front() of empty list");
             return Data[0];
         }
 
         /// back - Get the last element.
-        constexpr const std::remove_const_t<T>& back() const {
+        constexpr T& back() const {
             VERIFY(!empty(), "ArrayRef: attempted to access back() of empty list");
             return Data[Length - 1];
         }
@@ -116,12 +116,7 @@ namespace Detail {
 
         /// slice(n, m) - Chop off the first N elements of the array, and keep M
         /// elements in the array.
-        ArrayRef<const T> slice(size_t N, size_t M) const {
-            VERIFY(N + M <= size(),  "ArrayRef: invalid slice, N = " << N << "; M = " << M << "; size = " << size());
-            return ArrayRef<const T>(data() + N, M);
-        }
-
-        ArrayRef<T> slice(size_t N, size_t M) {
+        ArrayRef<T> slice(size_t N, size_t M) const {
             VERIFY(N + M <= size(),  "ArrayRef: invalid slice, N = " << N << "; M = " << M << "; size = " << size());
             return ArrayRef<T>(data() + N, M);
         }
@@ -131,9 +126,6 @@ namespace Detail {
             return slice(N, size() - N);
         }
 
-        constexpr ArrayRef<T> slice(size_t N) {
-            return slice(N, size() - N);
-        }
 
         /// @}
         /// @name Operator Overloads
@@ -147,7 +139,7 @@ namespace Detail {
         }
 
         /// Vector compatibility
-        const std::remove_const_t<T>& at(size_t Index) const {
+        T& at(size_t Index) const {
             VERIFY(
                 Index < Length,
                 "ArrayRef: invalid index Index = " <<
