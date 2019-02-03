@@ -1,10 +1,11 @@
 #pragma once
 
 #include <core/object.h>
+#include <core/matrix.h>
 #include <data/dataset.h>
 #include <targets/target.h>
-#include <core/matrix.h>
 #include <targets/l2.h>
+#include <random>
 
 class GradientBoostingWeakTargetFactory : public EmpiricalTargetFactory {
 public:
@@ -17,14 +18,34 @@ private:
 
 
 
-//class GradientBoostingBootstrappedWeakTargetFactory : public Object {
-//public:
-//    virtual SharedPtr<Target> create(const DataSet& ds,
-//                                     const Target& target,
-//                                     const Mx& startPoint) override  {
-//        const Vec cursor = startPoint;
-//        Vec der(cursor.dim());
-//        target.gradientTo(cursor, der);
-//        return std::make_shared<L2>(der);
-//    }
-//};
+enum class BootstrapType {
+    Bayessian,
+    Uniform,
+    Poisson
+};
+
+struct BootstrapOptions {
+    BootstrapType type_ = BootstrapType::Poisson;
+    double sampleRate_ = 0.7;
+    uint32_t seed_ = 42;
+};
+
+class GradientBoostingBootstrappedWeakTargetFactory : public EmpiricalTargetFactory {
+public:
+    GradientBoostingBootstrappedWeakTargetFactory(BootstrapOptions options)
+    : options_(std::move(options))
+    , engine_(options_.seed_) {
+
+    }
+
+    virtual SharedPtr<Target> create(const DataSet& ds,
+                                     const Target& target,
+                                     const Mx& startPoint) override;
+private:
+    BootstrapOptions options_;
+    std::default_random_engine engine_;
+    std::uniform_real_distribution<double> uniform_ = std::uniform_real_distribution<double>(0, 1);
+    std::poisson_distribution<int> poisson_ = std::poisson_distribution<int>(1);
+
+
+};

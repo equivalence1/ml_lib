@@ -7,13 +7,10 @@
 #include <util/array_ref.h>
 
 
-
-
-
 template <class AdditiveStat,
-    class I,
-    int64_t BundleSize = 4,
-    int64_t N = 8>
+          class I,
+          int64_t BundleSize = 4,
+          int64_t N = 8>
 void buildHistograms(
     ConstArrayRef<AdditiveStat> statistics,
     ConstArrayRef<I> binLoadIndices,
@@ -21,8 +18,6 @@ void buildHistograms(
     ConstArrayRef<uint8_t> data,
     ArrayRef<AdditiveStat> dst) {
     std::array<int32_t, BundleSize * N> localBins;
-//    std::array<AdditiveStat, N> localStat;
-
     const auto size = static_cast<const int64_t>(binLoadIndices.size());
 
     for (int64_t i = 0; i < (size / N) * N; i += N) {
@@ -32,9 +27,6 @@ void buildHistograms(
                 localBins[b * N + k] = data[loadIdx * BundleSize + b];
             }
         }
-//        for (int64_t k = 0; k < N; ++k) {
-//            localStat[k] = statistics[i + k];
-//        }
 
         for (int64_t b = 0; b < BundleSize; ++b) {
             for (int64_t k = 0; k < N; ++k) {

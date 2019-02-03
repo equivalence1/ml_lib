@@ -66,11 +66,11 @@ private:
 class LogL2Score {
 public:
     double bestIncrement(const L2Stat& stat) const {
-        return stat.Weight > 1 ? stat.Sum / stat.Weight : 0;
+        return stat.Weight > 1 ? stat.Sum / (stat.Weight + 1e-20) : 0;
     }
 
     double score(const L2Stat& stat) const {
-        return stat.Weight > 1 ? -stat.Sum * stat.Sum * (1 + 2 * log(stat.Weight + 1)) / stat.Weight : 0;
+        return stat.Weight > 1 ? -stat.Sum * stat.Sum * (1. + 2. * log(stat.Weight + 1)) / stat.Weight : 0;
     }
 };
 
@@ -78,7 +78,8 @@ public:
 using ScoreFunction = LogL2Score;
 
 class L2 :  public Stub<Target, L2>,
-            public StatBasedLoss<L2Stat>  {
+            public StatBasedLoss<L2Stat>,
+            public PointwiseTarget {
 public:
 
     explicit L2(const DataSet& ds, Vec target, ScoreFunction scoreFunction = ScoreFunction())
@@ -120,6 +121,9 @@ public:
         }
 
         Vec trans(const Vec& x, Vec to) const {
+            //TODO(noxoomo): support subsets
+            assert(x.dim() == owner_.nzTargets_.dim());
+
             VecTools::copyTo(owner_.nzTargets_, to);
             to -= x;
             return to;
@@ -134,39 +138,13 @@ public:
     }
 
 
-    void makeStats(Buffer<L2Stat>* stats, Buffer<int32_t>* indices) const override {
-        (*stats) = Buffer<L2Stat>(nzTargets_.dim());
-        if (nzIndices_.size()) {
-            (*indices) = nzIndices_.copy();
-        } else {
-            (*indices) = Buffer<int32_t>(nzTargets_.dim());
-            auto indicesRef = indices->arrayRef();
-            for (int32_t i = 0; i < indicesRef.size(); ++i) {
-                indicesRef[i] = i;
-            }
-        }
-
-        auto nzTargetsRef = nzTargets_.arrayRef();
-        auto nzWeightsRef = nzWeights_.dim() ? nzWeights_.arrayRef() : ConstArrayRef<float>((const float*)nullptr, (size_t)0u);
-
-        ArrayRef<L2Stat> statsRef = stats->arrayRef();
-        if (!nzWeightsRef.empty()) {
-            parallelFor(0, nzTargetsRef.size(), [&](int64_t i) {
-                statsRef[i].Sum = nzTargetsRef[i];
-                statsRef[i].Weight = nzWeightsRef[i];
-            });
-        } else {
-            parallelFor(0, nzTargetsRef.size(), [&](int64_t i) {
-                statsRef[i].Sum = nzTargetsRef[i];
-                statsRef[i].Weight = 1.0;
-            });
-        }
-    }
-
+    void makeStats(Buffer<L2Stat>* stats, Buffer<int32_t>* indices) const override;
 
     double score(const L2Stat& comb) const override {
         return scoreFunction_.score(comb);
     }
+
+    void subsetDer(const Vec& point, const Buffer<int32_t>& indices, Vec to) const override;
 
     DoubleRef valueTo(const Vec& x, DoubleRef to) const {
         assert(nzWeights_.dim() == 0);

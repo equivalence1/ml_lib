@@ -27,6 +27,8 @@ namespace {
 
             target.makeStats(&stat_, &indices_);
             bins_ = Buffer<int32_t>(stat_.size());
+            bins_.fill(0);
+
             leaves_.push_back({0, indices_.size()});
             updateLeavesStats();
         }
@@ -111,7 +113,7 @@ namespace {
                     Stat left;
                     for (int32_t bin = 0; bin < conditions; ++bin) {
                         left += featureHistogram[bin];
-                        right -= featureHistogram[bin];
+                        right = leaves_stats_ref[leaf] -  left;
                         visitor(seqCondition + bin, left, right);
                     }
                 });

@@ -6,6 +6,7 @@ add_library(targets
         target.h
         target.cpp
         l2.h
+        l2.cpp
         stat_based_loss.h
 )
 

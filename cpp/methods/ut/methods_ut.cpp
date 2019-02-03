@@ -20,7 +20,12 @@ inline std::unique_ptr<GreedyObliviousTree> createWeakLearner(
 
 inline std::unique_ptr<EmpiricalTargetFactory> createWeakTarget() {
     return std::make_unique<GradientBoostingWeakTargetFactory>();
+}
 
+inline std::unique_ptr<EmpiricalTargetFactory> createBootstrapWeakTarget() {
+    BootstrapOptions options;
+    options.seed_ = 23;
+    return std::make_unique<GradientBoostingBootstrappedWeakTargetFactory>(options);
 }
 
 //run it from root
@@ -47,6 +52,29 @@ TEST(FeaturesTxt, TestTrainMseFeaturesTxt) {
 }
 
 
+TEST(FeaturesTxt, TestTrainWithBootstrapMseFeaturesTxt) {
+
+    auto ds = loadFeaturesTxt("test_data/featuresTxt/train");
+    auto test = loadFeaturesTxt("test_data/featuresTxt/test");
+    EXPECT_EQ(ds.samplesCount(), 12465);
+    EXPECT_EQ(ds.featuresCount(), 50);
+
+    BinarizationConfig config;
+    config.bordersCount_ = 32;
+    auto grid = buildGrid(ds, config);
+
+    BoostingConfig boostingConfig;
+    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLearner(6, grid));
+
+    auto metricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
+    metricsCalcer->addMetric(L2(test), "l2");
+    boosting.addListener(metricsCalcer);
+    L2 target(ds);
+    auto ensemble = boosting.fit(ds, target);
+
+}
+
+
 //run it from root
 TEST(FeaturesTxt, TestTrainMseMoscow) {
     auto start = std::chrono::system_clock::now();
@@ -63,7 +91,7 @@ TEST(FeaturesTxt, TestTrainMseMoscow) {
     std::cout << " build grid " << std::endl;
 
     BoostingConfig boostingConfig;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLearner(6, grid));
+    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLearner(6, grid));
 
     auto metricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     metricsCalcer->addMetric(L2(test), "l2");

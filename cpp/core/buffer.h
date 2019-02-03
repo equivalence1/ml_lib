@@ -4,6 +4,7 @@
 #include "torch_helpers.h"
 #include <torch/torch.h>
 
+//TODO: vec should be subclass of buffer
 template <class T>
 class Buffer  {
 public:
@@ -56,6 +57,16 @@ public:
 
     void Swap(Buffer<T> other) {
         std::swap(data_, other.data_);
+    }
+
+
+    static Buffer fromVector(const std::vector<T>& vec) {
+        Buffer x(vec.size());
+        ArrayRef<T> dst = x.arrayRef();
+        for (int64_t i = 0; i < dst.size(); ++i) {
+            dst[i] = vec[i];
+        }
+        return x;
     }
 
 private:

@@ -14,7 +14,9 @@ public:
 
 class PointwiseTarget : public Object {
 public:
-    virtual void der(const Vec& point, const Buffer<uint32_t>& indices, Vec to) = 0;
+
+    //gather from point and compute der
+    virtual void subsetDer(const Vec& point, const Buffer<int32_t>& indices, Vec to) const = 0;
 };
 
 class PointwiseC2Target : public PointwiseTarget {
@@ -22,9 +24,9 @@ class PointwiseC2Target : public PointwiseTarget {
     virtual void derAndDer2(const Vec& point,
                             const Buffer<uint32_t>& indices,
                             Vec derTo,
-                            Vec der2To) = 0;
+                            Vec der2To) const = 0;
 
-    virtual void der2(const Vec& point, const Buffer<uint32_t>& indices, Vec to) = 0;
+    virtual void der2(const Vec& point, const Buffer<uint32_t>& indices, Vec to) const = 0;
 
 };
 

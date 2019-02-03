@@ -14,4 +14,6 @@ public:
     //will not copy data if vec is already on this device
     static Vec toDevice(const Vec& vec, const ComputeDevice& device);
 
+    static Vec fromVector(const std::vector<double>& vec);
+
 };
