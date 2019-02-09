@@ -4,7 +4,9 @@ void train_model(Model* model, TensorPairDataset* d, int epochs) {
     auto mds = d->map(torch::data::transforms::Stack<>());
     auto dloader = torch::data::make_data_loader(mds, 64);
 
-    torch::optim::SGD optimizer(model->parameters(), 0.01);
+    torch::optim::SGDOptions options(0.001);
+    options.momentum_ = 0.9;
+    torch::optim::SGD optimizer(model->parameters(), options);
 
     for (int epoch = 0; epoch < epochs; epoch++) {
         int batch_index = 0;
