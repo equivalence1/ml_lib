@@ -72,3 +72,22 @@ private:
     Mx cursor_;
     int32_t iter_ = 0;
 };
+
+
+class IterPrinter : public Listener<Model> {
+public:
+
+    IterPrinter() {
+
+    }
+
+    void operator()(const Model& model) override {
+        if (iter_ % 10 == 0) {
+            std::cout << "iter " << iter_<<std::endl;
+        }
+        ++iter_;
+    }
+
+private:
+    int32_t iter_ = 0;
+};

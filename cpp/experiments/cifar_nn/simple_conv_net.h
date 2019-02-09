@@ -1,7 +1,7 @@
 #pragma once
 
-#include <torch/torch.h>
 #include "model.h"
+#include <torch/torch.h>
 
 class SimpleConvNet: public Model {
 public:

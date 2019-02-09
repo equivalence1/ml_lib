@@ -1,7 +1,8 @@
 cmake_version()
 project(cifar_nn)
 
-add_library(cifar_nn SHARED
+add_library(cifar_nn
+        em_like_train.h
         simple_conv_net.h
         simple_conv_net.cpp
         model.h

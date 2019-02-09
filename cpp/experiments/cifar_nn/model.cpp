@@ -1,6 +1,6 @@
 #include "model.h"
 
-void tain_model(Model *model, TensorPairDataset *d, int epochs) {
+void train_model(Model* model, TensorPairDataset* d, int epochs) {
     auto mds = d->map(torch::data::transforms::Stack<>());
     auto dloader = torch::data::make_data_loader(mds, 64);
 
@@ -14,8 +14,7 @@ void tain_model(Model *model, TensorPairDataset *d, int epochs) {
 
             // TODO(equivalence1) log_softmax works better then log(softmax)
             prediction = torch::log(prediction);
-
-            auto loss = torch::nll_loss(prediction, batch.target);
+            auto loss= torch::nll_loss(prediction, batch.target);
             loss.backward();
             optimizer.step();
 

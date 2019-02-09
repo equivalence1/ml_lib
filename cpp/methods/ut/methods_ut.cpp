@@ -24,7 +24,7 @@ inline std::unique_ptr<EmpiricalTargetFactory> createWeakTarget() {
 
 inline std::unique_ptr<EmpiricalTargetFactory> createBootstrapWeakTarget() {
     BootstrapOptions options;
-    options.seed_ = 23;
+    options.seed_ = 42;
     return std::make_unique<GradientBoostingBootstrappedWeakTargetFactory>(options);
 }
 

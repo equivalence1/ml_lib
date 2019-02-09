@@ -12,6 +12,8 @@ include(GNUInstallDirs)
 add_subdirectory(contrib/pybind11)
 add_subdirectory(contrib/googletest)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 if(USE_CUDA)
     enable_language(CUDA)
     add_definitions(-DCUDA)

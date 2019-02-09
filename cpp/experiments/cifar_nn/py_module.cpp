@@ -87,7 +87,7 @@ public:
 };
 
 void py_train_model(PySimpleNet *model, PyTensorPairDataset *ds, int epochs = 10) {
-    tain_model(model, ds, epochs);
+    train_model(model, ds, epochs);
 }
 
 PYBIND11_MODULE(cifar_nn_py, m) {

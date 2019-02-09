@@ -73,6 +73,7 @@ double ObliviousTree::value(const Vec& x) {
 
     std::vector<double> vec(weights_.dim());
     std::vector<double> probs(splits_.size());
+    auto weightsPtr = weights_.arrayRef();
     for (int64_t i = 0; i < probs.size(); ++i) {
         const auto binFeature = splits_[i];
         const auto border = grid_->condition(binFeature.featureId_, binFeature.conditionId_);
@@ -85,7 +86,7 @@ double ObliviousTree::value(const Vec& x) {
         for (int a = 0; a < vec.size(); ++a) {
             int64_t bitsA = bits(a);
             if (bits(a & b) >= bitsA) {
-                value += (((bitsA + bitsB) & 1) > 0 ? -1. : 1.) * weights_.get(a);
+                value += (((bitsA + bitsB) & 1) > 0 ? -1. : 1.) * weightsPtr[a];
             }
         }
         for (int f = 0; f < probs.size(); ++f) {
@@ -152,6 +153,7 @@ void ObliviousTree::grad(const Vec& x, Vec to) {
 
 }
 
+//TODO: special instrict for intel
 int64_t ObliviousTree::bits(int64_t x) {
     int64_t result = 0;
     while (x != 0) {

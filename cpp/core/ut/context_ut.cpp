@@ -10,8 +10,7 @@ TEST(SimpleTests, Tests) {
     ComputeDevice gpu(ComputeDeviceType::Gpu);
     ComputeDevice cpu(ComputeDeviceType::Cpu);
     ComputeDevice current = CurrentDevice();
-    on_device(gpu)
-        {
+    on_device(gpu) {
             EXPECT_EQ(CurrentDevice(), gpu);
             on_device(cpu)
                 {

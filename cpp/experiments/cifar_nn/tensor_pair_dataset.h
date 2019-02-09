@@ -18,6 +18,14 @@ public:
 
     ~TensorPairDataset() = default;
 
+    torch::Tensor data() const {
+        return x_;
+    }
+
+    torch::Tensor targets() const {
+        return y_;
+    }
+
 protected:
     TensorPairDataset() = default;
 
