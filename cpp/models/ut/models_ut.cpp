@@ -76,12 +76,7 @@ TEST(FeaturesTxt, ApplyFloatAndBinarizedOtTest) {
                 weg.set(i, 2.0 * std::rand() / RAND_MAX - 1.0 );
             }
             ObliviousTree tree(grid, features, values, weg);
-
-            Vec toFromBds(ds.samplesCount());
-            Vec toFromDs(ds.samplesCount());
-
-            tree.apply(bds, Mx(toFromBds, ds.samplesCount(), 1));
-            tree.apply(ds, Mx(toFromDs, ds.samplesCount(), 1));
+            
             double delta = 0.001;
             for (int64_t k = 0; k < ds.samplesCount(); ++k) {
                 Vec grad = Vec(ds.sample(0).dim());
