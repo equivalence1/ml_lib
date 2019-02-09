@@ -10,7 +10,13 @@ add_library(cifar_nn
         simple_net.h
         simple_net.cpp
         tensor_pair_dataset.h
-        tensor_pair_dataset.cpp)
+        tensor_pair_dataset.cpp
+        loss.cpp
+        loss.h
+        optimizer.cpp
+        optimizer.h
+        initializer.cpp
+        initializer.h)
 target_link_libraries(cifar_nn "${TORCH_LIBRARIES}")
 enable_cxx14(cifar_nn)
 
