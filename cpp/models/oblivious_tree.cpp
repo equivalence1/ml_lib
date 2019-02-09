@@ -68,3 +68,95 @@ void ObliviousTree::appendTo(const Vec& x, Vec to) const {
 
     to += leaves_.get(bin);
 }
+
+double ObliviousTree::value(const Vec& x) {
+
+    std::vector<double> vec(weights_.dim());
+    std::vector<double> probs(splits_.size());
+    for (int64_t i = 0; i < probs.size(); ++i) {
+        const auto binFeature = splits_[i];
+        const auto border = grid_->condition(binFeature.featureId_, binFeature.conditionId_);
+        const auto val = x.get(grid_->origFeatureIndex(binFeature.featureId_));
+        probs[i] = 1./(1. + exp(-(val - border)));
+    }
+    for (int b = 0; b < vec.size(); ++b) {
+        double value = 0;
+        int64_t bitsB = bits(b);
+        for (int a = 0; a < vec.size(); ++a) {
+            int64_t bitsA = bits(a);
+            if (bits(a & b) >= bitsA) {
+                value += (((bitsA + bitsB) & 1) > 0 ? -1. : 1.) * weights_.get(a);
+            }
+        }
+        for (int f = 0; f < probs.size(); ++f) {
+            if ((b >> f & 1) != 0) {
+                value *= probs[probs.size() - f - 1];
+            }
+        }
+        vec[b] = value;
+    }
+    double res = 0;
+    for (int64_t i = 0; i < vec.size(); ++i) {
+        res += vec[i] * weights_.get(i);
+    }
+    return res;
+}
+
+void ObliviousTree::grad(const Vec& x, Vec to) {
+    std::vector<int64_t> masks(x.dim());
+    for (int i = 0; i < splits_.size(); ++i) {
+        const auto binFeature = splits_[i];
+        masks[grid_->origFeatureIndex(binFeature.featureId_)] += (1 << (splits_.size() - i - 1));
+    }
+
+    std::vector<double> vec(weights_.dim());
+    std::vector<double> probs(splits_.size());
+    for (int64_t i = 0; i < probs.size(); i++) {
+        const auto binFeature = splits_[i];
+        const auto border = grid_->condition(binFeature.featureId_, binFeature.conditionId_);
+        const auto val = x.get(grid_->origFeatureIndex(binFeature.featureId_));
+        probs[i] = 1./(1. + exp(-(val - border)));
+    }
+    for (int i = 0; i < to.dim(); ++i) {
+
+        for (int b = 0; b < vec.size(); ++b) {
+            if (masks[i] & b == 0) {
+                vec[b] = 0.;
+                continue;
+            }
+            double value = 0;
+            int64_t bitsB = bits(b);
+            for (int a = 0; a < vec.size(); ++a) {
+                int64_t bitsA = bits(a);
+                if (bits(a & b) >= bitsA)
+                    value += (((bitsA + bitsB) & 1) > 0 ? -1 : 1) * weights_.get(a);
+            }
+            double diffCf = 0;
+            for (int f = 0; f < probs.size(); f++) {
+                if ((b >> f & 1) != 0) {
+                    value *= probs[probs.size() - f - 1];
+                    if ((masks[i] >> f & 1) != 0) {
+                        diffCf += 1 - probs[probs.size() - f - 1];
+                    }
+                }
+            }
+            value *= diffCf;
+            vec[b] = value;
+        }
+        double res = 0;
+        for (int64_t k = 0; k < vec.size(); ++k) {
+            res += vec[k] * weights_.get(k);
+        }
+        to.set(i, res);
+    }
+
+}
+
+int64_t ObliviousTree::bits(int64_t x) {
+    int64_t result = 0;
+    while (x != 0) {
+        result += (x & 1);
+        x >>= 1;
+    }
+    return result;
+}
