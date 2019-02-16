@@ -1,6 +1,7 @@
 #pragma once
 
 #include <core/vec.h>
+#include <core/buffer.h>
 
 namespace VecTools {
 
@@ -18,9 +19,16 @@ namespace VecTools {
 
     Vec abs(Vec to);
 
+    Vec expCopy(Vec x);
+
+    Vec log(Vec x);
+
     Vec absCopy(const Vec& source);
 
     Vec mul(const Vec& x, Vec y);
 
     Vec mul(Scalar alpha, Vec x);
+
+
+    Vec gather(const Vec& from, const Buffer<int32_t>& map, Vec to);
 }

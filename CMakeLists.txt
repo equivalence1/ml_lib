@@ -9,8 +9,9 @@ option(USE_CUDA  "Build with CUDA")
 include(GNUInstallDirs)
 #add_compile_options(-Wall -Wextra -pedantic -Werror)
 
-add_subdirectory(contrib/pybind11)
 add_subdirectory(contrib/googletest)
+add_subdirectory(contrib/pybind11)
+enable_testing()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 

@@ -2,6 +2,7 @@
 
 #include "context.h"
 #include "scalar.h"
+#include "buffer.h"
 #include <torch/torch.h>
 #include <cassert>
 #include <cstdint>
@@ -11,13 +12,12 @@
 #include <functional>
 #include <util/array_ref.h>
 
-class Vec {
+class Vec : public Buffer<float> {
 public:
     explicit Vec(int64_t dim);
 
     Vec()
     : Vec(0) {
-
     }
 
     Vec(Vec&& other) = default;
@@ -25,13 +25,13 @@ public:
     Vec(Vec& other) = default;
 
     Vec(const Vec& other)
-        : vec_(other.vec_) {
+        : Buffer<float>(other) {
     }
 
     explicit Vec(int64_t dim, const ComputeDevice& device);
 
-    explicit Vec(const torch::Tensor& impl)
-        : vec_(impl) {
+    explicit Vec(torch::Tensor impl)
+        : Buffer<float>(std::move(impl)) {
     }
 
 
@@ -62,44 +62,11 @@ public:
 
     int64_t dim() const;
 
-    operator const torch::Tensor&() const {
-        return data();
-    }
-
-    operator torch::Tensor&() {
-        return data();
-    }
-
-    const torch::Tensor& data() const {
-        return vec_;
-    }
-
-    torch::Tensor& data() {
-        return vec_;
-    }
-
-    bool isContiguous() const {
-        return vec_.is_contiguous();
-    }
-
-    ArrayRef<float> arrayRef() {
-        assert(vec_.is_contiguous());
-        return ArrayRef<float>(vec_.data<float>(), dim());
-    }
-
-
-    ConstArrayRef<float> arrayRef() const {
-        assert(vec_.is_contiguous());
-        return ConstArrayRef<float>(vec_.data<float>(), dim());
-    }
-
     bool operator==(const Vec& other) const {
-        return vec_.equal(other.vec_);
+        return data().equal(other.data());
     }
 
-    ComputeDevice device() const;
 protected:
-    torch::Tensor vec_;
     friend class VecFactory;
 };
 

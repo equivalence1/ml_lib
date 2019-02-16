@@ -7,7 +7,7 @@ enum class MatrixLayout {
     RowMajor
 };
 
-class Mx  {
+class Mx  : public Vec {
 public:
     Mx(Mx&& other) = default;
     Mx(Mx& other) = default;
@@ -50,14 +50,6 @@ public:
 
     Scalar get(int64_t x, int64_t y) const;
 
-    //TODO(noxoomo): should this be implicit?
-    operator Vec() {
-        return vec_;
-    }
-
-    operator Vec() const {
-        return vec_;
-    }
 
     Mx& operator+=(const Mx& other);
     Mx& operator-=(const Mx& other);

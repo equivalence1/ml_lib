@@ -16,7 +16,7 @@ TEST(FeaturesTxt, ApplyFloatAndBinarizedOtTest) {
     for (int32_t groupSize : {2, 4, 8, 16, 17, 32}) {
         auto ds = loadFeaturesTxt("test_data/featuresTxt/train");
         EXPECT_EQ(ds.samplesCount(), 12465);
-        EXPECT_EQ(ds.featuresCount(), 49);
+        EXPECT_EQ(ds.featuresCount(), 50);
 
         BinarizationConfig config;
         config.bordersCount_ = 32;
@@ -55,7 +55,7 @@ TEST(FeaturesTxt, ApplyFloatAndBinarizedOtTest) {
 TEST(FeaturesTxt, Gradient) {
     auto ds = loadFeaturesTxt("test_data/featuresTxt/train");
     EXPECT_EQ(ds.samplesCount(), 12465);
-    EXPECT_EQ(ds.featuresCount(), 49);
+    EXPECT_EQ(ds.featuresCount(), 50);
 
     BinarizationConfig config;
     config.bordersCount_ = 32;

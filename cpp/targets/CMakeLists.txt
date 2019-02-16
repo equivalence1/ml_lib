@@ -8,6 +8,10 @@ add_library(targets
         l2.h
         l2.cpp
         stat_based_loss.h
+
+
+        cross_entropy.cpp
+        cross_entropy.h
 )
 
 

@@ -1,5 +1,6 @@
 #include "transform.h"
 #include <core/vec_factory.h>
+#include <core/buffer.h>
 
 namespace VecTools {
 
@@ -53,5 +54,36 @@ namespace VecTools {
     Vec absCopy(const Vec& x) {
         return abs(copy(x));
     }
+
+    Vec expCopy(Vec x) {
+        return Vec(x.data().exp());
+    }
+    Vec log(Vec x) {
+        x.data().log();
+        return x;
+    }
+
+    template <class T, class I, class TC>
+    inline void gatherCpuImpl(ConstArrayRef<T> from, ConstArrayRef<I> map, ArrayRef<TC> to) {
+        for (int64_t i = 0; i < map.size(); ++i) {
+            to[i] = from[map[i]];
+        }
+    }
+
+
+    template <class T, class I, class TC>
+    inline void scatterCpuImpl(ConstArrayRef<T> from, ConstArrayRef<I> map, ArrayRef<TC> to) {
+        for (int64_t i = 0; i < map.size(); ++i) {
+            to[map[i]] = from[i];
+        }
+    }
+
+
+    Vec gather(const Vec& from, const Buffer<int32_t>& map, Vec to) {
+        VERIFY(from.isContiguous() && from.isCpu(), "error: not implemented on gpu yet");
+        gatherCpuImpl(from.arrayRef(), map.arrayRef(), to.arrayRef());
+        return to;
+    }
+
 
 }

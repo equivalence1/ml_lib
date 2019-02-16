@@ -29,7 +29,6 @@ struct L2Stat {
     }
 };
 
-
 inline L2Stat operator-(const L2Stat& left, const L2Stat& right) {
     L2Stat res = left;
     res -= right;
@@ -46,7 +45,7 @@ inline L2Stat operator+(const L2Stat& left, const L2Stat& right) {
 
 class RegularizedL2Score {
 public:
-    RegularizedL2Score(double lambda = 0)
+    explicit RegularizedL2Score(double lambda = 0)
     : lambda_(lambda) {
         assert(lambda_ >= 0);
         lambda_ += 1e-20;
@@ -120,7 +119,7 @@ public:
 
         }
 
-        Vec trans(const Vec& x, Vec to) const {
+        Vec trans(const Vec& x, Vec to) const final {
             //TODO(noxoomo): support subsets
             assert(x.dim() == owner_.nzTargets_.dim());
 

@@ -13,7 +13,7 @@
 TEST(FeaturesTxt, TestLoad) {
     auto ds = loadFeaturesTxt("test_data/featuresTxt/train");
     EXPECT_EQ(ds.samplesCount(), 12465);
-    EXPECT_EQ(ds.featuresCount(), 49);
+    EXPECT_EQ(ds.featuresCount(), 50);
 
 }
 
@@ -23,7 +23,7 @@ TEST(FeaturesTxt, TestLoad) {
 TEST(FeaturesTxt, TesGrid) {
     auto ds = loadFeaturesTxt("test_data/featuresTxt/train");
     EXPECT_EQ(ds.samplesCount(), 12465);
-    EXPECT_EQ(ds.featuresCount(), 49);
+    EXPECT_EQ(ds.featuresCount(), 50);
 
     {
         BinarizationConfig config;
@@ -52,7 +52,7 @@ TEST(FeaturesTxt, TesBinarize) {
     for (int32_t groupSize : {2, 4, 8, 11, 16, 32}) {
         auto ds = loadFeaturesTxt("test_data/featuresTxt/train");
         EXPECT_EQ(ds.samplesCount(), 12465);
-        EXPECT_EQ(ds.featuresCount(), 49);
+        EXPECT_EQ(ds.featuresCount(), 50);
 
         {
             BinarizationConfig config;

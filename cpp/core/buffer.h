@@ -1,18 +1,59 @@
 #pragma once
-#include <utility>
 
 #include "torch_helpers.h"
 #include <torch/torch.h>
+#include <util/array_ref.h>
+#include <utility>
 
-//TODO: vec should be subclass of buffer
+namespace Detail {
+
+    template <class T>
+    class TorchBufferTrait {
+    public:
+
+        static torch::Tensor create(int64_t size) {
+            return torch::zeros({static_cast<int64_t>(size * sizeof(T))}, TorchHelpers::tensorOptionsOnDevice(CurrentDevice(),
+                                                                                                               torch::ScalarType::Byte));
+        }
+
+        static uint8_t* data(const torch::Tensor& tensor) {
+            return tensor.data<uint8_t>();
+        }
+
+
+        static int64_t size(const torch::Tensor& tensor) {
+            return TorchHelpers::totalSize(tensor) / sizeof(T);
+        }
+    };
+
+
+    //todo: make specialisation based for all specialisations
+    template <>
+    class TorchBufferTrait<float> {
+    public:
+
+        static torch::Tensor create(int64_t size) {
+            return torch::zeros({static_cast<int64_t>(size)}, TorchHelpers::tensorOptionsOnDevice(CurrentDevice(),
+                                                                                                              torch::ScalarType::Float));
+        }
+
+        static float* data(const torch::Tensor& tensor) {
+            return tensor.data<float>();
+        }
+
+        static int64_t size(const torch::Tensor& tensor) {
+            return TorchHelpers::totalSize(tensor);
+        }
+    };
+}
+
 template <class T>
 class Buffer  {
 public:
 
     //TODO(noxoomo): should not clear memory  and this won't work with multiGPU
     explicit Buffer(int64_t size)
-    : data_(torch::zeros({static_cast<int64_t>(size * sizeof(T))}, TorchHelpers::tensorOptionsOnDevice(CurrentDevice(),
-                                                                     torch::ScalarType::Byte))) {
+    : data_(Detail::TorchBufferTrait<T>(size)) {
 
     }
 
@@ -23,7 +64,7 @@ public:
     }
 
     ArrayRef<T> arrayRef() {
-        return ArrayRef<T>(reinterpret_cast<T*>(data_.data<uint8_t>()), size());
+        return ArrayRef<T>(reinterpret_cast<T*>(Detail::TorchBufferTrait<T>::data(data_)), size());
     }
 
     void fill(const T& val) {
@@ -34,17 +75,12 @@ public:
     }
 
     ConstArrayRef<T> arrayRef() const {
-        return ConstArrayRef<T>(reinterpret_cast<const T*>(data_.data<uint8_t>()), size());
+        return ConstArrayRef<T>(reinterpret_cast<const T*>(Detail::TorchBufferTrait<T>::data(data_)), size());
     }
 
 
     static Buffer create(int64_t size) {
-        size *= sizeof(T);
-        return Buffer(torch::empty({size}, TorchHelpers::tensorOptionsOnDevice(CurrentDevice(), torch::ScalarType::Byte)));
-    }
-
-    ComputeDevice device() const {
-        return TorchHelpers::getDevice(data_);
+        return Buffer(Detail::TorchBufferTrait<T>::create(size));
     }
 
     Buffer copy() const {
@@ -52,16 +88,16 @@ public:
     }
 
     int64_t size() const {
-        return  TorchHelpers::totalSize(data_) / sizeof(T);
+        return  Detail::TorchBufferTrait<T>::size(data_);
     }
 
-    void Swap(Buffer<T> other) {
+    void swap(Buffer<T> other) {
         std::swap(data_, other.data_);
     }
 
 
     static Buffer fromVector(const std::vector<T>& vec) {
-        Buffer x(vec.size());
+        Buffer x(static_cast<int64_t>(vec.size()));
         ArrayRef<T> dst = x.arrayRef();
         for (int64_t i = 0; i < dst.size(); ++i) {
             dst[i] = vec[i];
@@ -69,9 +105,41 @@ public:
         return x;
     }
 
-private:
+    operator const torch::Tensor&() const {
+        return data();
+    }
 
-    Buffer(torch::Tensor data)
+    operator torch::Tensor&() {
+        return data();
+    }
+
+    const torch::Tensor& data() const {
+        return data_;
+    }
+
+    torch::Tensor& data() {
+        return data_;
+    }
+
+    bool isContiguous() const {
+        return data_.is_contiguous();
+    }
+
+    Buffer& operator=(const Buffer& other) {
+        data_ = other.data_;
+        return *this;
+    }
+
+    ComputeDevice device() const {
+        return TorchHelpers::getDevice(data());
+    }
+
+    bool isCpu() const {
+        return device().deviceType() == ComputeDeviceType::Cpu;
+    }
+protected:
+
+    explicit Buffer(torch::Tensor data)
     : data_(std::move(data)) {
 
 }

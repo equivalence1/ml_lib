@@ -15,7 +15,7 @@
 TEST(TargetsTest, TestL2) {
     auto ds = loadFeaturesTxt("test_data/featuresTxt/train");
     EXPECT_EQ(ds.samplesCount(), 12465);
-    EXPECT_EQ(ds.featuresCount(), 49);
+    EXPECT_EQ(ds.featuresCount(), 50);
     L2 target(ds);
 
     Vec cursor(target.dim());

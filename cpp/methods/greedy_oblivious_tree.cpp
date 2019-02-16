@@ -81,9 +81,9 @@ namespace {
                 nextStatRef[writeOffset] = statRef[i];
             });
 
-            stat_.Swap(nextStat);
-            indices_.Swap(nextIndices);
-            bins_.Swap(nextBins);
+            stat_.swap(nextStat);
+            indices_.swap(nextIndices);
+            bins_.swap(nextBins);
             leaves_.swap(newLeaves);
 
             updateLeavesStats();

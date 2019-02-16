@@ -14,7 +14,7 @@ Vec VecFactory::uninitializedCopy(const Vec& other) {
 }
 
 Vec VecFactory::toDevice(const Vec& vec, const ComputeDevice& device) {
-    return Vec(vec.vec_.to(TorchHelpers::torchDevice(device)));
+    return Vec(vec.data().to(TorchHelpers::torchDevice(device)));
 }
 
 
