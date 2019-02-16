@@ -1,9 +1,10 @@
 #pragma once
 
 #include "model.h"
+
 #include <torch/torch.h>
 
-class SimpleConvNet: public Model {
+class SimpleConvNet : public Model {
 public:
     SimpleConvNet() {
         conv1_ = register_module("conv1_", torch::nn::Conv2d(3, 6, 5));

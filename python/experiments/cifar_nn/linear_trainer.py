@@ -13,15 +13,12 @@ def main():
     train_images = train_images.reshape((50000, 3, 32, 32))
     test_images = test_images.reshape((10000, 3, 32, 32))
 
-    ds = cifar_nn_py.Dataset(train_images, train_labels)
-    print(ds)
-    net = cifar_nn_py.SimpleNet()
-    print(net)
+    ds = cifar_nn_py.PyDataset(train_images, train_labels)
 
-    cifar_nn_py.train(net, ds, 10)
+    linear_trainer = cifar_nn_py.PyLinearTrainer()
+    model = linear_trainer.get_trained_model(ds)
 
-    res = net.forward(test_images)
-    print(res.shape)
+    res = model.forward(test_images)
     res = np.argmax(res, axis=1)
 
     diff = test_labels - res

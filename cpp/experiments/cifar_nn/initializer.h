@@ -9,9 +9,17 @@
 
 class Initializer {
 public:
-    virtual void init(const TensorPairDataset& ds, const Loss& loss, ModelPtr* representation, ModelPtr* decisionFunc) = 0;
+    virtual void init(const TensorPairDataset& ds, LossPtr loss, ModelPtr* representation, ModelPtr* decisionFunc) = 0;
 
     virtual ~Initializer() = default;
 };
 
 using InitializerPtr = std::shared_ptr<Initializer>;
+
+class NoopInitializer : public Initializer {
+public:
+    NoopInitializer() = default;
+
+    void init(const TensorPairDataset& ds, LossPtr loss, ModelPtr* representation, ModelPtr* decisionFunc) override {
+    }
+};

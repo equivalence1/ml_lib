@@ -16,13 +16,11 @@ public:
         return x_.size(0);
     }
 
-    ~TensorPairDataset() = default;
-
-    torch::Tensor data() const {
+    torch::Tensor data() {
         return x_;
     }
 
-    torch::Tensor targets() const {
+    torch::Tensor targets() {
         return y_;
     }
 

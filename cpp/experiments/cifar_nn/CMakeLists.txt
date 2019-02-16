@@ -1,6 +1,8 @@
 cmake_version()
 project(cifar_nn)
 
+find_package(Eigen3 REQUIRED NO_MODULE)
+
 add_library(cifar_nn
         em_like_train.h
         simple_conv_net.h
@@ -16,8 +18,16 @@ add_library(cifar_nn
         optimizer.cpp
         optimizer.h
         initializer.cpp
-        initializer.h)
-target_link_libraries(cifar_nn "${TORCH_LIBRARIES}")
+        initializer.h
+        linear_train.cpp
+        linear_train.h
+        linear_model.cpp
+        linear_model.h
+        linear_function.cpp
+        linear_function.h
+        cross_entropy_loss.cpp
+        cross_entropy_loss.h)
+target_link_libraries(cifar_nn "${TORCH_LIBRARIES}" Eigen3::Eigen)
 enable_cxx14(cifar_nn)
 
 pybind11_add_module(cifar_nn_py py_module.cpp)

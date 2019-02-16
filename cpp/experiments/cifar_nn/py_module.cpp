@@ -1,10 +1,32 @@
 #include "simple_net.h"
 #include "tensor_pair_dataset.h"
+#include "linear_train.h"
 
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 
 namespace py = pybind11;
+
+torch::Tensor npToTorch(py::buffer_info& x_buff, torch::ScalarType t) {
+    std::vector<int64_t> xStrides(x_buff.strides.size());
+    std::transform(x_buff.strides.begin(), x_buff.strides.end(), xStrides.begin(),
+                   [&](auto el){return el / x_buff.itemsize;});
+
+    return torch::from_blob(x_buff.ptr,
+                            x_buff.shape,
+                            xStrides,
+                            t);
+}
+
+py::array_t<float> torchToNp(torch::Tensor& x) {
+    std::vector<int64_t> sizes(x.sizes().begin(), x.sizes().end());
+    std::vector<int64_t> strides(x.strides().begin(), x.strides().end());
+    std::transform(strides.begin(), strides.end(), strides.begin(),
+                   [](int64_t stride){return stride * sizeof(float);});
+
+    py::array_t<float> a(sizes, strides, (const float*)x.data_ptr());
+    return a;
+}
 
 class PyTensorPairDataset: public TensorPairDataset {
 public:
@@ -22,85 +44,92 @@ public:
 private:
     PyTensorPairDataset(py::buffer_info x, py::buffer_info y):
             TensorPairDataset() {
-        std::vector<int64_t> xStrides(x.strides.size());
-        std::transform(x.strides.begin(), x.strides.end(), xStrides.begin(),
-                       [&](auto el){return el / x.itemsize;});
-
-        std::vector<int64_t> yStrides(y.strides.size());
-        std::transform(y.strides.begin(), y.strides.end(), yStrides.begin(),
-                       [&](auto el){return el / y.itemsize;});
-
-        x_ = torch::from_blob(x.ptr,
-                              x.shape,
-                              xStrides,
-                              torch::kFloat32);
-        y_ = torch::from_blob(y.ptr,
-                              y.shape,
-                              yStrides,
-                              torch::kLong);
+        x_ = npToTorch(x, torch::kFloat32);
+        y_ = npToTorch(y, torch::kLong);
     }
 
     py::array_t<float> py_x_;
     py::array_t<long> py_y_;
 };
 
-#include <iostream>
+//class PyModel : public Model {
+//public:
+//    py::array_t<float> forward_np(py::array_t<float> x) {
+//        auto x_buff = x.request();
+//        auto torch_x = npToTorch(x_buff);
+//        auto res = this->forward(torch_x);
+//        return torchToNp(res);
+//    }
+//};
 
-class PySimpleNet: public SimpleNet {
+class PySimpleNet : public SimpleNet {
 public:
-    PySimpleNet(): SimpleNet() {}
+    PySimpleNet() : SimpleNet() {}
 
     py::array_t<float> forward_np(py::array_t<float> x) {
-        auto x_buff = x.request();
-
-        std::vector<int64_t> xStrides(x_buff.strides.size());
-        std::transform(x_buff.strides.begin(), x_buff.strides.end(), xStrides.begin(),
-                       [&](auto el){return el / x_buff.itemsize;});
-
-        auto torch_x = torch::from_blob(x_buff.ptr,
-                                        x_buff.shape,
-                                        xStrides,
-                                        torch::kFloat32);
-
-        auto res = this->forward(torch_x);
-
-        std::vector<int64_t> sizes(res.sizes().begin(), res.sizes().end());
-        std::vector<int64_t> strides(res.strides().begin(), res.strides().end());
-        std::transform(strides.begin(), strides.end(), strides.begin(),
-                [](int64_t stride){return stride * sizeof(float);});
-
-        std::cout << "sizes: " << sizes.size() << std::endl;
-        for (auto el: sizes)
-            std::cout << el << " ";
-        std::cout << std::endl;
-
-        std::cout << "strides: " << strides.size() << std::endl;
-        for (auto el: strides)
-            std::cout << el << " ";
-        std::cout << std::endl;
-
-        py::array_t<float> a(sizes, strides, (const float*)res.data_ptr());
-
-        std::cout << "returning" << std::endl;
-        return a;
+        py::buffer_info x_buff = x.request();
+        torch::Tensor torch_x = npToTorch(x_buff, torch::kFloat32);
+        torch::Tensor res = this->forward(torch_x);
+        return torchToNp(res);
     }
 };
 
-void py_train_model(PySimpleNet *model, PyTensorPairDataset *ds, int epochs = 10) {
-    train_model(model, ds, epochs);
+class PyWrapperModel : public Model {
+public:
+    explicit PyWrapperModel(ModelPtr model) : model_(std::move(model)) {}
+
+    torch::Tensor forward(torch::Tensor x) override {
+        return model_->forward(x);
+    }
+
+    py::array_t<float> forward_np(py::array_t<float> x) {
+        py::buffer_info x_buff = x.request();
+        torch::Tensor torch_x = npToTorch(x_buff, torch::kFloat32);
+        torch::Tensor res = this->forward(torch_x);
+        return torchToNp(res);
+    }
+
+private:
+    ModelPtr model_;
+};
+
+class PyLinearTrainer : public LinearTrainer {
+public:
+    PyLinearTrainer() : LinearTrainer() {}
+
+    ModelPtr getTrainedModel_py(PyTensorPairDataset* ds) {
+        return std::make_shared<PyWrapperModel>(this->getTrainedModel(*ds));
+    }
+};
+
+void py_train_model(std::shared_ptr<PySimpleNet> model, PyTensorPairDataset* ds, int epochs = 10) {
+    DefaultSGDOptimizer optim(epochs);
+    auto loss = std::make_shared<CrossEntropyLoss>();
+    optim.train(*ds, loss, model);
 }
 
 PYBIND11_MODULE(cifar_nn_py, m) {
     m.doc() = "experiments";
 
-    py::class_<PyTensorPairDataset> dataset(m, "Dataset");
-    dataset.def(py::init<py::array_t<double>, py::array_t<double>>());
-//
-//            m.def("least_squares", &least_squares);
-//
-    py::class_<PySimpleNet, std::shared_ptr<PySimpleNet>> simple_net(m, "SimpleNet");
+    // Dataset
+    py::class_<PyTensorPairDataset> dataset(m, "PyDataset");
+    dataset.def(py::init<py::array_t<float>, py::array_t<long>>());
+
+    // Models
+//    py::class_<PyModel, std::shared_ptr<PyModel>> model(m, "PyModel");
+//    model.def("forward", &PyModel::forward_np);
+
+    py::class_<PySimpleNet, std::shared_ptr<PySimpleNet>> simple_net(m, "PySimpleNet");
     simple_net.def(py::init<>());
     simple_net.def("forward", &PySimpleNet::forward_np);
+
+    py::class_<PyWrapperModel, std::shared_ptr<PyWrapperModel>> wrapper_model(m, "PyWrapperModel");
+    wrapper_model.def("forward", &PyWrapperModel::forward_np);
+
+    // Training
+    py::class_<PyLinearTrainer> linear_trainer(m, "PyLinearTrainer");
+    linear_trainer.def(py::init<>());
+    linear_trainer.def("get_trained_model", &PyLinearTrainer::getTrainedModel_py);
 
     m.def("train", py_train_model, py::arg("model"), py::arg("ds"), py::arg("epochs") = 10);
 }

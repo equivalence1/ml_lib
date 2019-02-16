@@ -12,4 +12,21 @@ public:
 
 using ModelPtr = std::shared_ptr<Model>;
 
-void train_model(Model* model, TensorPairDataset* d, int epochs = 10);
+class CompositionalModel : public Model {
+public:
+    CompositionalModel(ModelPtr first, ModelPtr second)
+            : first_(std::move(first))
+            , second_(std::move(second)) {
+
+    }
+
+    CompositionalModel(const CompositionalModel& model) = default;
+
+    torch::Tensor forward(torch::Tensor x) override {
+        return second_->forward(first_->forward(x));
+    }
+
+private:
+    ModelPtr first_;
+    ModelPtr second_;
+};

@@ -20,25 +20,53 @@ public:
 
     }
 
-    void train(const TensorPairDataset& ds, const Loss& loss) const {
-        ModelPtr representations;
-        ModelPtr decisionTrans;
-        initializer_->init(ds, loss, &representations, &decisionTrans);
+    void train(TensorPairDataset& ds, LossPtr& loss) {
+        initializer_->init(ds, loss, &representationsModel, &decisionModel);
 
         for (uint32_t i = 0; i < iterations_; ++i) {
-            torch::Tensor lastLayer = representations->forward(ds.data());
-            decisionFuncOptimizer_->train(lastLayer, ds.targets(), loss, decisionTrans);
+            std::cout << "EM iteration: " << i << std::endl;
 
-            LossPtr representationLoss = makeRepresentationLoss(decisionTrans, loss);
-            representationOptimizer_->train(ds, *representationLoss, representations);
+            for (auto& param : representationsModel->parameters()) {
+                param.set_requires_grad(false);
+            }
+            for (auto& param : decisionModel->parameters()) {
+                param.set_requires_grad(true);
+            }
+
+            torch::Tensor lastLayer = representationsModel->forward(ds.data());
+
+            auto targets = ds.targets();
+            decisionFuncOptimizer_->train(lastLayer, targets, loss, decisionModel);
+
+            for (auto& param : representationsModel->parameters()) {
+                param.set_requires_grad(true);
+            }
+            for (auto& param : decisionModel->parameters()) {
+                param.set_requires_grad(false);
+            }
+
+            LossPtr representationLoss = makeRepresentationLoss(decisionModel, loss);
+            representationOptimizer_->train(ds, representationLoss, representationsModel);
         }
     }
 
-    virtual LossPtr makeRepresentationLoss(ModelPtr trans, const Loss& loss) const = 0;
+    ModelPtr getTrainedModel(TensorPairDataset& ds, LossPtr& loss) {
+        train(ds, loss);
+        return std::make_shared<CompositionalModel>(representationsModel, decisionModel);
+    }
 
-private:
+    virtual LossPtr makeRepresentationLoss(ModelPtr trans, LossPtr loss) const = 0;
+
+protected:
+    EMLikeTrainer() = default;
+
     OptimizerPtr representationOptimizer_;
     OptimizerPtr decisionFuncOptimizer_;
+
+    ModelPtr representationsModel;
+    ModelPtr decisionModel;
+
     InitializerPtr initializer_;
-    uint32_t iterations_ = 10;
+
+    uint32_t iterations_ = 5;
 };

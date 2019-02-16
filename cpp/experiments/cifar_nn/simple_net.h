@@ -1,11 +1,12 @@
 #pragma once
 
-#include <torch/torch.h>
 #include "simple_conv_net.h"
 
-class SimpleNet: public SimpleConvNet {
+#include <torch/torch.h>
+
+class SimpleNet : public SimpleConvNet {
 public:
-    SimpleNet(): SimpleConvNet() {
+    SimpleNet() : SimpleConvNet() {
         fc1_ = register_module("fc1_", torch::nn::Linear(16 * 5 * 5, 120));
         fc2_ = register_module("fc2_", torch::nn::Linear(120, 84));
         fc3_ = register_module("fc3_", torch::nn::Linear(84, 10));
@@ -15,7 +16,7 @@ public:
         x = SimpleConvNet::forward(x);
         x = torch::relu(fc1_(x));
         x = torch::relu(fc2_(x));
-        x = torch::softmax(fc3_(x), 1);
+        x = fc3_(x);
         return x;
     }
 
