@@ -4,6 +4,7 @@ import torch.optim as optim
 import torch
 import torchvision
 import torchvision.transforms as transforms
+import time
 
 
 class Net(nn.Module):
@@ -45,8 +46,9 @@ def main():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
-    for epoch in range(2):  # loop over the dataset multiple times
+    start_time = time.time()
 
+    for epoch in range(2):  # loop over the dataset multiple times
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
             # get the inputs
@@ -68,7 +70,8 @@ def main():
                       (epoch + 1, i + 1, running_loss / 2000))
                 running_loss = 0.0
 
-    print('Finished Training')
+    end_time = time.time()
+    print('Finished Training in %d sec ' % (end_time - start_time))
 
     correct = 0
     total = 0

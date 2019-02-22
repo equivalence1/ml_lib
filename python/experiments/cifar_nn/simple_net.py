@@ -2,6 +2,7 @@ from python.experiments import data_loading
 import sys
 import os
 import numpy as np
+import time
 
 sys.path.append("../../../cmake-build-debug/cpp/experiments/cifar_nn")
 import cifar_nn_py
@@ -16,7 +17,12 @@ def main():
     ds = cifar_nn_py.PyDataset(train_images, train_labels)
     net = cifar_nn_py.PySimpleNet()
 
+    start_time = time.time()
+
     cifar_nn_py.train(net, ds, 2)
+
+    end_time = time.time()
+    print('Finished Training in %d sec' % (end_time - start_time))
 
     res = net.forward(test_images)
     res = np.argmax(res, axis=1)

@@ -2,6 +2,7 @@ from python.experiments import data_loading
 import sys
 import os
 import numpy as np
+import time
 
 sys.path.append("../../../cmake-build-debug/cpp/experiments/cifar_nn")
 import cifar_nn_py
@@ -16,16 +17,20 @@ def main():
     ds = cifar_nn_py.PyDataset(train_images, train_labels)
 
     linear_trainer = cifar_nn_py.PyLinearTrainer()
+
+    start_time = time.time()
+
     model = linear_trainer.get_trained_model(ds)
+
+    end_time = time.time()
+    print('Finished Training in %d sec' % (end_time - start_time))
 
     res = model.forward(test_images)
     res = np.argmax(res, axis=1)
 
-    diff = test_labels - res
-    sim = np.where(diff == 0, 1, 0)
-    accuracy = np.sum(sim)/sim.shape[0]
+    accuracy = np.sum((res == test_labels))/res.shape[0]
 
-    print(accuracy)
+    print('Accuracy of the network on the 10000 test images: %d %%' % (100 * accuracy))
 
 
 if __name__ == "__main__":
