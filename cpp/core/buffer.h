@@ -53,7 +53,7 @@ public:
 
     //TODO(noxoomo): should not clear memory  and this won't work with multiGPU
     explicit Buffer(int64_t size)
-    : data_(Detail::TorchBufferTrait<T>(size)) {
+    : data_(Detail::TorchBufferTrait<T>::create(size)) {
 
     }
 
