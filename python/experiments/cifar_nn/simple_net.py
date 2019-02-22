@@ -16,16 +16,14 @@ def main():
     ds = cifar_nn_py.PyDataset(train_images, train_labels)
     net = cifar_nn_py.PySimpleNet()
 
-    cifar_nn_py.train(net, ds, 10)
+    cifar_nn_py.train(net, ds, 2)
 
     res = net.forward(test_images)
     res = np.argmax(res, axis=1)
 
-    diff = test_labels - res
-    sim = np.where(diff == 0, 1, 0)
-    accuracy = np.sum(sim)/sim.shape[0]
+    accuracy = np.sum((res == test_labels))/res.shape[0]
 
-    print(accuracy)
+    print('Accuracy of the network on the 10000 test images: %d %%' % (100 * accuracy))
 
 
 if __name__ == "__main__":

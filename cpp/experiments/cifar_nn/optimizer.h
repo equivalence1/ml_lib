@@ -28,11 +28,14 @@ public:
 
     void train(TensorPairDataset& ds, LossPtr loss, ModelPtr model) const override {
         auto mds = ds.map(torch::data::transforms::Stack<>());
-        auto dloader = torch::data::make_data_loader(mds, 64);
+        auto dloader = torch::data::make_data_loader(mds, 4);
 
         torch::optim::SGDOptions options(0.001);
         options.momentum_ = 0.9;
         torch::optim::SGD optimizer(model->parameters(), options);
+
+        float runningLoss = 0;
+        const int kBatchesReport = 2000;
 
         for (int epoch = 0; epoch < epochs_; epoch++) {
             int batch_index = 0;
@@ -43,9 +46,11 @@ public:
                 lossVal.backward();
                 optimizer.step();
 
-                if (++batch_index % 100 == 0) {
-                    std::cout << "Epoch: " << epoch << " | Batch: " << batch_index
-                              << " | Loss: " << lossVal.item<float>() << std::endl;
+                runningLoss += lossVal.item<float>();
+                if (++batch_index % kBatchesReport == kBatchesReport - 1) {
+                    std::cout << "[" << epoch + 1 << ", " << (batch_index + 1)
+                              << "] loss: " << (runningLoss / kBatchesReport) << std::endl;
+                    runningLoss = 0;
                     // Serialize your model periodically as a checkpoint.
 //                            torch::save(this, "net.pt");
                 }
