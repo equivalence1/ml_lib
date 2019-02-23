@@ -10,7 +10,7 @@
 
 struct BoostingConfig {
     double step_ = 0.01;
-    int64_t iterations_ = 250;
+    int64_t iterations_ = 1000;
 
 };
 

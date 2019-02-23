@@ -9,6 +9,7 @@
 #include <methods/boosting.h>
 #include <methods/greedy_oblivious_tree.h>
 #include <methods/boosting_weak_target_factory.h>
+#include <targets/cross_entropy.h>
 
 #define EPS 1e-5
 
@@ -22,7 +23,7 @@ inline std::unique_ptr<EmpiricalTargetFactory> createWeakTarget() {
     return std::make_unique<GradientBoostingWeakTargetFactory>();
 }
 
-inline std::unique_ptr<EmpiricalTargetFactory> createBootstrapWeakTarget() {
+inline std::unique_ptr<EmpiricalTargetFactory>  createBootstrapWeakTarget() {
     BootstrapOptions options;
     options.seed_ = 42;
     return std::make_unique<GradientBoostingBootstrappedWeakTargetFactory>(options);
@@ -48,7 +49,6 @@ TEST(FeaturesTxt, TestTrainMseFeaturesTxt) {
     boosting.addListener(metricsCalcer);
     L2 target(ds);
     auto ensemble = boosting.fit(ds, target);
-
 }
 
 
@@ -70,6 +70,33 @@ TEST(FeaturesTxt, TestTrainWithBootstrapMseFeaturesTxt) {
     metricsCalcer->addMetric(L2(test), "l2");
     boosting.addListener(metricsCalcer);
     L2 target(ds);
+    auto ensemble = boosting.fit(ds, target);
+
+}
+
+
+
+
+TEST(FeaturesTxt, TestTrainWithBootstrapLogLikelihoodFeaturesTxt) {
+
+    auto ds = loadFeaturesTxt("test_data/featuresTxt/train");
+
+    auto test = loadFeaturesTxt("test_data/featuresTxt/test");
+    EXPECT_EQ(ds.samplesCount(), 12465);
+    EXPECT_EQ(ds.featuresCount(), 50);
+
+    BinarizationConfig config;
+    config.bordersCount_ = 32;
+    auto grid = buildGrid(ds, config);
+
+    BoostingConfig boostingConfig;
+//    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLearner(6, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLearner(6, grid));
+
+    auto metricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
+    metricsCalcer->addMetric(CrossEntropy(test), "CrossEntropy");
+    boosting.addListener(metricsCalcer);
+    CrossEntropy target(ds);
     auto ensemble = boosting.fit(ds, target);
 
 }

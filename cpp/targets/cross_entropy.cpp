@@ -29,24 +29,50 @@ Vec CrossEntropy::gradientTo(const Vec& x, Vec to) const {
     return to;
 }
 
-DoubleRef CrossEntropy::valueTo(const Vec& x, DoubleRef to) const {
-    auto tmp = VecTools::expCopy(x);
+double score(double x, double c) {
+    return c * x - log(exp(x) + 1.0);
+}
 
-    // t * log(p(x)) + (1.0 - t) * log(1.0 - p(x));
-    // t log(s(x)) + (1.0 - t) * log(1.0 - s(x))
-    //t log(s(x)) + (1.0 - t)  * log(s(-x))
-    //t (x - log(1 + exp(x)) + (1.0 - t) * (-log(1.0 + exp(x))
-    //t * x - log(1.0 + exp(x))
-    to = VecTools::sum(target_ * x - VecTools::log(tmp + 1.0));
+DoubleRef CrossEntropy::valueTo(const Vec& x, DoubleRef to) const {
+    auto xRef = x.arrayRef();
+    auto targetRef = target_.arrayRef();
+    double sum = 0;
+    for (int64_t i = 0; i < targetRef.size(); ++i) {
+        sum += score(xRef[i], targetRef[i]);
+    }
+    to = sum / targetRef.size();
+//    auto tmp = VecTools::expCopy(x);
+//    tmp += 1;
+//    VecTools::log(tmp);
+////
+////    // t * log(p(x)) + (1.0 - t) * log(1.0 - p(x));
+////    // t log(s(x)) + (1.0 - t) * log(1.0 - s(x))
+////    //t log(s(x)) + (1.0 - t)  * log(s(-x))
+////    //t (x - log(1 + exp(x)) + (1.0 - t) * (-log(1.0 + exp(x))
+////    //t * x - log(1.0 + exp(x))
+//    double scoresSum = VecTools::sum(target_ * x - tmp);
+//    to = (scoresSum / x.dim());
     return to;
 }
 
 CrossEntropy::CrossEntropy(const DataSet& ds,
-                           const Vec& target,
-                           const Vec& weights)
+                           const Vec& target)
     : Stub(ds)
-    , target_(target)
-    , weights_(weights) {
-    totalWeight_ = VecTools::sum(weights_);
+    , target_(target)  {
 
+}
+CrossEntropy::CrossEntropy(const DataSet& ds, double border)
+    : Stub<Target, CrossEntropy>(ds)
+    , target_(ds.samplesCount()) {
+    auto targetAccessor = target_.arrayRef();
+    auto sourceAccessor = ds.target().arrayRef();
+    for (int64_t i  = 0; i < targetAccessor.size(); ++i) {
+        targetAccessor[i] = sourceAccessor[i] > border;
+    }
+}
+
+
+CrossEntropy::CrossEntropy(const DataSet& ds)
+    : Stub<Target, CrossEntropy>(ds)
+      , target_(ds.target()) {
 }

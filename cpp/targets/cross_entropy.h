@@ -8,8 +8,11 @@ class CrossEntropy :  public Stub<Target, CrossEntropy>,
 public:
 
     CrossEntropy(const DataSet& ds,
-                 const Vec& target_,
-                 const Vec& weights_);
+                 const Vec& target_);
+
+    explicit CrossEntropy(const DataSet& ds, double border);
+    explicit CrossEntropy(const DataSet& ds);
+
 
     class Der : public Stub<Trans, Der> {
     public:
@@ -36,6 +39,4 @@ public:
 
 private:
     Vec target_;
-    Vec weights_;
-    double totalWeight_;
 };

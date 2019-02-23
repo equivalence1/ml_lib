@@ -121,7 +121,7 @@ public:
 
         Vec trans(const Vec& x, Vec to) const final {
             //TODO(noxoomo): support subsets
-            assert(x.dim() == owner_.nzTargets_.dim());
+             assert(x.dim() == owner_.nzTargets_.dim());
 
             VecTools::copyTo(owner_.nzTargets_, to);
             to -= x;
