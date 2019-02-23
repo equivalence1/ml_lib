@@ -59,7 +59,7 @@ namespace VecTools {
         return Vec(x.data().exp());
     }
     Vec log(Vec x) {
-        x.data().log();
+        x.data().log_();
         return x;
     }
 

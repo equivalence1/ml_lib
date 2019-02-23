@@ -4,6 +4,7 @@
 #include <variant>
 #include <optional>
 #include <typeindex>
+#include <util/counter.h>
 /*
 * Base class for all RTTI classes
 */
@@ -15,6 +16,19 @@ public:
 //    virtual bool equals(const Object& other) const = 0;
 };
 
+class UuidHolder : public Object {
+public:
+    UuidHolder() :
+    uuid_(Counter::next()) {
+
+    }
+
+    int64_t uuid() const {
+        return uuid_;
+    }
+private:
+    int64_t uuid_;
+};
 
 
 //easy to switch for intrusive, if we'll need it

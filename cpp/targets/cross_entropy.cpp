@@ -29,29 +29,19 @@ Vec CrossEntropy::gradientTo(const Vec& x, Vec to) const {
     return to;
 }
 
-double score(double x, double c) {
-    return c * x - log(exp(x) + 1.0);
-}
 
 DoubleRef CrossEntropy::valueTo(const Vec& x, DoubleRef to) const {
-    auto xRef = x.arrayRef();
-    auto targetRef = target_.arrayRef();
-    double sum = 0;
-    for (int64_t i = 0; i < targetRef.size(); ++i) {
-        sum += score(xRef[i], targetRef[i]);
-    }
-    to = sum / targetRef.size();
-//    auto tmp = VecTools::expCopy(x);
-//    tmp += 1;
-//    VecTools::log(tmp);
-////
-////    // t * log(p(x)) + (1.0 - t) * log(1.0 - p(x));
-////    // t log(s(x)) + (1.0 - t) * log(1.0 - s(x))
-////    //t log(s(x)) + (1.0 - t)  * log(s(-x))
-////    //t (x - log(1 + exp(x)) + (1.0 - t) * (-log(1.0 + exp(x))
-////    //t * x - log(1.0 + exp(x))
-//    double scoresSum = VecTools::sum(target_ * x - tmp);
-//    to = (scoresSum / x.dim());
+    auto tmp = VecTools::expCopy(x);
+    tmp += 1;
+    VecTools::log(tmp);
+//
+//    // t * log(p(x)) + (1.0 - t) * log(1.0 - p(x));
+//    // t log(s(x)) + (1.0 - t) * log(1.0 - s(x))
+//    //t log(s(x)) + (1.0 - t)  * log(s(-x))
+//    //t (x - log(1 + exp(x)) + (1.0 - t) * (-log(1.0 + exp(x))
+//    //t * x - log(1.0 + exp(x))
+    double scoresSum = VecTools::sum(target_ * x - tmp);
+    to = (scoresSum / x.dim());
     return to;
 }
 
