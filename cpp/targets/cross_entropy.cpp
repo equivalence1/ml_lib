@@ -9,6 +9,7 @@ inline Vec sigmoid(const Vec& point) {
     x /= tmp;
     return x;
 }
+
 inline void crossEntropyGradient(const Vec& target, const Vec& point, Vec to) {
     Vec p = sigmoid(point);
     VecTools::copyTo(target, to);

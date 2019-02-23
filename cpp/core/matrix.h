@@ -13,7 +13,7 @@ public:
     Mx(Mx& other) = default;
 
     Mx(Vec& x, int64_t nrows, int64_t ncols, MatrixLayout layout = MatrixLayout::RowMajor)
-        : vec_(x)
+        : Vec(x)
           , layout_(layout)
           , rows_(nrows)
           , cols_(ncols) {
@@ -24,26 +24,26 @@ public:
         int64_t ncols,
         MatrixLayout layout = MatrixLayout::RowMajor
     )
-        : vec_(x)
+        : Vec(x)
           , layout_(layout)
           , rows_(nrows)
           , cols_(ncols) {
-        assert(vec_.dim() == rows_ * cols_);
+        assert(dim() == rows_ * cols_);
     }
 
     Mx(const Mx& other)
-        : Mx(other.vec_, other.rows_, other.cols_, other.layout_) {
+        : Mx(other, other.rows_, other.cols_, other.layout_) {
 
     }
 
     Mx(int64_t nrows,
        int64_t ncols,
        MatrixLayout layout = MatrixLayout::RowMajor)
-        : vec_(nrows * ncols)
+        : Vec(nrows * ncols)
           , layout_(layout)
           , rows_(nrows)
           , cols_(ncols) {
-        assert(vec_.dim() == rows_ * cols_);
+        assert(dim() == rows_ * cols_);
     }
 
     Mx& set(int64_t x, int64_t y, Scalar val);
@@ -67,7 +67,7 @@ public:
 
     template <class Visitor>
     void iterateOverColumn(int64_t columnIdx, Visitor&& visitor) const {
-        ConstArrayRef<float> data = vec_.arrayRef();
+        ConstArrayRef<float> data = arrayRef();
         for (int64_t i = 0; i < ydim(); ++i) {
             visitor(i, data[seqIndex(columnIdx, i)]);
         }
@@ -83,7 +83,6 @@ public:
 private:
     int64_t seqIndex(int64_t x, int64_t y) const;
 private:
-    Vec vec_;
     MatrixLayout layout_ = MatrixLayout::RowMajor;
     int64_t rows_ = 0;
     int64_t cols_ = 0;
