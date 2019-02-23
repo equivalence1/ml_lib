@@ -20,19 +20,6 @@ public:
 
     }
 
-    ObliviousTree(GridPtr grid,
-                  std::vector<BinaryFeature> binFeatures,
-                  Vec leaves,
-                  Vec weights
-                  )
-      : Stub<BinOptimizedModel, ObliviousTree>(grid->origFeaturesCount(), 1)
-      , grid_(std::move(grid))
-      , splits_(std::move(binFeatures))
-      , leaves_(leaves)
-      , weights_(weights) {
-
-    }
-
 
     ObliviousTree(const ObliviousTree& other, double scale = 1.0)
     : Stub<BinOptimizedModel, ObliviousTree>(other)
@@ -61,12 +48,11 @@ public:
     void grad(const Vec& x, Vec to);
 
 private:
-    int64_t bits(int64_t x);
+    uint bits(uint i);
 
 
 private:
     GridPtr grid_;
     std::vector<BinaryFeature> splits_;
     Vec leaves_;
-    Vec weights_;
 };

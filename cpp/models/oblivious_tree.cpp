@@ -71,26 +71,26 @@ void ObliviousTree::appendTo(const Vec& x, Vec to) const {
 
 double ObliviousTree::value(const Vec& x) {
 
-    std::vector<double> vec(weights_.dim());
+    std::vector<double> vec(leaves_.dim());
     std::vector<double> probs(splits_.size());
-    auto weightsPtr = weights_.arrayRef();
+    auto leavesPtr = leaves_.arrayRef();
     for (int64_t i = 0; i < probs.size(); ++i) {
         const auto binFeature = splits_[i];
         const auto border = grid_->condition(binFeature.featureId_, binFeature.conditionId_);
         const auto val = x.get(grid_->origFeatureIndex(binFeature.featureId_));
         probs[i] = 1./(1. + exp(-(val - border)));
     }
-    for (int b = 0; b < vec.size(); ++b) {
+    for (uint b = 0; b < vec.size(); ++b) {
         double value = 0;
-        int64_t bitsB = bits(b);
-        for (int a = 0; a < vec.size(); ++a) {
-            int64_t bitsA = bits(a);
+        uint bitsB = bits(b);
+        for (uint a = 0; a < vec.size(); ++a) {
+            uint bitsA = bits(a);
             if (bits(a & b) >= bitsA) {
-                value += (((bitsA + bitsB) & 1) > 0 ? -1. : 1.) * weightsPtr[a];
+                value += (((bitsA + bitsB) & 1) > 0 ? -1. : 1.) * leavesPtr[a];
             }
         }
         for (int f = 0; f < probs.size(); ++f) {
-            if ((b >> f & 1) != 0) {
+            if (((b >> f) & 1) != 0) {
                 value *= probs[probs.size() - f - 1];
             }
         }
@@ -98,7 +98,7 @@ double ObliviousTree::value(const Vec& x) {
     }
     double res = 0;
     for (int64_t i = 0; i < vec.size(); ++i) {
-        res += vec[i] * weights_.get(i);
+        res += vec[i] * leavesPtr[i];
     }
     return res;
 }
@@ -110,8 +110,9 @@ void ObliviousTree::grad(const Vec& x, Vec to) {
         masks[grid_->origFeatureIndex(binFeature.featureId_)] += (1 << (splits_.size() - i - 1));
     }
 
-    std::vector<double> vec(weights_.dim());
+    std::vector<double> vec(leaves_.dim());
     std::vector<double> probs(splits_.size());
+    auto leavesPtr = leaves_.arrayRef();
     for (int64_t i = 0; i < probs.size(); i++) {
         const auto binFeature = splits_[i];
         const auto border = grid_->condition(binFeature.featureId_, binFeature.conditionId_);
@@ -120,21 +121,21 @@ void ObliviousTree::grad(const Vec& x, Vec to) {
     }
     for (int i = 0; i < to.dim(); ++i) {
 
-        for (int b = 0; b < vec.size(); ++b) {
-            if (masks[i] & b == 0) {
+        for (uint b = 0; b < vec.size(); ++b) {
+            if ((masks[i] & b) == 0) {
                 vec[b] = 0.;
                 continue;
             }
             double value = 0;
-            int64_t bitsB = bits(b);
-            for (int a = 0; a < vec.size(); ++a) {
-                int64_t bitsA = bits(a);
+            uint bitsB = bits(b);
+            for (uint a = 0; a < vec.size(); ++a) {
+                uint bitsA = bits(a);
                 if (bits(a & b) >= bitsA)
-                    value += (((bitsA + bitsB) & 1) > 0 ? -1 : 1) * weights_.get(a);
+                    value += (((bitsA + bitsB) & 1) > 0 ? -1 : 1) * leavesPtr[a];
             }
             double diffCf = 0;
             for (int f = 0; f < probs.size(); f++) {
-                if ((b >> f & 1) != 0) {
+                if (((b >> f) & 1) != 0) {
                     value *= probs[probs.size() - f - 1];
                     if ((masks[i] >> f & 1) != 0) {
                         diffCf += 1 - probs[probs.size() - f - 1];
@@ -146,19 +147,22 @@ void ObliviousTree::grad(const Vec& x, Vec to) {
         }
         double res = 0;
         for (int64_t k = 0; k < vec.size(); ++k) {
-            res += vec[k] * weights_.get(k);
+            res += vec[k] * leavesPtr[k];
         }
         to.set(i, res);
     }
 
 }
 
-//TODO: special instrict for intel
-int64_t ObliviousTree::bits(int64_t x) {
-    int64_t result = 0;
-    while (x != 0) {
-        result += (x & 1);
-        x >>= 1;
-    }
-    return result;
+uint ObliviousTree::bits(uint i) {
+    i = i - ((i >> 1) & 0x55555555);
+    i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
+    return (((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
+//    return __builtin_popcount(x);
+//    uint result = 0;
+//    while (x != 0) {
+//        result += (x & 1);
+//        x >>= 1;
+//    }
+//    return result;
 }
