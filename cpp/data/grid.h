@@ -35,7 +35,7 @@ struct Feature {
 
 };
 
-class Grid : public Object {
+class Grid : public UuidHolder {
 public:
 
     int64_t origFeaturesCount() const {

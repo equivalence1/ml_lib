@@ -8,7 +8,8 @@ add_library(util
         exception.h
         singleton.h
         guard.h
-
+        counter.h
+        counter.cpp
         cuda_wrappers.cpp
         exception.cpp
         parallel_executor.h
