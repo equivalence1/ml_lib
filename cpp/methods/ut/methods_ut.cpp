@@ -10,6 +10,7 @@
 #include <methods/greedy_oblivious_tree.h>
 #include <methods/boosting_weak_target_factory.h>
 #include <targets/cross_entropy.h>
+#include <metrics/accuracy.h>
 
 #define EPS 1e-5
 
@@ -94,9 +95,10 @@ TEST(FeaturesTxt, TestTrainWithBootstrapLogLikelihoodFeaturesTxt) {
     Boosting boosting(boostingConfig, createWeakTarget(), createWeakLearner(6, grid));
 
     auto metricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
-    metricsCalcer->addMetric(CrossEntropy(test), "CrossEntropy");
+    metricsCalcer->addMetric(CrossEntropy(test, 0.1), "CrossEntropy");
+    metricsCalcer->addMetric(Accuracy(test.target(), 0.1, 0), "Accuracy");
     boosting.addListener(metricsCalcer);
-    CrossEntropy target(ds);
+    CrossEntropy target(ds, 0.1);
     auto ensemble = boosting.fit(ds, target);
 
 }

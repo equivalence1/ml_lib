@@ -133,3 +133,18 @@ Vec operator^(const Vec& left, const Vec& right) {
     result ^= right;
     return result;
 }
+Vec operator>(const Vec& left, Scalar right) {
+    return Vec(left.data().gt(right).to(torch::ScalarType::Float));
+}
+Vec operator<(const Vec& left, Scalar right) {
+    return Vec(left.data().lt(right).to(torch::ScalarType::Float));
+}
+Vec eq(const Vec& left, Scalar right) {
+    return Vec(left.data().eq(right).to(torch::ScalarType::Float));
+}
+Vec eq(const Vec& left, const Vec& right) {
+    return Vec(left.data().eq(right).to(torch::ScalarType::Float));
+}
+Vec operator!=(const Vec& left, Scalar right) {
+    return Vec(left.data().ne(right).to(torch::ScalarType::Float));
+}

@@ -82,3 +82,10 @@ Vec operator/(const Vec& left, Scalar right);
 
 Vec operator^(const Vec& left, Scalar q);
 Vec operator^(const Vec& left, const Vec& right);
+
+
+Vec operator>(const Vec& left, Scalar right);
+Vec operator<(const Vec& left, Scalar right);
+Vec eq(const Vec& left, Scalar right);
+Vec eq(const Vec& left, const Vec& right);
+Vec operator!=(const Vec& left, Scalar right);
