@@ -28,37 +28,41 @@ private:
     torch::Tensor w_;
 };
 
-#include <cassert>
+namespace E = Eigen;
+
 class LinearFunction : public torch::autograd::Function {
 public:
+
     LinearFunction() = default;
 
     torch::autograd::variable_list apply(torch::autograd::variable_list&& inputs) override {
         torch::autograd::Variable x = inputs[0];
         torch::autograd::Variable w = inputs[1];
 
-        namespace E = Eigen;
+        E::Map<E::Matrix<float, E::Dynamic, E::Dynamic, E::RowMajor>> x_((float*)x.data_ptr(), x.size(0), x.size(1));
 
-        E::Map<E::Matrix<float, E::Dynamic, E::Dynamic, E::RowMajor>> x_((float *)x.data_ptr(), x.size(0), x.size(1));
-
-        E::Map<E::Matrix<float, E::Dynamic, E::Dynamic, E::RowMajor>> w_((float *)w.data_ptr(), w.size(0), w.size(1));
+        E::Map<E::Matrix<float, E::Dynamic, E::Dynamic, E::RowMajor>> w_((float*)w.data_ptr(), w.size(0), w.size(1));
 
         auto resultEigen = x_ * w_;
-        auto resultRaw = new float[resultEigen.rows() * resultEigen.cols()];
-
-        E::Map<E::Matrix<float, E::Dynamic, E::Dynamic, E::RowMajor>> resultMap(resultRaw, resultEigen.rows(), resultEigen.cols());
-        resultMap = resultEigen;
-
-        torch::autograd::Variable res;
-
-        res = torch::from_blob(resultRaw,
-                               {resultEigen.rows(), resultEigen.cols()},
-                               {(long)(resultEigen.cols()), 1},
-                               torch::kFloat32);
+        torch::autograd::Variable resultTorch = torch::zeros({resultEigen.rows(), resultEigen.cols()}, torch::kFloat32);
+        copyEigenToTorch(resultEigen, resultTorch);
 
         auto grad_fn = std::make_shared<LinearFunctionBackward>(x, w, torch::autograd::collect_next_edges(inputs));
-        torch::autograd::create_gradient_edge(res, grad_fn);
+        torch::autograd::create_gradient_edge(resultTorch, grad_fn);
 
-        return {res};
+        return {resultTorch};
     }
+
+private:
+    template <class T>
+    void copyEigenToTorch(T resultEigen,
+            torch::Tensor& resultTorch) {
+        auto resultAccessor = resultTorch.accessor<float, 2>();
+        for (auto i = 0; i < resultEigen.rows(); i++) {
+            for (auto j = 0; j < resultEigen.cols(); j++) {
+                resultAccessor[i][j] = resultEigen(i, j);
+            }
+        }
+    }
+
 };
