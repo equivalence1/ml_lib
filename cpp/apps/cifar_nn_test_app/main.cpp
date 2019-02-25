@@ -4,13 +4,17 @@
 #include <iostream>
 
 int main() {
-    torch::Tensor x = torch::randn({7, 7}, torch::requires_grad(true));
-    torch::Tensor w = torch::randn({7, 7}, torch::requires_grad(true));
+    torch::Tensor x = torch::randn({5, 5}, torch::requires_grad(true));
+    torch::Tensor w = torch::randn({5, 5}, torch::requires_grad(true));
+
+    std::cout << "x = " << x << std::endl;
 
     LinearFunction f;
     auto r = f.apply({x, w})[0];
 
-    std::cout << "r = " << r << std::endl;
+    std::cout << "Linear result = " << r << std::endl;
+
+    std::cout << "Torch result = " << torch::mm(w, x.t()).t() << std::endl;
 
     auto s = torch::sum(r);
     std::cout << "s = " << s << std::endl;

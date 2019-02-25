@@ -20,7 +20,9 @@ public:
     }
 
     torch::autograd::variable_list apply(torch::autograd::variable_list&& inputs) override {
-        return {torch::mm(inputs[0], w_.t()), torch::mm(x_.t(), inputs[0])};
+        auto r1 = torch::mm(inputs[0], w_);
+        auto r2 = torch::mm(x_.t(), inputs[0]).t();
+        return {r1, r2};
     }
 
 private:
@@ -32,7 +34,6 @@ namespace E = Eigen;
 
 class LinearFunction : public torch::autograd::Function {
 public:
-
     LinearFunction() = default;
 
     torch::autograd::variable_list apply(torch::autograd::variable_list&& inputs) override {
@@ -40,29 +41,19 @@ public:
         torch::autograd::Variable w = inputs[1];
 
         E::Map<E::Matrix<float, E::Dynamic, E::Dynamic, E::RowMajor>> x_((float*)x.data_ptr(), x.size(0), x.size(1));
-
         E::Map<E::Matrix<float, E::Dynamic, E::Dynamic, E::RowMajor>> w_((float*)w.data_ptr(), w.size(0), w.size(1));
 
-        auto resultEigen = x_ * w_;
+        // x_ should be transposed, as it has shape [batch_size, n_features_in]
+        // the result is transposed to match shape [batch_size, n_features_out]
+        auto resultEigen = (w_ * x_.transpose()).transpose();
         torch::autograd::Variable resultTorch = torch::zeros({resultEigen.rows(), resultEigen.cols()}, torch::kFloat32);
-        copyEigenToTorch(resultEigen, resultTorch);
+
+        E::Map<E::Matrix<float, E::Dynamic, E::Dynamic, E::RowMajor>> resultMap((float*)resultTorch.data_ptr(), resultEigen.rows(), resultEigen.cols());
+        resultMap = resultEigen;
 
         auto grad_fn = std::make_shared<LinearFunctionBackward>(x, w, torch::autograd::collect_next_edges(inputs));
         torch::autograd::create_gradient_edge(resultTorch, grad_fn);
 
         return {resultTorch};
     }
-
-private:
-    template <class T>
-    void copyEigenToTorch(T resultEigen,
-            torch::Tensor& resultTorch) {
-        auto resultAccessor = resultTorch.accessor<float, 2>();
-        for (auto i = 0; i < resultEigen.rows(); i++) {
-            for (auto j = 0; j < resultEigen.cols(); j++) {
-                resultAccessor[i][j] = resultEigen(i, j);
-            }
-        }
-    }
-
 };

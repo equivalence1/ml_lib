@@ -95,7 +95,9 @@ private:
 
 class PyLinearTrainer : public LinearTrainer {
 public:
-    PyLinearTrainer() : LinearTrainer() {}
+    PyLinearTrainer(uint32_t it_global,
+            uint32_t it_repr,
+            uint32_t it_decision) : LinearTrainer(it_global, it_repr, it_decision) {}
 
     ModelPtr getTrainedModel_py(PyTensorPairDataset* ds) {
         return std::make_shared<PyWrapperModel>(this->getTrainedModel(*ds));
@@ -128,7 +130,7 @@ PYBIND11_MODULE(cifar_nn_py, m) {
 
     // Training
     py::class_<PyLinearTrainer> linear_trainer(m, "PyLinearTrainer");
-    linear_trainer.def(py::init<>());
+    linear_trainer.def(py::init<uint32_t, uint32_t, uint32_t>());
     linear_trainer.def("get_trained_model", &PyLinearTrainer::getTrainedModel_py);
 
     m.def("train", py_train_model, py::arg("model"), py::arg("ds"), py::arg("epochs") = 10);

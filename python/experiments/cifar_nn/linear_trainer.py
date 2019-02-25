@@ -1,11 +1,14 @@
-from python.experiments import data_loading
 import sys
 import os
 import numpy as np
 import time
 
-sys.path.append("../../../cmake-build-debug/cpp/experiments/cifar_nn")
+# sys.path.append("../../../cmake-build-debug/cpp/experiments/cifar_nn")
+sys.path.append("../../../cmake-build-release/cpp/experiments/cifar_nn")
 import cifar_nn_py
+
+sys.path.append("..")
+import data_loading
 
 
 def main():
@@ -14,9 +17,14 @@ def main():
     train_images = train_images.reshape((50000, 3, 32, 32))
     test_images = test_images.reshape((10000, 3, 32, 32))
 
+    # train_images = train_images[:100]
+    # train_labels = train_labels[:100]
+    # test_images = test_images[:100]
+    # test_labels = test_labels[:100]
+
     ds = cifar_nn_py.PyDataset(train_images, train_labels)
 
-    linear_trainer = cifar_nn_py.PyLinearTrainer()
+    linear_trainer = cifar_nn_py.PyLinearTrainer(3, 2, 2)
 
     start_time = time.time()
 

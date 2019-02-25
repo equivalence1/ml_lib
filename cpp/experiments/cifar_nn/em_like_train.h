@@ -12,11 +12,13 @@ class EMLikeTrainer {
 public:
     EMLikeTrainer(OptimizerPtr representationOptimizer,
                   OptimizerPtr decisionFuncOptimizer,
-                  InitializerPtr initializer
+                  InitializerPtr initializer,
+                  uint32_t iterations
                   )
         : representationOptimizer_(std::move(representationOptimizer))
         , decisionFuncOptimizer_(std::move(decisionFuncOptimizer))
-        , initializer_(std::move(initializer)) {
+        , initializer_(std::move(initializer))
+        , iterations_(iterations) {
 
     }
 
@@ -33,7 +35,11 @@ public:
                 param.set_requires_grad(true);
             }
 
+            std::cout << "    getting representations" << std::endl;
+
             torch::Tensor lastLayer = representationsModel->forward(ds.data());
+
+            std::cout << "    optimizing decision model" << std::endl;
 
             auto targets = ds.targets();
             decisionFuncOptimizer_->train(lastLayer, targets, loss, decisionModel);
@@ -44,6 +50,8 @@ public:
             for (auto& param : decisionModel->parameters()) {
                 param.set_requires_grad(false);
             }
+
+            std::cout << "    optimizing representation model" << std::endl;
 
             LossPtr representationLoss = makeRepresentationLoss(decisionModel, loss);
             representationOptimizer_->train(ds, representationLoss, representationsModel);
@@ -68,5 +76,5 @@ protected:
 
     InitializerPtr initializer_;
 
-    uint32_t iterations_ = 5;
+    uint32_t iterations_;
 };

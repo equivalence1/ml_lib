@@ -7,14 +7,17 @@
 
 class LinearTrainer : public EMLikeTrainer {
 public:
-    LinearTrainer() : EMLikeTrainer() {
+    LinearTrainer(uint32_t it_global,
+            uint32_t it_repr,
+            uint32_t it_decision) : EMLikeTrainer() {
         representationsModel = std::make_shared<SimpleConvNet>();
-        representationOptimizer_ = std::make_shared<DefaultSGDOptimizer>(8);
+        representationOptimizer_ = std::make_shared<DefaultSGDOptimizer>(it_repr);
 
         decisionModel = std::make_shared<LinearModel>(16 * 5 * 5, 10);
-        decisionFuncOptimizer_ = std::make_shared<DefaultSGDOptimizer>(8);
+        decisionFuncOptimizer_ = std::make_shared<DefaultSGDOptimizer>(it_decision);
 
         initializer_ = std::make_shared<NoopInitializer>();
+        iterations_ = it_global;
     }
 
     ModelPtr getTrainedModel(TensorPairDataset& ds) {
