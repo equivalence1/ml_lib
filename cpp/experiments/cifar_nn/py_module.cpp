@@ -12,8 +12,12 @@ torch::Tensor npToTorch(py::buffer_info& x_buff, torch::ScalarType t) {
     std::transform(x_buff.strides.begin(), x_buff.strides.end(), xStrides.begin(),
                    [&](auto el){return el / x_buff.itemsize;});
 
+    std::vector<int64_t> shape;
+    for (auto  val : x_buff.shape) {
+        shape.push_back(val);
+    }
     return torch::from_blob(x_buff.ptr,
-                            x_buff.shape,
+                            shape,
                             xStrides,
                             t);
 }

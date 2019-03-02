@@ -75,7 +75,7 @@ TEST(FeaturesTxt, Gradient) {
         for (int i = 0; i < weg.dim(); ++i) {
             weg.set(i, 2.0 * std::rand() / RAND_MAX - 1.0 );
         }
-        ObliviousTree tree(grid, features, values, weg);
+        ObliviousTree tree(grid, features, values);
 
         double delta = 0.001;
         for (int64_t k = 0; k < ds.samplesCount(); ++k) {

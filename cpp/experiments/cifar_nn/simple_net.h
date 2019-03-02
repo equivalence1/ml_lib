@@ -14,14 +14,14 @@ public:
 
     torch::Tensor forward(torch::Tensor x) override {
         x = SimpleConvNet::forward(x);
-        x = torch::relu(fc1_(x));
-        x = torch::relu(fc2_(x));
-        x = fc3_(x);
+        x = torch::relu(fc1_->forward(x));
+        x = torch::relu(fc2_->forward(x));
+        x = fc3_->forward(x);
         return x;
     }
 
 private:
-    torch::nn::Linear fc1_{nullptr};
+    torch::nn::Linear fc1_ {nullptr};
     torch::nn::Linear fc2_{nullptr};
     torch::nn::Linear fc3_{nullptr};
 };
