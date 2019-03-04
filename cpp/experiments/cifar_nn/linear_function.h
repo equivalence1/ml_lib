@@ -22,7 +22,8 @@ public:
     torch::autograd::variable_list apply(torch::autograd::variable_list&& inputs) override {
         auto r1 = torch::mm(inputs[0], w_);
         auto r2 = torch::mm(x_.t(), inputs[0]).t();
-        return {r1, r2};
+        auto r3 = inputs[0];
+        return {r1, r2, r3};
     }
 
 private:
@@ -39,9 +40,11 @@ public:
     torch::autograd::variable_list apply(torch::autograd::variable_list&& inputs) override {
         torch::autograd::Variable x = inputs[0];
         torch::autograd::Variable w = inputs[1];
+        torch::autograd::Variable b = inputs[2];
 
         E::Map<E::Matrix<float, E::Dynamic, E::Dynamic, E::RowMajor>> x_((float*)x.data_ptr(), x.size(0), x.size(1));
         E::Map<E::Matrix<float, E::Dynamic, E::Dynamic, E::RowMajor>> w_((float*)w.data_ptr(), w.size(0), w.size(1));
+        E::Map<E::RowVectorXf, E::RowMajor> b_((float*)b.data_ptr(), 1, b.size(0));
 
         // x_ should be transposed, as it has shape [batch_size, n_features_in]
         // the result is transposed to match shape [batch_size, n_features_out]
@@ -50,6 +53,7 @@ public:
 
         E::Map<E::Matrix<float, E::Dynamic, E::Dynamic, E::RowMajor>> resultMap((float*)resultTorch.data_ptr(), resultEigen.rows(), resultEigen.cols());
         resultMap = resultEigen;
+        resultMap.rowwise() += b_;
 
         auto grad_fn = std::make_shared<LinearFunctionBackward>(x, w, torch::autograd::collect_next_edges(inputs));
         torch::autograd::create_gradient_edge(resultTorch, grad_fn);

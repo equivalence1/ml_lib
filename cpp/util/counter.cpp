@@ -1,5 +1,8 @@
 #include "counter.h"
 #include "singleton.h"
+
+#include <atomic>
+
 namespace {
     class CounterImpl {
     public:
