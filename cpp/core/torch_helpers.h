@@ -7,9 +7,9 @@
 namespace TorchHelpers {
 
     inline int64_t totalSize(const torch::Tensor& tensor) {
-        int64_t size = 0;
+        int64_t size = 1;
         for (auto dimSize : tensor.sizes()) {
-            size += dimSize;
+            size *= dimSize;
         }
         return size;
     }
