@@ -24,7 +24,7 @@ def main():
 
     ds = cifar_nn_py.PyDataset(train_images, train_labels)
 
-    linear_trainer = cifar_nn_py.PyLinearTrainer(3, 2, 2)
+    linear_trainer = cifar_nn_py.PyLetNetLinearTrainer(3, 2, 2)
 
     start_time = time.time()
 

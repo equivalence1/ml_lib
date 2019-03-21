@@ -14,7 +14,7 @@ add_library(data
         histogram.cpp
         load_data.h
         load_data.cpp
-        cifar10_reader.hpp)
+        )
 
 
 enable_cxx17(data)

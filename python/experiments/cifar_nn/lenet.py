@@ -4,7 +4,8 @@ import os
 import numpy as np
 import time
 
-sys.path.append("../../../cmake-build-debug/cpp/experiments/cifar_nn")
+# sys.path.append("../../../cmake-build-debug/cpp/experiments/cifar_nn")
+sys.path.append("../../../cmake-build-release/cpp/experiments/cifar_nn")
 import cifar_nn_py
 
 
@@ -15,7 +16,7 @@ def main():
     test_images = test_images.reshape((10000, 3, 32, 32))
 
     ds = cifar_nn_py.PyDataset(train_images, train_labels)
-    net = cifar_nn_py.PySimpleNet()
+    net = cifar_nn_py.PyLeNet()
 
     start_time = time.time()
 

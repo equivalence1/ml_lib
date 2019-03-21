@@ -1,4 +1,4 @@
-#include "simple_net.h"
+#include "lenet.h"
 #include "tensor_pair_dataset.h"
 #include "linear_train.h"
 
@@ -66,9 +66,9 @@ private:
 //    }
 //};
 
-class PySimpleNet : public SimpleNet {
+class PyLeNet : public LeNet {
 public:
-    PySimpleNet() : SimpleNet() {}
+    PyLeNet() : LeNet() {}
 
     py::array_t<float> forward_np(py::array_t<float> x) {
         py::buffer_info x_buff = x.request();
@@ -97,18 +97,18 @@ private:
     ModelPtr model_;
 };
 
-class PyLinearTrainer : public LinearTrainer {
+class PyLeNetLinearTrainer : public LeNetLinearTrainer {
 public:
-    PyLinearTrainer(uint32_t it_global,
+    PyLeNetLinearTrainer(uint32_t it_global,
             uint32_t it_repr,
-            uint32_t it_decision) : LinearTrainer(it_global, it_repr, it_decision) {}
+            uint32_t it_decision) : LeNetLinearTrainer(it_global, it_repr, it_decision) {}
 
     ModelPtr getTrainedModel_py(PyTensorPairDataset* ds) {
         return std::make_shared<PyWrapperModel>(this->getTrainedModel(*ds));
     }
 };
 
-void py_train_model(std::shared_ptr<PySimpleNet> model, PyTensorPairDataset* ds, int epochs = 10) {
+void py_train_model(std::shared_ptr<PyLeNet> model, PyTensorPairDataset* ds, int epochs = 10) {
     DefaultSGDOptimizer optim(epochs);
     auto loss = std::make_shared<CrossEntropyLoss>();
     optim.train(*ds, loss, model);
@@ -125,17 +125,17 @@ PYBIND11_MODULE(cifar_nn_py, m) {
 //    py::class_<PyModel, std::shared_ptr<PyModel>> model(m, "PyModel");
 //    model.def("forward", &PyModel::forward_np);
 
-    py::class_<PySimpleNet, std::shared_ptr<PySimpleNet>> simple_net(m, "PySimpleNet");
-    simple_net.def(py::init<>());
-    simple_net.def("forward", &PySimpleNet::forward_np);
+    py::class_<PyLeNet, std::shared_ptr<PyLeNet>> lenet(m, "PyLeNet");
+    lenet.def(py::init<>());
+    lenet.def("forward", &PyLeNet::forward_np);
 
     py::class_<PyWrapperModel, std::shared_ptr<PyWrapperModel>> wrapper_model(m, "PyWrapperModel");
     wrapper_model.def("forward", &PyWrapperModel::forward_np);
 
     // Training
-    py::class_<PyLinearTrainer> linear_trainer(m, "PyLinearTrainer");
-    linear_trainer.def(py::init<uint32_t, uint32_t, uint32_t>());
-    linear_trainer.def("get_trained_model", &PyLinearTrainer::getTrainedModel_py);
+    py::class_<PyLeNetLinearTrainer> lenet_linear_trainer(m, "PyLeNetLinearTrainer");
+    lenet_linear_trainer.def(py::init<uint32_t, uint32_t, uint32_t>());
+    lenet_linear_trainer.def("get_trained_model", &PyLeNetLinearTrainer::getTrainedModel_py);
 
     m.def("train", py_train_model, py::arg("model"), py::arg("ds"), py::arg("epochs") = 10);
 }

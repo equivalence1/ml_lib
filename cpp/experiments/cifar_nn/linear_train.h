@@ -1,16 +1,16 @@
 #pragma once
 
 #include "em_like_train.h"
-#include "simple_conv_net.h"
+#include "lenet.h"
 #include "linear_model.h"
 #include "cross_entropy_loss.h"
 
-class LinearTrainer : public EMLikeTrainer {
+class LeNetLinearTrainer : public EMLikeTrainer {
 public:
-    LinearTrainer(uint32_t it_global,
+    LeNetLinearTrainer(uint32_t it_global,
             uint32_t it_repr,
             uint32_t it_decision) : EMLikeTrainer() {
-        representationsModel = std::make_shared<SimpleConvNet>();
+        representationsModel = std::make_shared<LeNetConv>();
         torch::optim::SGDOptions reprOptimOptions(0.001);
         representationOptimizer_ = std::make_shared<DefaultSGDOptimizer>(it_repr, reprOptimOptions);
 
