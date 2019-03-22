@@ -48,3 +48,13 @@ PYTORCH
 https://pytorch.org/cppdocs/installing.html
 
 https://github.com/pytorch/pytorch/issues/14165
+
+
+# Experiments
+
+## Cifar-10 models
+
+| model | optimizer info | learning rate | # of epochs | training log | accuracy | comments |
+| ----- | -------------- | ------------- | ----------- | ------------ | -------- | -------- |
+| LeNet | SGD(momentum = 0.9) | constant, lr = 0.001 | 2 | - | 51% | - |
+| LeNet | SGD(momentum = 0.9) | constant, lr = 0.001 | 50 | [log](example_training_logs/cifar10_LeNet_SGD_50.txt) | 56% | judging by log, SGD diverges |
