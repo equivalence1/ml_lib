@@ -24,7 +24,10 @@ add_library(cifar_nn
         cross_entropy_loss.cpp
         cross_entropy_loss.h
         lenet.cpp
-        lenet.h)
+        lenet.h
+        vgg.cpp
+        vgg.h
+        )
 target_link_libraries(cifar_nn "${TORCH_LIBRARIES}" Eigen3::Eigen)
 enable_cxx14(cifar_nn)
 

@@ -1,6 +1,10 @@
 cmake_version()
 project(cifar_networks)
 
-add_executable(lenet lenet.cpp)
+include_directories(../../experiments)
 
-target_link_libraries(lenet "${TORCH_LIBRARIES}" cifar_nn data)
+add_executable(lenet lenet.cpp)
+target_link_libraries(lenet "${TORCH_LIBRARIES}" cifar_nn)
+
+add_executable(vgg vgg.cpp)
+target_link_libraries(vgg "${TORCH_LIBRARIES}" cifar_nn)

@@ -30,7 +30,7 @@ public:
     ~LeNet() override = default;
 
 private:
-    torch::nn::Linear fc1_ {nullptr};
+    torch::nn::Linear fc1_{nullptr};
     torch::nn::Linear fc2_{nullptr};
     torch::nn::Linear fc3_{nullptr};
 };
