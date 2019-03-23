@@ -59,3 +59,4 @@ https://github.com/pytorch/pytorch/issues/14165
 | LeNet | SGD(momentum = 0.9) | constant, lr = 0.001 | 2 | - | 51% | - |
 | LeNet | SGD(momentum = 0.9) | constant, lr = 0.001 | 50 | [log](example_training_logs/cifar10_LeNet_SGD_50.txt) | 56% | judging by log, SGD diverges |
 | VGG-16 | - | - | - | - | - | takes too long on my PC to train |
+| ResNet-34 | - | - | - | - | - | takes too long on my PC to train |
