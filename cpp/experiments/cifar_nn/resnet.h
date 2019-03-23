@@ -18,7 +18,7 @@ enum class ResNetConfiguration {
 
 // BasicBlock
 
-class BasicBlock : public Model {
+class BasicBlock : public experiments::Model {
 public:
     BasicBlock(int id, int inChannels, int outChannels, int stride = 1);
 
@@ -35,10 +35,10 @@ private:
 
 // ResNetConv
 
-class ResNetConv : public Model {
+class ResNetConv : public experiments::Model {
 public:
     ResNetConv(torch::IntList numBlocks,
-               std::function<ModelPtr(int, int, int, int)> blocksBuilder);
+               std::function<experiments::ModelPtr(int, int, int, int)> blocksBuilder);
 
     torch::Tensor forward(torch::Tensor x) override;
 
@@ -48,12 +48,12 @@ private:
     torch::nn::Conv2d conv1_{nullptr};
     torch::nn::BatchNorm bn1_{nullptr};
 
-    std::vector<ModelPtr> blocks_;
+    std::vector<experiments::ModelPtr> blocks_;
 };
 
 // ResNetClassifier
 
-class ResNetClassifier : public Model {
+class ResNetClassifier : public experiments::Model {
 public:
     explicit ResNetClassifier(int expansion);
 
@@ -67,7 +67,7 @@ private:
 
 // ResNet
 
-class ResNet : public Model {
+class ResNet : public experiments::Model {
 public:
     explicit ResNet(ResNetConfiguration cfg);
 
@@ -77,5 +77,5 @@ public:
 
 private:
     std::shared_ptr<ResNetConv> conv_{nullptr};
-    ModelPtr classifier_{nullptr};
+    experiments::ModelPtr classifier_{nullptr};
 };

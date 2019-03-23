@@ -17,7 +17,7 @@ enum class VggConfiguration {
 //
 // We'll be comparing our accuracy with https://github.com/kuangliu/pytorch-cifar/blob/master/models/vgg.py
 // so in each configuration we use the same conv/maxpool/batchnorm layers as they do.
-class VggConv : public Model {
+class VggConv : public experiments::Model {
 public:
     VggConv() = default;
 
@@ -42,7 +42,7 @@ public:
 
 // VggClassifier
 
-class VggClassifier : public Model {
+class VggClassifier : public experiments::Model {
 public:
     VggClassifier();
 
@@ -56,7 +56,7 @@ private:
 
 // Vgg
 
-class Vgg : public Model {
+class Vgg : public experiments::Model {
 public:
     explicit Vgg(VggConfiguration cfg);
 

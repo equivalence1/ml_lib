@@ -17,7 +17,19 @@ public:
       , grid_(std::move(grid))
       , splits_(std::move(binFeatures))
       , leaves_(leaves) {
+            bitVec.reserve(leaves_.size());
+            auto leavesPtr = leaves_.arrayRef();
 
+            for (uint32_t b = 0; b < leaves_.size(); ++b) {
+                double value = 0;
+                uint bitsB = bits(b);
+                for (uint a = 0; a < leaves_.size(); ++a) {
+                    uint bitsA = bits(a);
+                    if (bits(a & b) >= bitsA)
+                        value += (((bitsA + bitsB) & 1) > 0 ? -1 : 1) * leavesPtr[a];
+                }
+                bitVec[b] = value;
+            }
     }
 
 
@@ -26,7 +38,19 @@ public:
     , grid_(other.grid_)
     , splits_(other.splits_)
     , leaves_(scale == 1.0  ? other.leaves_ : VecFactory::clone(other.leaves_) * scale) {
+        bitVec.reserve(leaves_.size());
+        auto leavesPtr = leaves_.arrayRef();
 
+        for (uint32_t b = 0; b < leaves_.size(); ++b) {
+            double value = 0;
+            uint bitsB = bits(b);
+            for (uint a = 0; a < leaves_.size(); ++a) {
+                uint bitsA = bits(a);
+                if (bits(a & b) >= bitsA)
+                    value += (((bitsA + bitsB) & 1) > 0 ? -1 : 1) * leavesPtr[a];
+            }
+            bitVec[b] = value;
+        }
     }
 
     const Grid& grid() const {
@@ -48,11 +72,12 @@ public:
     void grad(const Vec& x, Vec to);
 
 private:
-    uint bits(uint i);
+    uint32_t bits(uint32_t i);
 
 
 private:
     GridPtr grid_;
     std::vector<BinaryFeature> splits_;
     Vec leaves_;
+    std::vector<double> bitVec;
 };

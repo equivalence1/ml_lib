@@ -69,100 +69,87 @@ void ObliviousTree::appendTo(const Vec& x, Vec to) const {
     to += leaves_.get(bin);
 }
 
-double ObliviousTree::value(const Vec& x) {
 
-    std::vector<double> vec(leaves_.dim());
+double ObliviousTree::value(const Vec& x) {
     std::vector<double> probs(splits_.size());
-    auto leavesPtr = leaves_.arrayRef();
-    for (int64_t i = 0; i < probs.size(); ++i) {
+    auto xRef = x.arrayRef();
+    for (int64_t i = 0; i < splits_.size(); ++i) {
         const auto binFeature = splits_[i];
         const auto border = grid_->condition(binFeature.featureId_, binFeature.conditionId_);
-        const auto val = x.get(grid_->origFeatureIndex(binFeature.featureId_));
-        probs[i] = 1./(1. + exp(-(val - border)));
-    }
-    for (uint b = 0; b < vec.size(); ++b) {
-        double value = 0;
-        uint bitsB = bits(b);
-        for (uint a = 0; a < vec.size(); ++a) {
-            uint bitsA = bits(a);
-            if (bits(a & b) >= bitsA) {
-                value += (((bitsA + bitsB) & 1) > 0 ? -1. : 1.) * leavesPtr[a];
-            }
-        }
-        for (int f = 0; f < probs.size(); ++f) {
-            if (((b >> f) & 1) != 0) {
-                value *= probs[probs.size() - f - 1];
-            }
-        }
-        vec[b] = value;
+        const auto val = xRef[grid_->origFeatureIndex(binFeature.featureId_)];
+        probs[i] = 1./(1. + exp(-(val - border)));//*1000));
     }
     double res = 0;
-    for (int64_t i = 0; i < vec.size(); ++i) {
-        res += vec[i] * leavesPtr[i];
+    for (uint32_t b = 0; b < leaves_.dim(); ++b) {
+        double value = bitVec[b];
+        for (int f = 0; f < probs.size(); ++f) {
+            if (((b >> f) & 1) != 0) {
+                value *= probs[f];
+            }
+        }
+        res += value;
     }
     return res;
 }
 
 void ObliviousTree::grad(const Vec& x, Vec to) {
-    std::vector<int64_t> masks(x.dim());
+    std::vector<uint32_t> masks(x.dim());
     for (int i = 0; i < splits_.size(); ++i) {
         const auto binFeature = splits_[i];
-        masks[grid_->origFeatureIndex(binFeature.featureId_)] += (1 << (splits_.size() - i - 1));
+        masks[grid_->origFeatureIndex(binFeature.featureId_)] += (1 << (i));
     }
-
-    std::vector<double> vec(leaves_.dim());
     std::vector<double> probs(splits_.size());
-    auto leavesPtr = leaves_.arrayRef();
+
     for (int64_t i = 0; i < probs.size(); i++) {
         const auto binFeature = splits_[i];
         const auto border = grid_->condition(binFeature.featureId_, binFeature.conditionId_);
         const auto val = x.get(grid_->origFeatureIndex(binFeature.featureId_));
-        probs[i] = 1./(1. + exp(-(val - border)));
+        probs[i] = 1./(1. + exp(-(val - border)));//*1000));
     }
+
+    std::vector<double> probs_mult_buff(leaves_.dim(), 1);
+
+    for (uint32_t b = 0; b < leaves_.dim(); ++b) {
+        for (int f = 0; f < probs.size(); f++) {
+            if (b >> f == 0) break;
+            if (((b >> f) & 1) != 0) {
+                probs_mult_buff[b] *= probs[f];
+            }
+        }
+    }
+
+    auto toRef = to.arrayRef();
+
     for (int i = 0; i < to.dim(); ++i) {
 
-        for (uint b = 0; b < vec.size(); ++b) {
-            if ((masks[i] & b) == 0) {
-                vec[b] = 0.;
+        double res = 0;
+
+        for (uint32_t b = 0; b < leaves_.dim(); ++b) {
+            uint32_t mask_b = masks[i] & b;
+            if (mask_b == 0) {
                 continue;
             }
-            double value = 0;
-            uint bitsB = bits(b);
-            for (uint a = 0; a < vec.size(); ++a) {
-                uint bitsA = bits(a);
-                if (bits(a & b) >= bitsA)
-                    value += (((bitsA + bitsB) & 1) > 0 ? -1 : 1) * leavesPtr[a];
-            }
+
+            double value = bitVec[b] * probs_mult_buff[b];
             double diffCf = 0;
+
             for (int f = 0; f < probs.size(); f++) {
-                if (((b >> f) & 1) != 0) {
-                    value *= probs[probs.size() - f - 1];
-                    if ((masks[i] >> f & 1) != 0) {
-                        diffCf += 1 - probs[probs.size() - f - 1];
-                    }
+                if (mask_b >> f == 0) break;
+                if (((mask_b >> f) & 1) != 0) {
+                    diffCf += 1 - probs[f];
                 }
             }
-            value *= diffCf;
-            vec[b] = value;
+            res += value * diffCf;//*1000;
         }
-        double res = 0;
-        for (int64_t k = 0; k < vec.size(); ++k) {
-            res += vec[k] * leavesPtr[k];
-        }
-        to.set(i, res);
+        toRef[i] += res;
     }
-
 }
 
-uint ObliviousTree::bits(uint i) {
-    i = i - ((i >> 1) & 0x55555555);
-    i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
-    return (((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
-//    return __builtin_popcount(x);
-//    uint result = 0;
-//    while (x != 0) {
-//        result += (x & 1);
-//        x >>= 1;
-//    }
-//    return result;
+uint32_t ObliviousTree::bits(uint32_t i) {
+    uint32_t result = 0;
+    while (i != 0) {
+        result += (i & 1);
+        i >>= 1;
+    }
+    return result;
 }

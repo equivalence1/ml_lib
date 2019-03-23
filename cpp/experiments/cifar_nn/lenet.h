@@ -6,7 +6,7 @@
 
 // LeNetConv
 
-class LeNetConv : public Model {
+class LeNetConv : public experiments::Model {
 public:
     LeNetConv();
 

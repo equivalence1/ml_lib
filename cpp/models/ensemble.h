@@ -39,6 +39,20 @@ public:
         }
     }
 
+    double value(const Vec& x) {
+        double res = 0;
+        for (auto& model : models_) {
+            res += model->value(x);
+        }
+        return res;
+    }
+
+    void grad(const Vec& x, Vec to) {
+        for (auto& model : models_) {
+            model->grad(x, to);
+        }
+    }
+
     int64_t size() const {
         return models_.size();
     }

@@ -40,6 +40,8 @@ public:
     }
 
     virtual void appendTo(const Vec& x, Vec to) const = 0;
+    virtual double value(const Vec& x) { return 0; }
+    virtual void grad(const Vec& x, Vec to) {}
 
 protected:
 

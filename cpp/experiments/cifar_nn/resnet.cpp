@@ -41,7 +41,7 @@ torch::Tensor BasicBlock::forward(torch::Tensor x) {
 // ResNetConv
 
 ResNetConv::ResNetConv(torch::IntList numBlocks,
-                       std::function<ModelPtr(int, int, int, int)> blocksBuilder) {
+                       std::function<experiments::ModelPtr(int, int, int, int)> blocksBuilder) {
     assert(numBlocks.size() == 4);
 
     static const int blockOutChannelSizes[] = {64, 128, 256, 512};
@@ -92,7 +92,7 @@ torch::Tensor ResNetClassifier::forward(torch::Tensor x) {
 
 ResNet::ResNet(ResNetConfiguration cfg) {
     if (cfg == ResNetConfiguration::ResNet16) {
-        std::function<ModelPtr(int, int, int, int)> blocksBuilder = [](int id, int inChannels, int outChannels, int stride){
+        std::function<experiments::ModelPtr(int, int, int, int)> blocksBuilder = [](int id, int inChannels, int outChannels, int stride){
             return std::make_shared<BasicBlock>(id, inChannels, outChannels, stride);
         };
         conv_ = std::make_shared<ResNetConv>(

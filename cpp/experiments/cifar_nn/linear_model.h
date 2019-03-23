@@ -7,9 +7,9 @@
 #include <torch/csrc/autograd/function.h>
 #include <cstdint>
 
-class LinearModel : public Model {
+class LinearModel : public experiments::Model {
 public:
-    LinearModel(uint32_t in, uint32_t out) : Model() {
+    LinearModel(uint32_t in, uint32_t out) : experiments::Model() {
         weights_ = register_parameter("weights", torch::zeros({out, in}, torch::kFloat32));
         biases_ = register_parameter("biases", torch::zeros({out}, torch::kFloat32));
         torch::nn::init::xavier_uniform_(weights_);

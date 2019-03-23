@@ -29,8 +29,19 @@ add_library(cifar_nn
         vgg.h
         resnet.cpp
         resnet.h
+        simple_conv_net.cpp
+        simple_conv_net.h
+        bce_sigm.cpp
+        bce_sigm.h
+        oblivious_tree_function.cpp
+        oblivious_tree_function.h
+        oblivious_tree_model.cpp
+        oblivious_tree_model.h
+        oblivious_tree_train.cpp
+        oblivious_tree_train.h
+        tree_train.h
         )
-target_link_libraries(cifar_nn "${TORCH_LIBRARIES}" Eigen3::Eigen)
+target_link_libraries(cifar_nn "${TORCH_LIBRARIES}" Eigen3::Eigen methods core models targets)
 enable_cxx14(cifar_nn)
 
 pybind11_add_module(cifar_nn_py py_module.cpp)

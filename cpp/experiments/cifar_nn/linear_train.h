@@ -23,15 +23,15 @@ public:
         iterations_ = it_global;
     }
 
-    ModelPtr getTrainedModel(TensorPairDataset& ds) {
+    experiments::ModelPtr getTrainedModel(TensorPairDataset& ds) {
         LossPtr loss = std::make_shared<CrossEntropyLoss>();
         return EMLikeTrainer::getTrainedModel(ds, loss);
     }
 
-    LossPtr makeRepresentationLoss(ModelPtr trans, LossPtr loss) const override {
+    LossPtr makeRepresentationLoss(experiments::ModelPtr trans, LossPtr loss) const override {
         class ReprLoss : public Loss {
         public:
-            ReprLoss(ModelPtr model, LossPtr loss)
+            ReprLoss(experiments::ModelPtr model, LossPtr loss)
                     : model_(std::move(model))
                     , loss_(std::move(loss)) {
 
@@ -42,7 +42,7 @@ public:
             }
 
         private:
-            ModelPtr model_;
+            experiments::ModelPtr model_;
             LossPtr loss_;
         };
 

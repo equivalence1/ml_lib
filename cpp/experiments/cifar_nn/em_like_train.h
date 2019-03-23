@@ -10,8 +10,8 @@
 
 class EMLikeTrainer {
 public:
-    EMLikeTrainer(OptimizerPtr representationOptimizer,
-                  OptimizerPtr decisionFuncOptimizer,
+    EMLikeTrainer(experiments::OptimizerPtr representationOptimizer,
+                  experiments::OptimizerPtr decisionFuncOptimizer,
                   InitializerPtr initializer,
                   uint32_t iterations
                   )
@@ -22,7 +22,7 @@ public:
 
     }
 
-    void train(TensorPairDataset& ds, LossPtr& loss) {
+    virtual void train(TensorPairDataset& ds, LossPtr& loss) {
         initializer_->init(ds, loss, &representationsModel, &decisionModel);
 
         for (uint32_t i = 0; i < iterations_; ++i) {
@@ -58,21 +58,21 @@ public:
         }
     }
 
-    ModelPtr getTrainedModel(TensorPairDataset& ds, LossPtr& loss) {
+    experiments::ModelPtr getTrainedModel(TensorPairDataset& ds, LossPtr& loss) {
         train(ds, loss);
         return std::make_shared<CompositionalModel>(representationsModel, decisionModel);
     }
 
-    virtual LossPtr makeRepresentationLoss(ModelPtr trans, LossPtr loss) const = 0;
+    virtual LossPtr makeRepresentationLoss(experiments::ModelPtr trans, LossPtr loss) const = 0;
 
 protected:
     EMLikeTrainer() = default;
 
-    OptimizerPtr representationOptimizer_;
-    OptimizerPtr decisionFuncOptimizer_;
+    experiments::OptimizerPtr representationOptimizer_;
+    experiments::OptimizerPtr decisionFuncOptimizer_;
 
-    ModelPtr representationsModel;
-    ModelPtr decisionModel;
+    experiments::ModelPtr representationsModel;
+    experiments::ModelPtr decisionModel;
 
     InitializerPtr initializer_;
 

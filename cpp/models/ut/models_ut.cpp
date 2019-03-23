@@ -53,7 +53,8 @@ TEST(FeaturesTxt, ApplyFloatAndBinarizedOtTest) {
 }
 
 TEST(FeaturesTxt, Gradient) {
-    auto ds = loadFeaturesTxt("test_data/featuresTxt/train");
+    auto ds = loadFeaturesTxt("../../../../test_data/featuresTxt/test");
+    std::cout << ds.samplesCount() << std::endl;
     EXPECT_EQ(ds.samplesCount(), 12465);
     EXPECT_EQ(ds.featuresCount(), 50);
 
@@ -66,18 +67,13 @@ TEST(FeaturesTxt, Gradient) {
         for (int32_t i = firstF; i < std::min<int32_t>(firstF + 6, grid->nzFeaturesCount()); ++i) {
             features.emplace_back(i, grid->conditionsCount(i) / 2);
         }
-        Vec values(64);
-        for (int64_t i = 0; i < 64; ++i) {
-            values.arrayRef()[i] = i;
-        }
-
         Vec weg(1 << features.size());
         for (int i = 0; i < weg.dim(); ++i) {
             weg.set(i, 2.0 * std::rand() / RAND_MAX - 1.0 );
         }
-        ObliviousTree tree(grid, features, values);
+        ObliviousTree tree(grid, features, weg);
 
-        double delta = 0.001;
+        double delta = 0.001 / 1000;
         for (int64_t k = 0; k < ds.samplesCount(); ++k) {
             Vec grad = Vec(ds.sample(0).dim());
             tree.grad(ds.sample(k), grad);
@@ -87,11 +83,10 @@ TEST(FeaturesTxt, Gradient) {
                 VecTools::copyTo(ds.sample(k), tmp);
                 tmp.set(p, tmp.get(p) + delta);
                 approx.set(p, (tree.value(tmp) - tree.value(ds.sample(k))) / delta);
-                assert(std::abs(approx.get(p) - grad.get(p)) <= 0.001);
+                double appr = approx.get(p);
+                double gr = grad.get(p);
+                assert(std::abs(appr - gr) <= 0.01 + 0.01*std::abs((gr + appr)/2));
             }
         }
     }
 }
-
-
-
