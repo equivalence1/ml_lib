@@ -66,5 +66,5 @@ public:
 
 private:
     std::shared_ptr<VggConv> conv_;
-    VggClassifier classifier_;
+    std::shared_ptr<VggClassifier> classifier_;
 };

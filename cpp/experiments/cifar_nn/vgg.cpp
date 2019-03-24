@@ -1,6 +1,7 @@
 #include "vgg.h"
 
 #include <memory>
+#include <string>
 
 static torch::nn::ConvOptions<2> buildConvOptions(int inChannels, int outChannels, int kernelSize) {
     auto convOptions = torch::nn::ConvOptions<2>(inChannels, outChannels, kernelSize);
@@ -29,10 +30,10 @@ Vgg16Conv::Vgg16Conv() {
             id = 0;
         } else {
             auto options = buildConvOptions(inChannels, outChannels, kKernelSize);
-            string convName = "conv_" + std::to_string(poolings) + std::to_string(id);
+            std::string convName = "conv_" + std::to_string(poolings) + std::to_string(id);
             auto conv = register_module(convName, torch::nn::Conv2d(options));
 
-            string bnName = "batch_norm_" + std::to_string(poolings) + std::to_string(id);
+            std::string bnName = "batch_norm_" + std::to_string(poolings) + std::to_string(id);
             auto batchNorm = register_module(bnName, torch::nn::BatchNorm(outChannels));
 
             std::function<torch::Tensor(torch::Tensor)> layer = [conv, batchNorm](torch::Tensor x){
@@ -71,7 +72,8 @@ torch::Tensor VggClassifier::forward(torch::Tensor x) {
 
 Vgg::Vgg(VggConfiguration cfg) {
     if (cfg == VggConfiguration::Vgg16) {
-        conv_ = std::make_shared<Vgg16Conv>();
+        conv_ = register_module("conv_", std::make_shared<Vgg16Conv>());
+        classifier_ = register_module("classifier_", std::make_shared<VggClassifier>());
     } else {
         throw "Unsupported configuration";
     }
@@ -79,5 +81,6 @@ Vgg::Vgg(VggConfiguration cfg) {
 
 torch::Tensor Vgg::forward(torch::Tensor x) {
     x = conv_->forward(x);
-    return classifier_.forward(x);
+    x = classifier_->forward(x);
+    return x;
 }
