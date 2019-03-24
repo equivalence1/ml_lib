@@ -16,21 +16,15 @@ static torch::nn::ConvOptions<2> buildConvOptions(int inChannels,
 
 // BasicBlock
 
-#define MODULE_NAME(baseName, id, secondId) std::string(baseName) + "_" + std::to_string(id) + "_" + std::to_string(secondId)
-
-BasicBlock::BasicBlock(int id, int inChannels, int outChannels, int stride) {
+BasicBlock::BasicBlock(int inChannels, int outChannels, int stride) {
     auto options = buildConvOptions(inChannels, outChannels, 3, stride);
-    conv1_ = register_module(MODULE_NAME("conv", id, 1), torch::nn::Conv2d(options));
-    string bnName = "batch_norm_" + std::to_string(id) + "_1";
-    bn1_ = register_module(bnName, torch::nn::BatchNorm(outChannels));
+    conv1_ = register_module("conv1_", torch::nn::Conv2d(options));
+    bn1_ = register_module("bn1_", torch::nn::BatchNorm(outChannels));
 
     options = buildConvOptions(outChannels, outChannels, 3, stride);
-    conv2_ = register_module(MODULE_NAME("conv", id, 2), torch::nn::Conv2d(options));
-    bnName = "batch_norm_" + std::to_string(id) + "_2";
-    bn2_ = register_module(bnName, torch::nn::BatchNorm(outChannels));
+    conv2_ = register_module("conv2_", torch::nn::Conv2d(options));
+    bn2_ = register_module("bn2_", torch::nn::BatchNorm(outChannels));
 }
-
-#undef MODULE_NAME
 
 torch::Tensor BasicBlock::forward(torch::Tensor x) {
     x = bn1_->forward(conv1_->forward(x));
@@ -41,28 +35,27 @@ torch::Tensor BasicBlock::forward(torch::Tensor x) {
 // ResNetConv
 
 ResNetConv::ResNetConv(torch::IntList numBlocks,
-                       std::function<experiments::ModelPtr(int, int, int, int)> blocksBuilder) {
+                       std::function<experiments::ModelPtr(int, int, int)> blocksBuilder) {
     assert(numBlocks.size() == 4);
 
     static const int blockOutChannelSizes[] = {64, 128, 256, 512};
     static const int initStrides[] = {1, 2, 2, 2};
 
-    int id = 0;
     int inChannels = 64;
 
     auto options = buildConvOptions(3, 64, 3);
-    conv1_ = register_module("conv1", torch::nn::Conv2d(options));
-    bn1_ = register_module("bn1", torch::nn::BatchNorm(64));
+    conv1_ = register_module("conv1_", torch::nn::Conv2d(options));
+    bn1_ = register_module("bn1_", torch::nn::BatchNorm(64));
 
     for (int i = 0; i < (int)numBlocks.size(); ++i) {
         int stride = initStrides[i];
         for (int j = 0; j < numBlocks.at(std::size_t(i)); ++j) {
             int outChannels = blockOutChannelSizes[i];
-            auto block = blocksBuilder(id, inChannels, outChannels, stride);
-            auto b = register_module("block_" + std::to_string(id), block);
+            auto block = blocksBuilder(inChannels, outChannels, stride);
+            std::string blockId = "block_" + std::to_string(i) + "_" + std::to_string(j);
+            auto b = register_module(blockId, block);
             blocks_.push_back(b);
 
-            id++;
             inChannels = outChannels;
             stride = 1;
         }
@@ -80,7 +73,7 @@ torch::Tensor ResNetConv::forward(torch::Tensor x) {
 // ResNetClassifier
 
 ResNetClassifier::ResNetClassifier(int expansion) {
-    fc1_ = register_module("fc1", torch::nn::Linear(512 * expansion, 10));
+    fc1_ = register_module("fc1_", torch::nn::Linear(512 * expansion, 10));
 }
 
 torch::Tensor ResNetClassifier::forward(torch::Tensor x) {
@@ -92,13 +85,15 @@ torch::Tensor ResNetClassifier::forward(torch::Tensor x) {
 
 ResNet::ResNet(ResNetConfiguration cfg) {
     if (cfg == ResNetConfiguration::ResNet16) {
-        std::function<experiments::ModelPtr(int, int, int, int)> blocksBuilder = [](int id, int inChannels, int outChannels, int stride){
-            return std::make_shared<BasicBlock>(id, inChannels, outChannels, stride);
+        std::function<experiments::ModelPtr(int, int, int)> blocksBuilder = [](int inChannels, int outChannels, int stride){
+            return std::make_shared<BasicBlock>(inChannels, outChannels, stride);
         };
         conv_ = std::make_shared<ResNetConv>(
                 torch::IntList({3, 4, 6, 3}),
                 blocksBuilder);
         classifier_ = std::make_shared<ResNetClassifier>(1);
+        conv_ = register_module("conv_", conv_);
+        classifier_ = register_module("classifier", classifier_);
     } else {
         throw "Unsupported configuration";
     }

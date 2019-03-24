@@ -20,7 +20,7 @@ enum class ResNetConfiguration {
 
 class BasicBlock : public experiments::Model {
 public:
-    BasicBlock(int id, int inChannels, int outChannels, int stride = 1);
+    BasicBlock(int inChannels, int outChannels, int stride = 1);
 
     torch::Tensor forward(torch::Tensor x) override;
 
@@ -38,7 +38,7 @@ private:
 class ResNetConv : public experiments::Model {
 public:
     ResNetConv(torch::IntList numBlocks,
-               std::function<experiments::ModelPtr(int, int, int, int)> blocksBuilder);
+               std::function<experiments::ModelPtr(int, int, int)> blocksBuilder);
 
     torch::Tensor forward(torch::Tensor x) override;
 
