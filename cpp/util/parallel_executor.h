@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <functional>
 
-#include <ATen/core/thread_pool.h>
+#include <c10/core/thread_pool.h>
 #include <thread>
 
 class ThreadPool {
