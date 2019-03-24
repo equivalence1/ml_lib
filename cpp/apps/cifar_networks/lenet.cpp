@@ -9,17 +9,31 @@
 #include <memory>
 #include <iostream>
 
-int main() {
+int main(int argc, char* argv[]) {
+    auto device = torch::kCPU;
+    if (argc > 1 && std::string(argv[1]) == std::string("CUDA")
+            && torch::cuda::is_available()) {
+        device = torch::kCUDA;
+        std::cout << "Using CUDA device for training" << std::endl;
+    } else {
+        std::cout << "Using CPU device for training" << std::endl;
+    }
+
     auto lenet = std::make_shared<LeNet>();
+    lenet->to(device);
 
     const std::string& path = "../../../../python/resources/cifar10/cifar-10-batches-bin";
     auto dataset = cifar::read_dataset(path);
+    dataset.first = dataset.first.to(device);
 
     auto optim = std::make_shared<DefaultSGDOptimizer>(2);
     auto loss = std::make_shared<CrossEntropyLoss>();
 
     optim->train(dataset.first, loss, lenet);
 
+    // TODO evaluate on CPU, otherwise I get OOM error. Need to investigate it.
+    lenet->to(torch::kCPU);
+    lenet->eval();
     auto testResModel = lenet->forward(dataset.second.data());
     auto testResReal = dataset.second.targets();
     int rightAnswersCnt = 0;

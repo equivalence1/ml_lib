@@ -11,3 +11,6 @@ target_link_libraries(vgg "${TORCH_LIBRARIES}" cifar_nn)
 
 add_executable(resnet resnet.cpp)
 target_link_libraries(resnet "${TORCH_LIBRARIES}" cifar_nn)
+
+add_executable(check_cuda_libtorch check_cuda_libtorch.cpp)
+target_link_libraries(check_cuda_libtorch "${TORCH_LIBRARIES}")

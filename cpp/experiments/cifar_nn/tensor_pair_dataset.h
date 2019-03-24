@@ -24,6 +24,10 @@ public:
         return y_;
     }
 
+    TensorPairDataset to(torch::DeviceType device) {
+        return TensorPairDataset(x_.to(device), y_.to(device));
+    }
+
 protected:
     TensorPairDataset() = default;
 
