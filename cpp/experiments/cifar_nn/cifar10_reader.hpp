@@ -100,7 +100,7 @@ void read_training(const std::string& folder, int limit, float* images, long* la
             break;
         }
 
-        string fname = "/data_batch_" + std::to_string(i) + ".bin";
+        std::string fname = "/data_batch_" + std::to_string(i) + ".bin";
         read_cifar10_file_float(images, labels, folder + fname, limit);
 
         images += IMAGE_SIZE * CIFAR10_FILE_SIZE;
