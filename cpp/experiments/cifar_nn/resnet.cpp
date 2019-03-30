@@ -21,21 +21,32 @@ BasicBlock::BasicBlock(int inChannels, int outChannels, int stride) {
     conv1_ = register_module("conv1_", torch::nn::Conv2d(options));
     bn1_ = register_module("bn1_", torch::nn::BatchNorm(outChannels));
 
-    options = buildConvOptions(outChannels, outChannels, 3, stride);
+    options = buildConvOptions(outChannels, outChannels, 3, 1);
     conv2_ = register_module("conv2_", torch::nn::Conv2d(options));
     bn2_ = register_module("bn2_", torch::nn::BatchNorm(outChannels));
+
+    if (stride != 1 || inChannels != outChannels) {
+        options = buildConvOptions(inChannels, outChannels, 1, stride);
+        shortcut_ = register_module("shortcut_", torch::nn::Sequential(
+                torch::nn::Conv2d(options),
+                torch::nn::BatchNorm(outChannels)
+                ));
+    } else {
+        shortcut_ = register_module("shortcut_", torch::nn::Sequential());
+    }
 }
 
 torch::Tensor BasicBlock::forward(torch::Tensor x) {
-    x = bn1_->forward(conv1_->forward(x));
-    x = bn2_->forward(conv2_->forward(x));
-    return x;
+    auto out = torch::relu(bn1_->forward(conv1_->forward(x)));
+    out = bn2_->forward(conv2_->forward(out));
+    out = torch::relu(out + x);
+    return out;
 }
 
 // ResNetConv
 
 ResNetConv::ResNetConv(torch::IntList numBlocks,
-                       std::function<experiments::ModelPtr(int, int, int)> blocksBuilder) {
+                       const std::function<experiments::ModelPtr(int, int, int)>& blocksBuilder) {
     assert(numBlocks.size() == 4);
 
     static const int blockOutChannelSizes[] = {64, 128, 256, 512};
@@ -67,6 +78,7 @@ torch::Tensor ResNetConv::forward(torch::Tensor x) {
     for (const auto& block : blocks_) {
         x = block->forward(x);
     }
+    x = torch::avg_pool2d(x, 4);
     return x;
 }
 

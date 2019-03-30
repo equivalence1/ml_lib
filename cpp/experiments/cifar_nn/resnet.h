@@ -31,6 +31,8 @@ private:
     torch::nn::Conv2d conv2_{nullptr};
     torch::nn::BatchNorm bn1_{nullptr};
     torch::nn::BatchNorm bn2_{nullptr};
+
+    torch::nn::Sequential shortcut_{nullptr};
 };
 
 // ResNetConv
@@ -38,7 +40,7 @@ private:
 class ResNetConv : public experiments::Model {
 public:
     ResNetConv(torch::IntList numBlocks,
-               std::function<experiments::ModelPtr(int, int, int)> blocksBuilder);
+               const std::function<experiments::ModelPtr(int, int, int)>& blocksBuilder);
 
     torch::Tensor forward(torch::Tensor x) override;
 
