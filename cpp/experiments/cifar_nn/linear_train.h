@@ -12,12 +12,15 @@ public:
             uint32_t it_decision) : EMLikeTrainer() {
         representationsModel = std::make_shared<LeNetConv>();
         torch::optim::SGDOptions reprOptimOptions(0.001);
-        representationOptimizer_ = std::make_shared<DefaultSGDOptimizer>(it_repr, reprOptimOptions);
+
+        // TODO optimizers
+
+//        representationOptimizer_ = std::make_shared<DefaultSGDOptimizer>(it_repr, reprOptimOptions);
 
         decisionModel = std::make_shared<LinearModel>(16 * 5 * 5, 10);
 
         torch::optim::SGDOptions decisionOptimOptions(0.1);
-        decisionFuncOptimizer_ = std::make_shared<DefaultSGDOptimizer>(it_decision, decisionOptimOptions);
+//        decisionFuncOptimizer_ = std::make_shared<DefaultSGDOptimizer>(it_decision, decisionOptimOptions);
 
         initializer_ = std::make_shared<NoopInitializer>();
         iterations_ = it_global;

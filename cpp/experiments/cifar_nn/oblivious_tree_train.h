@@ -21,7 +21,10 @@ public:
         representationsModel = std::make_shared<SimpleConvNet>();
 
         torch::optim::SGDOptions reprOptimOptions(0.0002);
-        representationOptimizer_ = std::make_shared<DefaultSGDOptimizer>(6, reprOptimOptions);
+
+        // TODO optimizer
+
+//        representationOptimizer_ = std::make_shared<DefaultSGDOptimizer>(6, reprOptimOptions);
     
         initializer_ = std::make_shared<NoopInitializer>();
     }
@@ -70,7 +73,10 @@ public:
             }
 
             LossPtr representationLoss = makeRepresentationLoss(decisionModel, loss);
-            representationOptimizer_->train_adam(ds, representationLoss, representationsModel);
+
+            // TODO train
+
+//            representationOptimizer_->train_adam(ds, representationLoss, representationsModel);
         }
     }
 

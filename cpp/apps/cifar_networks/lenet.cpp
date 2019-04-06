@@ -26,10 +26,28 @@ int main(int argc, char* argv[]) {
     auto dataset = cifar::read_dataset(path);
     dataset.first = dataset.first.to(device);
 
-    auto optim = std::make_shared<DefaultSGDOptimizer>(2);
+    auto transform = torch::data::transforms::Stack<>();
+    experiments::OptimizerArgs<decltype(transform)> args;
+    args.transform_ = std::move(transform);
+
+    args.epochs_ = 2;
+
+    auto dloaderOptions = torch::data::DataLoaderOptions(4);
+    args.dloaderOptions_ = std::move(dloaderOptions);
+
+    torch::optim::SGDOptions opt(0.001);
+    opt.momentum_ = 0.9;
+    auto optim = std::make_shared<torch::optim::SGD>(lenet->parameters(), opt);
+    args.torchOptim_ = optim;
+
+    args.lrPtrGetter_ = [&](){return &optim->options.learning_rate_;};
+
+    auto optimizer = std::make_shared<experiments::DefaultOptimizer<decltype(args.transform_)>>(args);
     auto loss = std::make_shared<CrossEntropyLoss>();
 
-    optim->train(dataset.first, loss, lenet);
+    experiments::DefaultOptimizerListener optimizerListener(2000);
+    optimizer->registerBatchListener(&optimizerListener);
+    optimizer->train(dataset.first, loss, lenet);
 
     // TODO evaluate on CPU, otherwise I get OOM error. Need to investigate it.
     lenet->to(torch::kCPU);
