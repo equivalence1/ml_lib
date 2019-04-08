@@ -31,15 +31,17 @@ BasicBlock::BasicBlock(int inChannels, int outChannels, int stride) {
                 torch::nn::Conv2d(options),
                 torch::nn::BatchNorm(outChannels)
                 ));
-    } else {
-        shortcut_ = register_module("shortcut_", torch::nn::Sequential());
     }
 }
 
 torch::Tensor BasicBlock::forward(torch::Tensor x) {
     auto out = torch::relu(bn1_->forward(conv1_->forward(x)));
     out = bn2_->forward(conv2_->forward(out));
-    out = torch::relu(out + x);
+    if (!shortcut_.is_empty()) {
+        out = torch::relu(out + shortcut_->forward(x));
+    } else {
+        out = torch::relu(out + x);
+    }
     return out;
 }
 

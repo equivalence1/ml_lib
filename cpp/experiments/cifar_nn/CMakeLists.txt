@@ -40,6 +40,8 @@ add_library(cifar_nn
         oblivious_tree_train.cpp
         oblivious_tree_train.h
         tree_train.h
+        transform.cpp
+        transform.h
         )
 target_link_libraries(cifar_nn "${TORCH_LIBRARIES}" Eigen3::Eigen methods core models targets)
 enable_cxx14(cifar_nn)

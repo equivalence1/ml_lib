@@ -10,6 +10,7 @@
 #include <functional>
 #include <vector>
 #include <string>
+#include <algorithm>
 
 namespace experiments {
 
@@ -40,11 +41,15 @@ public:
 class DefaultOptimizerListener : public OptimizerBatchListener, OptimizerEpochListener {
 public:
     explicit DefaultOptimizerListener(int nBatchesReport,
+            float lrDecay = 10,
+            std::vector<int> decayEpochs = {},
             int nEpochsSave = -1,
             std::string savePath = "")
             : OptimizerBatchListener()
             , OptimizerEpochListener()
             , nBatchesReport_(nBatchesReport)
+            , lrDecay_(lrDecay)
+            , decayEpochs_(std::move(decayEpochs))
             , nEpochsSave_(nEpochsSave)
             , savePath_(std::move(savePath)) {
         epoch_ = 0;
@@ -77,9 +82,16 @@ public:
         }
         auto epochElapsedTime = std::chrono::high_resolution_clock::now() - epochStartTime_;
         auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(epochElapsedTime);
-        std::cout << " elapsed time since last epoch: " << elapsedTimeMs.count() << std::endl;
+        std::cout << " elapsed time since last epoch: " << elapsedTimeMs.count();
 
         epoch_ = epoch;
+
+        if (std::find(decayEpochs_.begin(), decayEpochs_.end(), epoch) != decayEpochs_.end()) {
+            std::cout << ", decaying lr: (" << (*lr) << " -> " << (*lr / lrDecay_) << ")";
+            *lr /= lrDecay_;
+        }
+
+        std::cout << std::endl;
     }
 
 private:
@@ -89,6 +101,8 @@ private:
     int nEpochsSave_;
     std::chrono::high_resolution_clock::time_point epochStartTime_;
     std::string savePath_;
+    float lrDecay_;
+    std::vector<int> decayEpochs_;
 
 };
 
@@ -116,6 +130,15 @@ using OptimizerPtr = std::shared_ptr<Optimizer>;
 
 template <typename TransformType>
 struct OptimizerArgs {
+    explicit OptimizerArgs(TransformType transform,
+            int epochs = 10,
+            torch::DeviceType device = torch::kCPU)
+            : transform_(std::move(transform))
+            , epochs_(epochs)
+            , device_(device) {
+
+    }
+
     std::shared_ptr<torch::optim::Optimizer> torchOptim_{nullptr};
 
     torch::data::DataLoaderOptions dloaderOptions_;
@@ -124,6 +147,8 @@ struct OptimizerArgs {
     std::function<double*(void)> lrPtrGetter_;
 
     int epochs_ = -1;
+
+    torch::DeviceType device_ = torch::kCPU;
 };
 
 // DefaultOptimizer
@@ -153,11 +178,17 @@ public:
             this->fireBatchResetListeners();
             int batchId = 0;
             for (auto& batch : *dloader) {
+                auto data = batch.data;
+                data = data.to(args_.device_);
+                auto target = batch.target;
+                target = target.to(args_.device_);
+
                 args_.torchOptim_->zero_grad();
-                auto prediction = model->forward(batch.data);
-                torch::Tensor lossVal = loss->value(prediction, batch.target);
+                auto prediction = model->forward(data);
+                torch::Tensor lossVal = loss->value(prediction, target);
                 lossVal.backward();
                 args_.torchOptim_->step();
+
                 this->fireOnBatchListeners(batchId, lossVal.item<float>());
                 batchId++;
             }
@@ -199,6 +230,5 @@ private:
     std::vector<OptimizerEpochListener*> epochListeners_;
 
 };
-
 
 }

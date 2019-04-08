@@ -1,3 +1,4 @@
+#include "common.h"
 #include <cifar_nn/lenet.h>
 #include <cifar_nn/cifar10_reader.hpp>
 #include <cifar_nn/optimizer.h>
@@ -24,13 +25,9 @@ int main(int argc, char* argv[]) {
 
     const std::string& path = "../../../../python/resources/cifar10/cifar-10-batches-bin";
     auto dataset = cifar::read_dataset(path);
-    dataset.first = dataset.first.to(device);
 
     auto transform = torch::data::transforms::Stack<>();
-    experiments::OptimizerArgs<decltype(transform)> args;
-    args.transform_ = std::move(transform);
-
-    args.epochs_ = 2;
+    experiments::OptimizerArgs<decltype(transform)> args(transform, 2, device);
 
     auto dloaderOptions = torch::data::DataLoaderOptions(4);
     args.dloaderOptions_ = std::move(dloaderOptions);
