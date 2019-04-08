@@ -39,7 +39,7 @@ private:
 
 class ResNetConv : public experiments::Model {
 public:
-    ResNetConv(torch::IntList numBlocks,
+    ResNetConv(std::vector<int> numBlocks,
                const std::function<experiments::ModelPtr(int, int, int)>& blocksBuilder);
 
     torch::Tensor forward(torch::Tensor x) override;
