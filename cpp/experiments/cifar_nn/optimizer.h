@@ -22,7 +22,7 @@ public:
 
     virtual void batchReset() = 0;
 
-    virtual void onBatch(int batchId, float batchLoss) = 0;
+    virtual void onBatch(int epoch, int batchId, float batchLoss) = 0;
 
     virtual ~OptimizerBatchListener() = default;
 };
@@ -38,72 +38,58 @@ public:
     virtual ~OptimizerEpochListener() = default;
 };
 
-class DefaultOptimizerListener : public OptimizerBatchListener, OptimizerEpochListener {
+class BatchReportOptimizerListener : public OptimizerBatchListener {
 public:
-    explicit DefaultOptimizerListener(int nBatchesReport,
-            float lrDecay = 10,
-            std::vector<int> decayEpochs = {},
-            int nEpochsSave = -1,
-            std::string savePath = "")
-            : OptimizerBatchListener()
-            , OptimizerEpochListener()
-            , nBatchesReport_(nBatchesReport)
-            , lrDecay_(lrDecay)
-            , decayEpochs_(std::move(decayEpochs))
-            , nEpochsSave_(nEpochsSave)
-            , savePath_(std::move(savePath)) {
-        epoch_ = 0;
-        runningLoss_ = 0.;
-    }
+    explicit BatchReportOptimizerListener(int nBatchesReport);
 
-    void batchReset() override {
-        runningLoss_ = 0.;
-    }
+    void batchReset() override;
 
-    void onBatch(int batchId, float batchLoss) override {
-        runningLoss_ += batchLoss;
-        if ((batchId + 1) % nBatchesReport_ != 0) {
-            return;
-        }
-        std::cout << "[" << epoch_ + 1 << ", " << (batchId + 1)
-                  << "] loss: " << (runningLoss_ / nBatchesReport_) << std::endl;
-        runningLoss_ = 0;
-    }
-
-    void epochReset() override {
-        epochStartTime_ = std::chrono::high_resolution_clock::now();
-    }
-
-    void onEpoch(int epoch, double* lr, ModelPtr model) override {
-        std::cout << "=== end of epoch #" << (epoch + 1) << ", lr = " << std::setprecision(3) << (*lr);
-        if (nEpochsSave_ > 0 && (epoch + 1) % nEpochsSave_ == 0) {
-            std::cout << ", saving model to '" << savePath_ << "'";
-            torch::save(model, savePath_);
-        }
-        auto epochElapsedTime = std::chrono::high_resolution_clock::now() - epochStartTime_;
-        auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(epochElapsedTime);
-        std::cout << " elapsed time since last epoch: " << elapsedTimeMs.count();
-
-        epoch_ = epoch;
-
-        if (std::find(decayEpochs_.begin(), decayEpochs_.end(), epoch) != decayEpochs_.end()) {
-            std::cout << ", decaying lr: (" << (*lr) << " -> " << (*lr / lrDecay_) << ")";
-            *lr /= lrDecay_;
-        }
-
-        std::cout << std::endl;
-    }
+    void onBatch(int epoch, int batchId, float batchLoss) override;
 
 private:
     int nBatchesReport_;
-    int epoch_;
     float runningLoss_;
-    int nEpochsSave_;
-    std::chrono::high_resolution_clock::time_point epochStartTime_;
-    std::string savePath_;
-    float lrDecay_;
-    std::vector<int> decayEpochs_;
 
+};
+
+class EpochReportOptimizerListener : public OptimizerEpochListener {
+public:
+    EpochReportOptimizerListener();
+
+    void epochReset() override;
+
+    void onEpoch(int epoch, double* lr, ModelPtr model) override;
+
+private:
+    std::chrono::high_resolution_clock::time_point epochStartTime_;
+};
+
+class LrDecayOptimizerListener : public OptimizerEpochListener {
+public:
+    LrDecayOptimizerListener(double lrDecay,
+            std::vector<int> decayEpochs);
+
+    void epochReset() override;
+
+    void onEpoch(int epoch, double* lr, ModelPtr model) override;
+
+private:
+    double lrDecay_;
+    std::vector<int> decayEpochs_;
+};
+
+class ModelSaveOptimizerListener : public OptimizerEpochListener {
+public:
+    ModelSaveOptimizerListener(int nEpochsSave,
+            std::string path);
+
+    void epochReset() override;
+
+    void onEpoch(int epoch, double* lr, ModelPtr model) override;
+
+private:
+    int nEpochsSave_;
+    std::string path_;
 };
 
 // Optimizer
@@ -119,9 +105,9 @@ public:
         this->train(ds, std::move(loss), std::move(model));
     }
 
-    virtual void registerBatchListener(OptimizerBatchListener* listener) = 0;
+    virtual void registerListener(std::shared_ptr<OptimizerBatchListener> listener) = 0;
 
-    virtual void registerEpochListener(OptimizerEpochListener* listener) = 0;
+    virtual void registerListener(std::shared_ptr<OptimizerEpochListener> listener) = 0;
 };
 
 using OptimizerPtr = std::shared_ptr<Optimizer>;
@@ -161,11 +147,11 @@ public:
 
     }
 
-    void registerBatchListener(OptimizerBatchListener* listener) override {
+    void registerListener(std::shared_ptr<OptimizerBatchListener> listener) override {
         batchListeners_.push_back(listener);
     }
 
-    void registerEpochListener(OptimizerEpochListener* listener) override {
+    void registerListener(std::shared_ptr<OptimizerEpochListener> listener) override {
         epochListeners_.push_back(listener);
     }
 
@@ -189,7 +175,7 @@ public:
                 lossVal.backward();
                 args_.torchOptim_->step();
 
-                this->fireOnBatchListeners(batchId, lossVal.item<float>());
+                this->fireOnBatchListeners(epoch, batchId, lossVal.item<float>());
                 batchId++;
             }
             double* lr = args_.lrPtrGetter_();
@@ -201,33 +187,35 @@ public:
 
 private:
     void fireEpochResetListeners() const {
-        for (auto* listener : epochListeners_) {
+        for (auto& listener : epochListeners_) {
             listener->epochReset();
         }
     }
 
     void fireOnEpochListeners(int epoch, double* lr, ModelPtr model) const {
-        for (auto* listener : epochListeners_) {
+        std::cout << std::endl;
+        for (auto& listener : epochListeners_) {
             listener->onEpoch(epoch, lr, model);
         }
+        std::cout << std::endl;
     }
 
     void fireBatchResetListeners() const {
-        for (auto* listener : batchListeners_) {
+        for (auto& listener : batchListeners_) {
             listener->batchReset();
         }
     }
 
-    void fireOnBatchListeners(int batchId, float batchLoss) const {
-        for (auto* listener : batchListeners_) {
-            listener->onBatch(batchId, batchLoss);
+    void fireOnBatchListeners(int epoch, int batchId, float batchLoss) const {
+        for (auto& listener : batchListeners_) {
+            listener->onBatch(epoch, batchId, batchLoss);
         }
     }
 
 private:
     OptimizerArgs<TransformType> args_;
-    std::vector<OptimizerBatchListener*> batchListeners_;
-    std::vector<OptimizerEpochListener*> epochListeners_;
+    std::vector<std::shared_ptr<OptimizerBatchListener>> batchListeners_;
+    std::vector<std::shared_ptr<OptimizerEpochListener>> epochListeners_;
 
 };
 

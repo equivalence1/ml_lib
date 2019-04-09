@@ -20,11 +20,17 @@ int main(int argc, char* argv[]) {
         std::cout << "Using CPU device for training" << std::endl;
     }
 
+    // Init model
+
     auto lenet = std::make_shared<LeNet>();
     lenet->to(device);
 
+    // Read dataset
+
     const std::string& path = "../../../../python/resources/cifar10/cifar-10-batches-bin";
     auto dataset = cifar::read_dataset(path);
+
+    // Create opimizer
 
     auto transform = torch::data::transforms::Stack<>();
     experiments::OptimizerArgs<decltype(transform)> args(transform, 2, device);
@@ -42,23 +48,21 @@ int main(int argc, char* argv[]) {
     auto optimizer = std::make_shared<experiments::DefaultOptimizer<decltype(args.transform_)>>(args);
     auto loss = std::make_shared<CrossEntropyLoss>();
 
-    experiments::DefaultOptimizerListener optimizerListener(2000);
-    optimizer->registerBatchListener(&optimizerListener);
+    // Attach listeners
+
+    attachDefaultListeners(optimizer, 50000 / 4 / 10, "lenet_checkpoint.pt");
+
+    // Train
+
     optimizer->train(dataset.first, loss, lenet);
 
-    // TODO evaluate on CPU, otherwise I get OOM error. Need to investigate it.
-    lenet->to(torch::kCPU);
-    lenet->eval();
-    auto testResModel = lenet->forward(dataset.second.data());
-    auto testResReal = dataset.second.targets();
-    int rightAnswersCnt = 0;
+    // Eval model
 
-    for (int i = 0; i < testResModel.size(0); ++i) {
-        if (torch::argmax(testResModel[i]).item<float>() == testResReal[i].item<float>()) {
-            rightAnswersCnt++;
-        }
-    }
+    auto acc = evalModelTestAccEval(dataset.second,
+            lenet,
+            device,
+            transform);
 
     std::cout << "LeNet test accuracy: " << std::setprecision(2)
-            << rightAnswersCnt * 100.0f / testResReal.size(0) << "%" << std::endl;
+            << acc << "%" << std::endl;
 }

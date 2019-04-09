@@ -36,13 +36,20 @@ int main(int argc, char* argv[]) {
     auto optimizer = getDefaultCifar10Optimizer(400, resnet, device);
     auto loss = std::make_shared<CrossEntropyLoss>();
 
+    // AttachListeners
+
+    attachDefaultListeners(optimizer, 50000 / 128 / 10, "resnet_checkpoint.pt");
+
     // Train model
 
     optimizer->train(dataset.first, loss, resnet);
 
     // Evaluate on test set
 
-    auto acc = evalModelTestAccEval(dataset.second, resnet);
+    auto acc = evalModelTestAccEval(dataset.second,
+            resnet,
+            device,
+            getDefaultCifar10TestTransform());
 
     std::cout << "ResNet test accuracy: " << std::setprecision(2)
               << acc << "%" << std::endl;
