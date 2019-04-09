@@ -6,6 +6,9 @@ include_directories(../../experiments)
 add_executable(lenet lenet.cpp common.h common.cpp)
 target_link_libraries(lenet "${TORCH_LIBRARIES}" cifar_nn)
 
+add_executable(lenet_save_restore lenet_save_restore.cpp)
+target_link_libraries(lenet_save_restore "${TORCH_LIBRARIES}" cifar_nn)
+
 add_executable(vgg vgg.cpp common.h common.cpp)
 target_link_libraries(vgg "${TORCH_LIBRARIES}" cifar_nn)
 
