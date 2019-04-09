@@ -2,7 +2,7 @@ cmake_version()
 
 project(apps)
 
-add_subdirectory(mkl_example)
+#add_subdirectory(mkl_example)
 add_subdirectory(test_app)
 add_subdirectory(devices_info)
 add_subdirectory(train_ot)
