@@ -7,7 +7,7 @@
 #include <vector>
 
 enum class ResNetConfiguration {
-    ResNet16,
+    ResNet34,
 };
 
 // TODO(equivalence1) ResNet and Vgg don't support save/restore features, since

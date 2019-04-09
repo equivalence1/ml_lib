@@ -98,7 +98,7 @@ torch::Tensor ResNetClassifier::forward(torch::Tensor x) {
 // ResNet
 
 ResNet::ResNet(ResNetConfiguration cfg) {
-    if (cfg == ResNetConfiguration::ResNet16) {
+    if (cfg == ResNetConfiguration::ResNet34) {
         std::function<experiments::ModelPtr(int, int, int)> blocksBuilder = [](int inChannels, int outChannels, int stride){
             return std::make_shared<BasicBlock>(inChannels, outChannels, stride);
         };

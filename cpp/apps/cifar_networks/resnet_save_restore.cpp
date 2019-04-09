@@ -9,8 +9,8 @@
 
 
 int main(int argc, char* argv[]) {
-    auto resnet = std::make_shared<ResNet>(ResNetConfiguration::ResNet16);
-    auto resnet2 = std::make_shared<ResNet>(ResNetConfiguration::ResNet16);
+    auto resnet = std::make_shared<ResNet>(ResNetConfiguration::ResNet34);
+    auto resnet2 = std::make_shared<ResNet>(ResNetConfiguration::ResNet34);
 
     torch::Tensor fakeBatch = torch::randn({10, 3, 32, 32}, torch::kFloat32);
 
