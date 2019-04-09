@@ -12,8 +12,14 @@ target_link_libraries(lenet_save_restore "${TORCH_LIBRARIES}" cifar_nn)
 add_executable(vgg vgg.cpp common.h common.cpp)
 target_link_libraries(vgg "${TORCH_LIBRARIES}" cifar_nn)
 
+add_executable(vgg_save_restore vgg_save_restore.cpp)
+target_link_libraries(vgg_save_restore "${TORCH_LIBRARIES}" cifar_nn)
+
 add_executable(resnet resnet.cpp common.h common.cpp)
 target_link_libraries(resnet "${TORCH_LIBRARIES}" cifar_nn)
+
+add_executable(resnet_save_restore resnet_save_restore.cpp)
+target_link_libraries(resnet_save_restore "${TORCH_LIBRARIES}" cifar_nn)
 
 add_executable(check_cuda_libtorch check_cuda_libtorch.cpp)
 target_link_libraries(check_cuda_libtorch "${TORCH_LIBRARIES}")

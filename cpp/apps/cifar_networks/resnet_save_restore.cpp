@@ -1,4 +1,4 @@
-#include <cifar_nn/lenet.h>
+#include <cifar_nn/resnet.h>
 #include <cifar_nn/model.h>
 
 #include <torch/torch.h>
@@ -9,23 +9,23 @@
 
 
 int main(int argc, char* argv[]) {
-    auto lenet = std::make_shared<LeNet>();
-    auto lenet2 = std::make_shared<LeNet>();
+    auto resnet = std::make_shared<ResNet>(ResNetConfiguration::ResNet16);
+    auto resnet2 = std::make_shared<ResNet>(ResNetConfiguration::ResNet16);
 
     torch::Tensor fakeBatch = torch::randn({10, 3, 32, 32}, torch::kFloat32);
 
-    auto resBeforeSave = lenet->forward(fakeBatch);
-    auto resBeforeSave2 = lenet2->forward(fakeBatch);
+    auto resBeforeSave = resnet->forward(fakeBatch);
+    auto resBeforeSave2 = resnet2->forward(fakeBatch);
 
     assert(!resBeforeSave.equal(resBeforeSave2));
 
     std::cout << "saving net" << std::endl;
-    torch::save(lenet, "lenet_save_restore_test.pt");
+    torch::save(resnet, "resnet_save_restore_test.pt");
     std::cout << "restoring net" << std::endl;
-    torch::load(lenet2, "lenet_save_restore_test.pt");
+    torch::load(resnet2, "resnet_save_restore_test.pt");
     std::cout << "done" << std::endl;
 
-    auto resAfterLoad = lenet2->forward(fakeBatch);
+    auto resAfterLoad = resnet2->forward(fakeBatch);
 
     std::cout << resBeforeSave << std::endl;
     std::cout << resAfterLoad << std::endl;
