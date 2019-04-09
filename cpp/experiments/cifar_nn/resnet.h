@@ -7,6 +7,7 @@
 #include <vector>
 
 enum class ResNetConfiguration {
+    ResNet18,
     ResNet34,
 };
 
@@ -76,6 +77,9 @@ public:
     torch::Tensor forward(torch::Tensor x) override;
 
     ~ResNet() override = default;
+
+private:
+    void init(std::vector<int> nBlocks);
 
 private:
     std::shared_ptr<ResNetConv> conv_{nullptr};

@@ -99,18 +99,24 @@ torch::Tensor ResNetClassifier::forward(torch::Tensor x) {
 
 ResNet::ResNet(ResNetConfiguration cfg) {
     if (cfg == ResNetConfiguration::ResNet34) {
-        std::function<experiments::ModelPtr(int, int, int)> blocksBuilder = [](int inChannels, int outChannels, int stride){
-            return std::make_shared<BasicBlock>(inChannels, outChannels, stride);
-        };
-        conv_ = std::make_shared<ResNetConv>(
-                std::vector<int>({3, 4, 6, 3}),
-                blocksBuilder);
-        classifier_ = std::make_shared<ResNetClassifier>(1);
-        conv_ = register_module("conv_", conv_);
-        classifier_ = register_module("classifier", classifier_);
+        init(std::move(std::vector<int>({3, 4, 6, 3})));
+    } else if (cfg == ResNetConfiguration::ResNet18) {
+        init(std::move(std::vector<int>({2, 2, 2, 2})));
     } else {
         throw "Unsupported configuration";
     }
+}
+
+void ResNet::init(std::vector<int> nBlocks) {
+    std::function<experiments::ModelPtr(int, int, int)> blocksBuilder = [](int inChannels, int outChannels, int stride){
+        return std::make_shared<BasicBlock>(inChannels, outChannels, stride);
+    };
+    conv_ = std::make_shared<ResNetConv>(
+            nBlocks,
+            blocksBuilder);
+    classifier_ = std::make_shared<ResNetClassifier>(1);
+    conv_ = register_module("conv_", conv_);
+    classifier_ = register_module("classifier", classifier_);
 }
 
 torch::Tensor ResNet::forward(torch::Tensor x) {

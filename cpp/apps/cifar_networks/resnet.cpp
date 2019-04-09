@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
 
     // Init model
 
-    auto resnet = std::make_shared<ResNet>(ResNetConfiguration::ResNet34);
+    auto resnet = std::make_shared<ResNet>(ResNetConfiguration::ResNet18);
     resnet->to(device);
 
     // Load data
