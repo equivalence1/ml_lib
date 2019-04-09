@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
 
     // Load data
 
-    const std::string& path = "../../../../python/resources/cifar10/cifar-10-batches-bin";
+    const std::string& path = "../../../../resources/cifar10/cifar-10-batches-bin";
     auto dataset = cifar::read_dataset(path);
 
     // Create optimizer
