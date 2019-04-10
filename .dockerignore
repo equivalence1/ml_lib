@@ -1,0 +1,6 @@
+resources
+build
+.git
+cmake-build-debug
+cmake-build-release
+Dockerfile
