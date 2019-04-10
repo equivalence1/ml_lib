@@ -14,6 +14,8 @@ add_library(util
         exception.cpp
         parallel_executor.h
         parallel_executor.cpp
+        city.cpp
+        city.h
         )
 
 enable_cxx14(util)

@@ -42,6 +42,13 @@ public:
     Vec target() const {
         return target_;
     }
+
+    const float* samples() const {
+        return data_.arrayRef().data();
+    }
+    const float* labels() const {
+        return target_.arrayRef().data();
+    }
 private:
     Mx data_;
     Vec target_;
