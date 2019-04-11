@@ -1,0 +1,5 @@
+{
+  "boosting_type": "Plain",
+  "iterations" : 1000,
+  "logging_level" : "Debug"
+}

@@ -3,11 +3,13 @@ cmake_version()
 project(cpp_root)
 
 add_subdirectory(apps)
+add_subdirectory(apps/train_catboost)
 
 add_subdirectory(core)
 add_subdirectory(vec_tools)
 add_subdirectory(mx_tools)
 add_subdirectory(models)
+add_subdirectory(models/polynom)
 add_subdirectory(methods)
 add_subdirectory(targets)
 add_subdirectory(metrics)

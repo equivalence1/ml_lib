@@ -7,7 +7,25 @@ find_package(Torch REQUIRED)
 option(USE_CUDA  "Build with CUDA")
 
 include(GNUInstallDirs)
-#add_compile_options(-Wall -Wextra -pedantic -Werror)
+
+find_library(CATBOOST catboost)
+find_path(CATBOOST_INCLUDES_API catboost_api.h contrib/catboost)
+include_directories(${CATBOOST_INCLUDES_API})
+include_directories(contrib/catboost/)
+# WTF this not work...
+#IF (WIN32)
+##    add_library(catboost STATIC IMPORTED)
+##    set_property(TARGET catboost PROPERTY IMPORTED_LOCATION "libcatboost.lib")
+#ELSE()
+#    IF(APPLE)
+#        add_library(catboost SHARED IMPORTED)
+#        set_property(TARGET catboost PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/libcatboost.dylib)
+#    ELSE()
+#        add_library(catboost SHARED IMPORTED)
+#        set_property(TARGET catboost PROPERTY IMPORTED_LOCATION "libcatboost.so")
+#    ENDIF())
+#ENDIF()
+
 
 add_subdirectory(contrib/googletest)
 add_subdirectory(contrib/pybind11)
