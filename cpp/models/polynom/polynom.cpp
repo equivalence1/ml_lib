@@ -1,6 +1,6 @@
-#include <util/exception.h>
 #include "polynom.h"
-
+#include <util/exception.h>
+#include <map>
 
 struct PathBit {
     int Bits = 0;
@@ -70,14 +70,23 @@ void PolynomBuilder::AddTree(const TSymmetricTree& tree)  {
             continue;
         }
         PolynomStructure polynomStructure;
+        std::map<int, float> polynom;
+
         for (int depth = 0; depth < maxDepth; ++depth) {
             int mask = 1 << depth;
             if (i & mask) {
                 BinarySplit split;
                 split.Feature = tree.Features[depth];
                 split.Condition = tree.Conditions[depth];
-                polynomStructure.Splits.push_back(split);
+                if (polynom.count(split.Feature)) {
+                    polynom[split.Feature] = std::max<float>(split.Condition, polynom[split.Feature]);
+                } else {
+                    polynom[split.Feature] = split.Condition;
+                }
             }
+        }
+        for (const auto& [split, condition] : polynom) {
+            polynomStructure.Splits.push_back({split, condition});
         }
         SortUnique(polynomStructure.Splits);
         auto& dst = EnsemblePolynoms[polynomStructure];
