@@ -142,10 +142,10 @@ __global__ void PolynomBackwardImpl(const float* features,
     out += sampleId * featuresCount;
 
     outDer += sampleId * outputDim;
-    float outputDer = 0;
-    for (int dim = 0; dim < outputDer; ++dim) {
-        outputDer += outDer[dim];
-    }
+//    float outputDer = 0;
+//    for (int dim = 0; dim < outputDim; ++dim) {
+//        outputDer += outDer[dim];
+//    }
 
     //out: batch_elem0 dim0, dim1, dimk batch_elem1 dim0 dim1 dimk
     //so threads
@@ -187,7 +187,11 @@ __global__ void PolynomBackwardImpl(const float* features,
         }
 
         //featureDerivative is outputDer * total value before monom * monom derivative
-        const float derMultiplier = __ldg(leafSum + polynomId) * outputDer;
+        float derMultiplier  = 0;
+        for (int dim = 0; dim < outputDim; ++dim) {
+            derMultiplier += __ldg(leafSum + polynomId) * __ldg(outDer + dim);
+        }
+
         #pragma unroll
         for (int i = 0; i < MaxDepth; ++i) {
             if (i < depth) {
@@ -210,7 +214,7 @@ __global__ void PolynomBackwardImpl(const float* features,
         for (int k = 0; k < memoryBlocks; ++k) {
             der += localFeaturesDer[i * memoryBlocks + k];
         }
-        out[i] = localFeaturesDer[i * memoryBlocks + i];
+        atomicAdd(out + i,  localFeaturesDer[i * memoryBlocks + i]);
     }
 }
 
@@ -237,6 +241,7 @@ void PolynomBackward(const float* features,
 
     const int maxDepth = 6;
     const int K = 16;
-    PolynomBackwardImpl<maxDepth, blockSize, K> <<<numBlocks, blockSize, 0, stream >>>(features, featuresCount, outDer, outputDim, leafSum, polynomDepths, polynomOffset, featureIds, conditions, polynomCount, out);
+    PolynomBackwardImpl<maxDepth, blockSize, K> <<<numBlocks, blockSize, 0, stream >>>(features, featuresCount, outDer, outputDim,
+        leafSum, polynomDepths, polynomOffset, featureIds, conditions, polynomCount, out);
 
 }
