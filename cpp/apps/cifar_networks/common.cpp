@@ -36,14 +36,14 @@ TransformType getDefaultCifar10TrainTransform() {
 TransformType getDefaultCifar10TestTransform() {
     // transforms are similar to https://github.com/kuangliu/pytorch-cifar/blob/master/main.py#L38
 
-    torch::data::transforms::Normalize<> normTransformTrain(
-            {0.4914, 0.4822, 0.4465},
-            {0.2023, 0.1994, 0.2010});
-    torch::data::transforms::Stack<> stackTransformTrain;
+    auto normTransformTrain = std::make_shared<torch::data::transforms::Normalize<>>(
+            std::vector<double>({0.4914, 0.4822, 0.4465}),
+            std::vector<double>({0.2023, 0.1994, 0.2010}));
+    auto stackTransformTrain = std::make_shared<torch::data::transforms::Stack<>>();
 
-    auto transformFunc = [&](std::vector<torch::data::Example<>> batch){
-        batch = normTransformTrain.apply_batch(batch);
-        return stackTransformTrain.apply_batch(batch);
+    auto transformFunc = [=](std::vector<torch::data::Example<>> batch){
+        batch = normTransformTrain->apply_batch(batch);
+        return stackTransformTrain->apply_batch(batch);
     };
 
     TransformType transform(transformFunc);
