@@ -46,8 +46,8 @@ torch::Tensor RandomCrop::pad(torch::Tensor x) {
     auto xAccessor = x.accessor<float, 3>();
 
     for (int c = 0; c < x.size(0); ++c) {
-        for (int i = 0; i < x.size(0); ++i) {
-            for (int j = 0; j < x.size(1); ++j) {
+        for (int i = 0; i < x.size(1); ++i) {
+            for (int j = 0; j < x.size(2); ++j) {
                 tAccessor[c][i + padY][j + padX] = xAccessor[c][i][j];
             }
         }
