@@ -33,12 +33,12 @@ void attachDefaultListeners(const OptimizerType<T>& optimizer,
     optimizer->registerListener(epochReportOptimizerListener);
 
     // see https://github.com/kuangliu/pytorch-cifar/blob/master/README.md#learning-rate-adjustment
-    auto lrDecayListener = std::make_shared<experiments::LrDecayOptimizerListener>(10,
-                                                                                   std::vector<int>({150, 250, 350}));
-    optimizer->registerListener(lrDecayListener);
+//    auto lrDecayListener = std::make_shared<experiments::LrDecayOptimizerListener>(10,
+//                                                                                   std::vector<int>({150, 250, 350}));
+//    optimizer->registerListener(lrDecayListener);
 
-    auto msListener = std::make_shared<experiments::ModelSaveOptimizerListener>(1, savePath);
-    optimizer->registerListener(msListener);
+//    auto msListener = std::make_shared<experiments::ModelSaveOptimizerListener>(1, savePath);
+//    optimizer->registerListener(msListener);
 }
 
 template <typename T>
@@ -62,7 +62,7 @@ float evalModelTestAccEval(TensorPairDataset& ds,
         prediction = prediction.to(torch::kCPU);
 
         for (int i = 0; i < target.size(0); ++i) {
-            if (target[i].item<long>() == torch::argmax(prediction[i]).item<long>()) {
+            if (target[i].item<int64_t>() == torch::argmax(prediction[i]).item<int64_t>()) {
                 rightAnswersCnt++;
             }
         }

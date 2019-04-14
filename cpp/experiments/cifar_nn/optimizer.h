@@ -185,7 +185,6 @@ public:
                 this->fireOnBatchListeners(epoch, batchId, lossVal.item<float>());
                 batchId++;
             }
-            std::cout << "epoch end" << std::endl;
             double* lr = args_.lrPtrGetter_();
             this->fireOnEpochListeners(epoch, lr, model);
         }

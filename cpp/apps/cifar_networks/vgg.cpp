@@ -45,6 +45,7 @@ int main(int argc, char* argv[]) {
     // Init model
 
     auto vgg = std::make_shared<Vgg>(VggConfiguration::Vgg16);
+//    auto vgg = std::make_shared<ResNet>(ResNetConfiguration::ResNet18);
     vgg->to(device);
 
     // Load data
@@ -54,18 +55,18 @@ int main(int argc, char* argv[]) {
 
     // Create optimizer
 
-    auto optimizer = getDefaultCifar10Optimizer(400, vgg, device);
+    auto optimizer = getDefaultCifar10Optimizer(1000, vgg, device);
     auto loss = std::make_shared<CrossEntropyLoss>();
 
     // AttachListeners
 
     attachDefaultListeners(optimizer, 50000 / 128 / 10, "vgg_checkpoint.pt");
+    auto mds = dataset.second.map(getDefaultCifar10TestTransform());
+
     experiments::Optimizer::emplaceEpochListener<EpochEndCallback>(optimizer.get(), [&](int epoch, experiments::Model& model) {
         model.eval();
 
-        auto mds = dataset.second.map(getDefaultCifar10TestTransform());
         auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(128));
-
         int rightAnswersCnt = 0;
 
         for (auto& batch : *dloader) {
@@ -75,12 +76,13 @@ int main(int argc, char* argv[]) {
 
             torch::Tensor prediction = model.forward(data);
             prediction = torch::argmax(prediction, 1);
-            prediction = prediction.to(torch::kCPU);
 
+            prediction = prediction.to(torch::kCPU);
 
             auto targetAccessor = target.accessor<int64_t, 1>();
             auto predictionsAccessor = prediction.accessor<int64_t, 1>();
             int size = target.size(0);
+
             for (int i = 0; i < size; ++i) {
                 const int targetClass = targetAccessor[i];
                 const int predictionClass = predictionsAccessor[i];
@@ -98,12 +100,12 @@ int main(int argc, char* argv[]) {
     optimizer->train(dataset.first, loss, vgg);
 
     // Evaluate on test set
+    auto acc = evalModelTestAccEval(dataset.second,
+                                    vgg,
+                                    device,
+                                    getDefaultCifar10TestTransform());
 
-//    auto acc = evalModelTestAccEval(dataset.second,
-//            vgg,
-//            device,
-//            getDefaultCifar10TestTransform());
-//
-//    std::cout << "ResNet test accuracy: " << std::setprecision(2)
-//              << acc << "%" << std::endl;
+    std::cout << "VGG test accuracy: " << std::setprecision(2)
+              << acc << "%" << std::endl;
+    return 0;
 }

@@ -22,7 +22,7 @@ TransformType getDefaultCifar10TrainTransform() {
     auto flipTransformTrain = std::make_shared<experiments::RandomHorizontalFlip>(0.5);
     auto stackTransformTrain = std::make_shared<torch::data::transforms::Stack<>>();
 
-    auto transformFunc = [=](std::vector<torch::data::Example<>> batch){
+    auto transformFunc = [=](std::vector<torch::data::Example<>>&& batch){
         batch = normTransformTrain->apply_batch(batch);
         batch = flipTransformTrain->apply_batch(batch);
         batch = cropTransformTrain->apply_batch(batch);
@@ -37,11 +37,11 @@ TransformType getDefaultCifar10TestTransform() {
     // transforms are similar to https://github.com/kuangliu/pytorch-cifar/blob/master/main.py#L38
 
     auto normTransformTrain = std::make_shared<torch::data::transforms::Normalize<>>(
-            std::vector<double>({0.4914, 0.4822, 0.4465}),
-            std::vector<double>({0.2023, 0.1994, 0.2010}));
+        std::vector<double>({0.4914, 0.4822, 0.4465}),
+        std::vector<double>({0.2023, 0.1994, 0.2010}));
     auto stackTransformTrain = std::make_shared<torch::data::transforms::Stack<>>();
 
-    auto transformFunc = [=](std::vector<torch::data::Example<>> batch){
+    auto transformFunc = [=](std::vector<torch::data::Example<>>&& batch){
         batch = normTransformTrain->apply_batch(batch);
         return stackTransformTrain->apply_batch(batch);
     };
@@ -57,16 +57,16 @@ OptimizerType<TransformType> getDefaultCifar10Optimizer(int epochs, const experi
 
     args.epochs_ = epochs;
 
-    auto dloaderOptions = torch::data::DataLoaderOptions(128);
-    args.dloaderOptions_ = std::move(dloaderOptions);
+    args.dloaderOptions_ = torch::data::DataLoaderOptions(128);
 
-    torch::optim::SGDOptions opt(0.1);
-    opt.momentum_ = 0.9;
-    opt.weight_decay_ = 5e-4;
-    auto optim = std::make_shared<torch::optim::SGD>(model->parameters(), opt);
+    torch::optim::AdamOptions opt(0.001);
+//    opt.momentum_ = 0.9;
+//    opt.weight_decay_ = 5e-4;
+    auto optim = std::make_shared<torch::optim::Adam>(model->parameters(), opt);
     args.torchOptim_ = optim;
 
-    args.lrPtrGetter_ = [&](){return &optim->options.learning_rate_;};
+    auto learningRatePtr = &(optim->options.learning_rate_);
+    args.lrPtrGetter_ = [=](){return learningRatePtr;};
 
     auto optimizer = std::make_shared<experiments::DefaultOptimizer<TransformType>>(args);
     return optimizer;
