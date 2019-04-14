@@ -107,6 +107,12 @@ public:
 
     virtual void registerListener(std::shared_ptr<OptimizerBatchListener> listener) = 0;
 
+    template <class Listener, class ... Args>
+    static void emplaceEpochListener(Optimizer* optimizer, Args... args) {
+        std::shared_ptr<OptimizerEpochListener> listener(new Listener(std::forward<Args>(args)...));
+        optimizer->registerListener(listener);
+    }
+
     virtual void registerListener(std::shared_ptr<OptimizerEpochListener> listener) = 0;
 };
 
@@ -162,6 +168,7 @@ public:
         for (int epoch = 0; epoch < args_.epochs_; epoch++) {
             this->fireEpochResetListeners();
             this->fireBatchResetListeners();
+            model->train(true);
             int batchId = 0;
             for (auto& batch : *dloader) {
                 auto data = batch.data;
@@ -178,6 +185,7 @@ public:
                 this->fireOnBatchListeners(epoch, batchId, lossVal.item<float>());
                 batchId++;
             }
+            std::cout << "epoch end" << std::endl;
             double* lr = args_.lrPtrGetter_();
             this->fireOnEpochListeners(epoch, lr, model);
         }

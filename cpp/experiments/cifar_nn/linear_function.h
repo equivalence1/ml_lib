@@ -4,7 +4,7 @@
 #include <torch/csrc/autograd/function.h>
 #include <torch/csrc/autograd/edge.h>
 
-#include <eigen3/Eigen/Core>
+#include <Eigen/Core>
 #include <Eigen/LU>
 
 #include <iostream>

@@ -2,6 +2,7 @@ cmake_version()
 project(cifar_nn)
 
 find_package(Eigen3 REQUIRED NO_MODULE)
+include_directories(${EIGEN_INCLUDE_DIR})
 
 add_library(cifar_nn
         em_like_train.h
@@ -43,7 +44,7 @@ add_library(cifar_nn
         transform.cpp
         transform.h
         )
-target_link_libraries(cifar_nn "${TORCH_LIBRARIES}" Eigen3::Eigen methods core models targets)
+target_link_libraries(cifar_nn "${TORCH_LIBRARIES}"  Eigen3::Eigen methods core models targets)
 enable_cxx14(cifar_nn)
 
 pybind11_add_module(cifar_nn_py py_module.cpp)

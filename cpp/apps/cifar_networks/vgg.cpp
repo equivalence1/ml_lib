@@ -10,6 +10,28 @@
 #include <memory>
 #include <iostream>
 
+class EpochEndCallback : public experiments::OptimizerEpochListener {
+public:
+    template <class Callback>
+    EpochEndCallback(Callback callback)
+    : Callback_(std::move(callback)) {
+
+    }
+
+
+    void epochReset() override {
+
+    }
+
+    void onEpoch(int epoch, double* lr, experiments::ModelPtr model) override {
+        Callback_(epoch, *model);
+
+    }
+
+private:
+    std::function<void(int, experiments::Model& model)> Callback_;
+};
+
 int main(int argc, char* argv[]) {
     auto device = torch::kCPU;
     if (argc > 1 && std::string(argv[1]) == std::string("CUDA")
@@ -38,6 +60,38 @@ int main(int argc, char* argv[]) {
     // AttachListeners
 
     attachDefaultListeners(optimizer, 50000 / 128 / 10, "vgg_checkpoint.pt");
+    experiments::Optimizer::emplaceEpochListener<EpochEndCallback>(optimizer.get(), [&](int epoch, experiments::Model& model) {
+        model.eval();
+
+        auto mds = dataset.second.map(getDefaultCifar10TestTransform());
+        auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(128));
+
+        int rightAnswersCnt = 0;
+
+        for (auto& batch : *dloader) {
+            auto data = batch.data;
+            data = data.to(device);
+            torch::Tensor target = batch.target;
+
+            torch::Tensor prediction = model.forward(data);
+            prediction = torch::argmax(prediction, 1);
+            prediction = prediction.to(torch::kCPU);
+
+
+            auto targetAccessor = target.accessor<int64_t, 1>();
+            auto predictionsAccessor = prediction.accessor<int64_t, 1>();
+            int size = target.size(0);
+            for (int i = 0; i < size; ++i) {
+                const int targetClass = targetAccessor[i];
+                const int predictionClass = predictionsAccessor[i];
+                if (targetClass == predictionClass) {
+                    rightAnswersCnt++;
+                }
+            }
+        }
+
+        std::cout << "Test accuracy: " <<  rightAnswersCnt * 100.0f / dataset.second.size().value() << std::endl;
+    });
 
     // Train model
 
@@ -45,11 +99,11 @@ int main(int argc, char* argv[]) {
 
     // Evaluate on test set
 
-    auto acc = evalModelTestAccEval(dataset.second,
-            vgg,
-            device,
-            getDefaultCifar10TestTransform());
-
-    std::cout << "ResNet test accuracy: " << std::setprecision(2)
-              << acc << "%" << std::endl;
+//    auto acc = evalModelTestAccEval(dataset.second,
+//            vgg,
+//            device,
+//            getDefaultCifar10TestTransform());
+//
+//    std::cout << "ResNet test accuracy: " << std::setprecision(2)
+//              << acc << "%" << std::endl;
 }
