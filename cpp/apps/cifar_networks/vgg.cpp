@@ -10,28 +10,6 @@
 #include <memory>
 #include <iostream>
 
-class EpochEndCallback : public experiments::OptimizerEpochListener {
-public:
-    template <class Callback>
-    EpochEndCallback(Callback callback)
-    : Callback_(std::move(callback)) {
-
-    }
-
-
-    void epochReset() override {
-
-    }
-
-    void onEpoch(int epoch, double* lr, experiments::ModelPtr model) override {
-        Callback_(epoch, *model);
-
-    }
-
-private:
-    std::function<void(int, experiments::Model& model)> Callback_;
-};
-
 int main(int argc, char* argv[]) {
     auto device = torch::kCPU;
     if (argc > 1 && std::string(argv[1]) == std::string("CUDA")
@@ -45,7 +23,6 @@ int main(int argc, char* argv[]) {
     // Init model
 
     auto vgg = std::make_shared<Vgg>(VggConfiguration::Vgg16);
-//    auto vgg = std::make_shared<ResNet>(ResNetConfiguration::ResNet18);
     vgg->to(device);
 
     // Load data
@@ -63,7 +40,7 @@ int main(int argc, char* argv[]) {
     attachDefaultListeners(optimizer, 50000 / 128 / 10, "vgg_checkpoint.pt");
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
 
-    experiments::Optimizer::emplaceEpochListener<EpochEndCallback>(optimizer.get(), [&](int epoch, experiments::Model& model) {
+    experiments::Optimizer::emplaceEpochListener<experiments::EpochEndCallback>(optimizer.get(), [&](int epoch, experiments::Model& model) {
         model.eval();
 
         auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(128));

@@ -92,6 +92,27 @@ private:
     std::string path_;
 };
 
+class EpochEndCallback : public experiments::OptimizerEpochListener {
+public:
+    template <class Callback>
+    EpochEndCallback(Callback callback)
+            : callback_(std::move(callback)) {
+
+    }
+
+
+    void epochReset() override {
+
+    }
+
+    void onEpoch(int epoch, double* lr, experiments::ModelPtr model) override {
+        callback_(epoch, *model);
+    }
+
+private:
+    std::function<void(int, experiments::Model& model)> callback_;
+};
+
 // Optimizer
 
 class Optimizer {
