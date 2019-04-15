@@ -10,7 +10,8 @@
 // NOTE: These functions provide CityHash 1.0 implementation whose results are *different* from
 // the mainline version of CityHash.
 
-
+#include <cstdint>
+#include <cstring>
 
 using uint128 = std::pair<uint64_t, uint64_t>;
 
