@@ -22,24 +22,8 @@ using OptimizerType = std::shared_ptr<experiments::DefaultOptimizer<T>>;
 OptimizerType<TransformType> getDefaultCifar10Optimizer(int epochs, const experiments::ModelPtr& model,
         torch::DeviceType device);
 
-template <typename T>
-void attachDefaultListeners(const OptimizerType<T>& optimizer,
-        int nBatchesReport, std::string savePath) {
-    // report 10 times per epoch
-    auto brListener = std::make_shared<experiments::BatchReportOptimizerListener>(nBatchesReport);
-    optimizer->registerListener(brListener);
-
-    auto epochReportOptimizerListener = std::make_shared<experiments::EpochReportOptimizerListener>();
-    optimizer->registerListener(epochReportOptimizerListener);
-
-    // see https://github.com/kuangliu/pytorch-cifar/blob/master/README.md#learning-rate-adjustment
-//    auto lrDecayListener = std::make_shared<experiments::LrDecayOptimizerListener>(10,
-//                                                                                   std::vector<int>({150, 250, 350}));
-//    optimizer->registerListener(lrDecayListener);
-
-//    auto msListener = std::make_shared<experiments::ModelSaveOptimizerListener>(1, savePath);
-//    optimizer->registerListener(msListener);
-}
+void attachDefaultListeners(const experiments::OptimizerPtr& optimizer,
+        int nBatchesReport, std::string savePath);
 
 template <typename T>
 float evalModelTestAccEval(TensorPairDataset& ds,

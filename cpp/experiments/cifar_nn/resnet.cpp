@@ -124,3 +124,11 @@ torch::Tensor ResNet::forward(torch::Tensor x) {
     x = classifier_->forward(x);
     return x;
 }
+
+experiments::ModelPtr ResNet::conv() {
+    return conv_;
+}
+
+experiments::ModelPtr ResNet::classifier() {
+    return classifier_;
+}

@@ -56,11 +56,15 @@ private:
 
 // Vgg
 
-class Vgg : public experiments::Model {
+class Vgg : public experiments::ConvModel {
 public:
     explicit Vgg(VggConfiguration cfg);
 
     torch::Tensor forward(torch::Tensor x) override;
+
+    experiments::ModelPtr conv() override;
+
+    experiments::ModelPtr classifier() override;
 
     ~Vgg() override = default;
 

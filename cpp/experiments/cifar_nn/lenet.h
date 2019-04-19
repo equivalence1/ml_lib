@@ -4,6 +4,8 @@
 
 #include <torch/torch.h>
 
+#include <memory>
+
 // LeNetConv
 
 class LeNetConv : public experiments::Model {
@@ -19,18 +21,37 @@ private:
     torch::nn::Conv2d conv2_{nullptr};
 };
 
-// LeNet
+// LeNetClassifier
 
-class LeNet : public LeNetConv {
+class LeNetClassifier : public experiments::Model {
 public:
-    LeNet();
+    LeNetClassifier();
 
     torch::Tensor forward(torch::Tensor x) override;
 
-    ~LeNet() override = default;
+    ~LeNetClassifier() override = default;
 
 private:
     torch::nn::Linear fc1_{nullptr};
     torch::nn::Linear fc2_{nullptr};
     torch::nn::Linear fc3_{nullptr};
+};
+
+// LeNet
+
+class LeNet : public experiments::ConvModel {
+public:
+    LeNet();
+
+    torch::Tensor forward(torch::Tensor x) override;
+
+    experiments::ModelPtr conv() override;
+
+    experiments::ModelPtr classifier() override;
+
+    ~LeNet() override = default;
+
+private:
+    std::shared_ptr<LeNetConv> conv_{nullptr};
+    std::shared_ptr<LeNetClassifier> classifier_{nullptr};
 };

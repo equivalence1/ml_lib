@@ -84,3 +84,11 @@ torch::Tensor Vgg::forward(torch::Tensor x) {
     x = classifier_->forward(x);
     return x;
 }
+
+experiments::ModelPtr Vgg::conv() {
+    return conv_;
+}
+
+experiments::ModelPtr Vgg::classifier() {
+    return classifier_;
+}

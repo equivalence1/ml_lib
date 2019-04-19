@@ -8,21 +8,12 @@
 
 #include <torch/torch.h>
 
+#include <vector>
+
+template <typename TransformType>
 class EMLikeTrainer {
 public:
-    EMLikeTrainer(experiments::OptimizerPtr representationOptimizer,
-                  experiments::OptimizerPtr decisionFuncOptimizer,
-                  InitializerPtr initializer,
-                  uint32_t iterations
-                  )
-        : representationOptimizer_(std::move(representationOptimizer))
-        , decisionFuncOptimizer_(std::move(decisionFuncOptimizer))
-        , initializer_(std::move(initializer))
-        , iterations_(iterations) {
-
-    }
-
-    virtual void train(TensorPairDataset& ds, LossPtr& loss) {
+    virtual void train(TensorPairDataset& ds, const LossPtr& loss) {
         initializer_->init(ds, loss, &representationsModel, &decisionModel);
 
         for (uint32_t i = 0; i < iterations_; ++i) {
@@ -37,12 +28,26 @@ public:
 
             std::cout << "    getting representations" << std::endl;
 
-            torch::Tensor lastLayer = representationsModel->forward(ds.data());
+            auto mds = ds.map(reprTransform_);
+            auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(100));
+            auto device = representationsModel->parameters().data()->device();
+            std::vector<torch::Tensor> reprList;
+            std::vector<torch::Tensor> targetsList;
+
+            for (auto& batch : *dloader) {
+                auto res = representationsModel->forward(batch.data.to(device));
+                auto target = batch.target.to(device);
+                reprList.push_back(res);
+                targetsList.push_back(target);
+            }
+
+            auto repr = torch::cat(reprList, 0);
+            auto targets = torch::cat(targetsList, 0);
 
             std::cout << "    optimizing decision model" << std::endl;
 
-            auto targets = ds.targets();
-            decisionFuncOptimizer_->train(lastLayer, targets, loss, decisionModel);
+            auto decisionFuncOptimizer = getDecisionOptimizer(decisionModel);
+            decisionFuncOptimizer->train(repr, targets, loss, decisionModel);
 
             for (auto& param : representationsModel->parameters()) {
                 param.set_requires_grad(true);
@@ -54,27 +59,84 @@ public:
             std::cout << "    optimizing representation model" << std::endl;
 
             LossPtr representationLoss = makeRepresentationLoss(decisionModel, loss);
-            representationOptimizer_->train(ds, representationLoss, representationsModel);
+
+            auto representationOptimizer = getReprOptimizer(representationsModel);
+            representationOptimizer->train(ds, representationLoss, representationsModel);
+
+            fireListeners(i);
         }
     }
 
-    experiments::ModelPtr getTrainedModel(TensorPairDataset& ds, LossPtr& loss) {
+    virtual experiments::ModelPtr getTrainedModel(TensorPairDataset& ds, const LossPtr& loss) {
         train(ds, loss);
         return std::make_shared<CompositionalModel>(representationsModel, decisionModel);
     }
 
-    virtual LossPtr makeRepresentationLoss(experiments::ModelPtr trans, LossPtr loss) const = 0;
+    virtual LossPtr makeRepresentationLoss(experiments::ModelPtr model, LossPtr loss) const {
+        class ReprLoss : public Loss {
+        public:
+            ReprLoss(experiments::ModelPtr model, LossPtr loss)
+                    : model_(std::move(model))
+                    , loss_(std::move(loss)) {
+
+            }
+
+            torch::Tensor value(const torch::Tensor& outputs, const torch::Tensor& targets) const override {
+                return loss_->value(model_->forward(outputs), targets);
+            }
+
+        private:
+            experiments::ModelPtr model_;
+            LossPtr loss_;
+        };
+
+        return std::make_shared<ReprLoss>(model, loss);
+    }
+
+    using IterationListener = std::function<void(uint32_t, experiments::ModelPtr)>;
+
+    virtual void registerGlobalIterationListener(IterationListener listener) {
+        listeners_.push_back(std::move(listener));
+    }
 
 protected:
-    EMLikeTrainer() = default;
+    EMLikeTrainer(TransformType reprTransform, uint32_t iterations)
+            : reprTransform_(reprTransform)
+            , iterations_(iterations) {
 
-    experiments::OptimizerPtr representationOptimizer_;
-    experiments::OptimizerPtr decisionFuncOptimizer_;
+    }
 
+    virtual experiments::OptimizerPtr getReprOptimizer(const experiments::ModelPtr& reprModel) {
+        return {nullptr};
+    }
+
+    virtual experiments::OptimizerPtr getDecisionOptimizer(const experiments::ModelPtr& decisionModel) {
+        return {nullptr};
+    }
+
+private:
+    void fireListeners(uint32_t iteration) {
+        std::cout << std::endl;
+
+        auto model = std::make_shared<CompositionalModel>(representationsModel, decisionModel);
+        model->eval();
+        for (auto& listener : listeners_) {
+            listener(iteration, model);
+        }
+        model->train();
+
+        std::cout << std::endl;
+    }
+
+protected:
     experiments::ModelPtr representationsModel;
     experiments::ModelPtr decisionModel;
+
+    TransformType reprTransform_;
 
     InitializerPtr initializer_;
 
     uint32_t iterations_;
+
+    std::vector<IterationListener> listeners_;
 };

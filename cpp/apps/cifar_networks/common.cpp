@@ -16,16 +16,16 @@ TransformType getDefaultCifar10TrainTransform() {
     auto normTransformTrain = std::make_shared<torch::data::transforms::Normalize<>>(
             torch::ArrayRef<double>({0.4914, 0.4822, 0.4465}),
             torch::ArrayRef<double>({0.2023, 0.1994, 0.2010}));
-    auto cropTransformTrain = std::make_shared<experiments::RandomCrop>(
-            std::vector<int>({32, 32}),
-            std::vector<int>({4, 4}));
+//    auto cropTransformTrain = std::make_shared<experiments::RandomCrop>(
+//            std::vector<int>({32, 32}),
+//            std::vector<int>({4, 4}));
     auto flipTransformTrain = std::make_shared<experiments::RandomHorizontalFlip>(0.5);
     auto stackTransformTrain = std::make_shared<torch::data::transforms::Stack<>>();
 
     auto transformFunc = [=](std::vector<torch::data::Example<>>&& batch){
         batch = normTransformTrain->apply_batch(batch);
         batch = flipTransformTrain->apply_batch(batch);
-        batch = cropTransformTrain->apply_batch(batch);
+//        batch = cropTransformTrain->apply_batch(batch);
         return stackTransformTrain->apply_batch(batch);
     };
 
@@ -70,4 +70,22 @@ OptimizerType<TransformType> getDefaultCifar10Optimizer(int epochs, const experi
 
     auto optimizer = std::make_shared<experiments::DefaultOptimizer<TransformType>>(args);
     return optimizer;
+}
+
+void attachDefaultListeners(const experiments::OptimizerPtr& optimizer,
+                            int nBatchesReport, std::string savePath) {
+    // report 10 times per epoch
+    auto brListener = std::make_shared<experiments::BatchReportOptimizerListener>(nBatchesReport);
+    optimizer->registerListener(brListener);
+
+    auto epochReportOptimizerListener = std::make_shared<experiments::EpochReportOptimizerListener>();
+    optimizer->registerListener(epochReportOptimizerListener);
+
+    // see https://github.com/kuangliu/pytorch-cifar/blob/master/README.md#learning-rate-adjustment
+//    auto lrDecayListener = std::make_shared<experiments::LrDecayOptimizerListener>(10,
+//                                                                                   std::vector<int>({150, 250, 350}));
+//    optimizer->registerListener(lrDecayListener);
+
+//    auto msListener = std::make_shared<experiments::ModelSaveOptimizerListener>(1, savePath);
+//    optimizer->registerListener(msListener);
 }

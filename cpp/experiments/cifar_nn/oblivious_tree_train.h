@@ -15,9 +15,9 @@
 #include <metrics/accuracy.h>
 
 
-class ObliviousTreeTrainer : public EMLikeTrainer {
+class ObliviousTreeTrainer : public EMLikeTrainer<torch::data::transforms::Stack<>> {
 public:
-    ObliviousTreeTrainer() : EMLikeTrainer() {
+    ObliviousTreeTrainer() : EMLikeTrainer(torch::data::transforms::Stack<>(), 0) {
         representationsModel = std::make_shared<SimpleConvNet>();
 
         torch::optim::SGDOptions reprOptimOptions(0.0002);
@@ -29,7 +29,7 @@ public:
         initializer_ = std::make_shared<NoopInitializer>();
     }
 
-    void train(TensorPairDataset& ds, LossPtr& loss) override {
+    void train(TensorPairDataset& ds, const LossPtr& loss) override {
         initializer_->init(ds, loss, &representationsModel, &decisionModel);
 
         for (auto& param : representationsModel->parameters()) {

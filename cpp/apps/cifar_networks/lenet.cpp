@@ -32,20 +32,7 @@ int main(int argc, char* argv[]) {
 
     // Create opimizer
 
-    auto transform = torch::data::transforms::Stack<>();
-    experiments::OptimizerArgs<decltype(transform)> args(transform, 2, device);
-
-    auto dloaderOptions = torch::data::DataLoaderOptions(4);
-    args.dloaderOptions_ = std::move(dloaderOptions);
-
-    torch::optim::SGDOptions opt(0.001);
-    opt.momentum_ = 0.9;
-    auto optim = std::make_shared<torch::optim::SGD>(lenet->parameters(), opt);
-    args.torchOptim_ = optim;
-
-    args.lrPtrGetter_ = [&](){return &optim->options.learning_rate_;};
-
-    auto optimizer = std::make_shared<experiments::DefaultOptimizer<decltype(args.transform_)>>(args);
+    auto optimizer = getDefaultCifar10Optimizer(10, lenet, device);
     auto loss = std::make_shared<CrossEntropyLoss>();
 
     // Attach listeners
@@ -61,7 +48,7 @@ int main(int argc, char* argv[]) {
     auto acc = evalModelTestAccEval(dataset.second,
             lenet,
             device,
-            transform);
+            getDefaultCifar10TestTransform());
 
     std::cout << "LeNet test accuracy: " << std::setprecision(2)
             << acc << "%" << std::endl;

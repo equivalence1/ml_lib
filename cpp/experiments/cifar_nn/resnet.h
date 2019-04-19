@@ -70,11 +70,15 @@ private:
 
 // ResNet
 
-class ResNet : public experiments::Model {
+class ResNet : public experiments::ConvModel {
 public:
     explicit ResNet(ResNetConfiguration cfg);
 
     torch::Tensor forward(torch::Tensor x) override;
+
+    experiments::ModelPtr conv() override;
+
+    experiments::ModelPtr classifier() override;
 
     ~ResNet() override = default;
 

@@ -5,51 +5,67 @@
 #include "linear_model.h"
 #include "cross_entropy_loss.h"
 
-class LeNetLinearTrainer : public EMLikeTrainer {
+#include <torch/torch.h>
+
+class LeNetLinearTrainer : public EMLikeTrainer<torch::data::transforms::Stack<>> {
 public:
     LeNetLinearTrainer(uint32_t it_global,
             uint32_t it_repr,
-            uint32_t it_decision) : EMLikeTrainer() {
+            uint32_t it_decision) : EMLikeTrainer(torch::data::transforms::Stack<>(), it_global) {
         representationsModel = std::make_shared<LeNetConv>();
-        torch::optim::SGDOptions reprOptimOptions(0.001);
+        representationsModel->to(torch::kCUDA);
 
         // TODO optimizers
 
 //        representationOptimizer_ = std::make_shared<DefaultSGDOptimizer>(it_repr, reprOptimOptions);
-
-        decisionModel = std::make_shared<LinearModel>(16 * 5 * 5, 10);
-
-        torch::optim::SGDOptions decisionOptimOptions(0.1);
+//        {
+//            torch::optim::SGDOptions reprOptimOptions(0.001);
+//            auto transform = torch::data::transforms::Stack<>();
+//            experiments::OptimizerArgs<decltype(transform)> args(transform, it_repr, torch::kCUDA);
+//
+//            auto dloaderOptions = torch::data::DataLoaderOptions(4);
+//            args.dloaderOptions_ = std::move(dloaderOptions);
+//
+//            auto optim = std::make_shared<torch::optim::SGD>(representationsModel->parameters(), reprOptimOptions);
+//            args.torchOptim_ = optim;
+//
+//            auto lr = &(optim->options.learning_rate_);
+//            args.lrPtrGetter_ = [=]() { return lr; };
+//
+//            auto optimizer = std::make_shared<experiments::DefaultOptimizer<decltype(args.transform_)>>(args);
+////            attachDefaultListeners(optimizer, 50000 / 4 / 10, "lenet_em_conv_checkpoint.pt");
+//            representationOptimizer_ = optimizer;
+//        }
+//
+//        decisionModel = std::make_shared<LinearModel>(16 * 5 * 5, 10);
+//        decisionModel->to(torch::kCUDA);
+//
+//        {
+//            torch::optim::SGDOptions decisionOptimOptions(0.1);
+//            auto transform = torch::data::transforms::Stack<>();
+//            experiments::OptimizerArgs<decltype(transform)> args(transform, it_decision, torch::kCUDA);
+//
+//            auto dloaderOptions = torch::data::DataLoaderOptions(4);
+//            args.dloaderOptions_ = std::move(dloaderOptions);
+//
+//            auto optim = std::make_shared<torch::optim::SGD>(decisionModel->parameters(), decisionOptimOptions);
+//            args.torchOptim_ = optim;
+//
+//            auto lr = &(optim->options.learning_rate_);
+//            args.lrPtrGetter_ = [=]() { return lr; };
+//
+//            auto optimizer = std::make_shared<experiments::DefaultOptimizer<decltype(args.transform_)>>(args);
+////            attachDefaultListeners(optimizer, 50000 / 4 / 10, "lenet_em_conv_checkpoint.pt");
+//            decisionFuncOptimizer_ = optimizer;
+//        }
 //        decisionFuncOptimizer_ = std::make_shared<DefaultSGDOptimizer>(it_decision, decisionOptimOptions);
 
         initializer_ = std::make_shared<NoopInitializer>();
-        iterations_ = it_global;
     }
 
     experiments::ModelPtr getTrainedModel(TensorPairDataset& ds) {
         LossPtr loss = std::make_shared<CrossEntropyLoss>();
         return EMLikeTrainer::getTrainedModel(ds, loss);
-    }
-
-    LossPtr makeRepresentationLoss(experiments::ModelPtr trans, LossPtr loss) const override {
-        class ReprLoss : public Loss {
-        public:
-            ReprLoss(experiments::ModelPtr model, LossPtr loss)
-                    : model_(std::move(model))
-                    , loss_(std::move(loss)) {
-
-            }
-
-            torch::Tensor value(const torch::Tensor& outputs, const torch::Tensor& targets) const override {
-                return loss_->value(model_->forward(outputs), targets);
-            }
-
-        private:
-            experiments::ModelPtr model_;
-            LossPtr loss_;
-        };
-
-        return std::make_shared<ReprLoss>(trans, loss);
     }
 
 };
