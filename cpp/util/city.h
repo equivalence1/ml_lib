@@ -6,7 +6,8 @@
 
 #include <utility>
 #include <vector>
-
+#include <cstdint>
+#include <cstring>
 // NOTE: These functions provide CityHash 1.0 implementation whose results are *different* from
 // the mainline version of CityHash.
 

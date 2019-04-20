@@ -30,9 +30,11 @@ EXPORT bool CopyTree(ResultHandle handle, int treeIndex, int* features, float* c
 
 EXPORT bool TrainCatBoost(const float* features,
                           const float* labels,
+                          const float* weights,
                           int featuresCount, int samplesCount,
                           const float* testFeatures,
                           const float* testLabels,
+                          const float* testWeights,
                           int testSamplesCount,
                           const char* params,
                           ResultHandle* handle);
