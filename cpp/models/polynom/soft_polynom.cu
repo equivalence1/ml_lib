@@ -189,7 +189,7 @@ __global__ void PolynomBackwardImpl(const float* features,
         //featureDerivative is outputDer * total value before monom * monom derivative
         float derMultiplier  = 0;
         for (int dim = 0; dim < outputDim; ++dim) {
-            derMultiplier += __ldg(leafSum + polynomId) * __ldg(outDer + dim);
+            derMultiplier += __ldg(leafSum + polynomId * outputDim + dim) * __ldg(outDer + dim);
         }
 
         #pragma unroll
