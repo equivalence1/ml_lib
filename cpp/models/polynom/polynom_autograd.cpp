@@ -27,19 +27,19 @@ torch::autograd::variable_list PolynomForward::apply(torch::autograd::variable_l
     auto dims = samplesBatch.sizes();
     const int batchSize = dims[0];
     const int outDim = polynom_->OutDim();
+    VERIFY(outDim > 0, "Error");
     torch::autograd::Variable result = torch::zeros({batchSize, outDim}, torch::kFloat32);
 
-
-    Vec resultVec = Vec(result);
-    VecTools::fill(0.0f, resultVec);
     for (int i = 0; i < batchSize; ++i) {
+        Vec resultVec = Vec(result[i]);
+        VecTools::fill(0.0f, resultVec);
         auto sample = Vec(samplesBatch[i]);
-        polynom_->Forward(sample.arrayRef(), resultVec.arrayRef().slice(i, 1));
+        polynom_->Forward(sample.arrayRef(), resultVec.arrayRef());
     }
 
     auto gradFunc = std::make_shared<PolynomBackward>(samplesBatch,
-                                                     polynom_,
-                                                     torch::autograd::collect_next_edges(inputs));
+                                                      polynom_,
+                                                      torch::autograd::collect_next_edges(inputs));
 
     torch::autograd::create_gradient_edge(result,
                                           gradFunc);

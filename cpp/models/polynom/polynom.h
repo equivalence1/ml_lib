@@ -125,6 +125,10 @@ struct Monom {
 
     }
 
+    Monom() {
+
+    }
+
     //forward/backward will append to dst
     void Forward(double lambda, ConstVecRef<float> features, VecRef<float> dst) const;
     void Backward(double lambda, ConstVecRef<float> features, ConstVecRef<float> outputsDer, VecRef<float> featuresDer) const;
@@ -141,12 +145,15 @@ struct Polynom {
         }
     }
 
+    Polynom() {
+
+    }
     //forward/backward will append to dst
     void Forward(ConstVecRef<float> features, VecRef<float> dst) const;
     void Backward(ConstVecRef<float> features, ConstVecRef<float> outputsDer, VecRef<float> featuresDer) const;
 
     int OutDim() const {
-        return Ensemble_.size() ? Ensemble_.end()->OutDim() : 0;
+        return Ensemble_.empty() ? 0 : Ensemble_.back().OutDim();
     }
 
 

@@ -33,7 +33,7 @@ class PolynomForward : public torch::autograd::Function {
 public:
 
     PolynomForward(PolynomPtr polynom)
-        : polynom_(polynom){
+        : polynom_(std::move(polynom)){
 
     }
 

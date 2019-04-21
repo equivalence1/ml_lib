@@ -12,7 +12,7 @@ struct TSymmetricTree {
     std::vector<float> Weights;
 
     int OutputDim() const {
-        return Leaves.size() ? Leaves.size() / Weights.size() : 0;
+        return Weights.size() ? Leaves.size() / Weights.size() : 0;
     }
 
     void Forward(const float* features, float* dst) const {

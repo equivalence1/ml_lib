@@ -2,6 +2,7 @@
 #include <map>
 #include <util/exception.h>
 #include <util/parallel_executor.h>
+#include <cmath>
 
 struct PathBit {
     int Bits = 0;

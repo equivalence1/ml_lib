@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
     auto resnet = std::make_shared<ResNet>(ResNetConfiguration::ResNet18);
     resnet->to(device);
 
-    CommonEm emTrainer({5, 2, 4}, resnet, device);
+    CommonEm emTrainer({500, 1, 1}, resnet, device);
 
     // Attach Listeners
 
