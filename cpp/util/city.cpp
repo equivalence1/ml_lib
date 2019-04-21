@@ -160,7 +160,7 @@ static uint64 HashLen33to64(const char *s, size_t len) {
   return ShiftMix(r * k0 + vs) * k2;
 }
 
-uint64 CityHash64(const char *s, size_t len) noexcept {
+uint64 CityHash64(const char *s, uint64_t len) noexcept {
   if (len <= 32) {
     if (len <= 16) {
       return HashLen0to16(s, len);
@@ -183,7 +183,7 @@ uint64 CityHash64(const char *s, size_t len) noexcept {
   y = Rotate(y, 33) * k1;
 
   // Decrease len to the nearest multiple of 64, and operate on 64-byte chunks.
-  len = (len - 1) & ~static_cast<size_t>(63);
+  len = (len - 1) & ~static_cast<uint64_t>(63);
   do {
     x = Rotate(x + y + v.first + UNALIGNED_LOAD64(s + 16), 37) * k1;
     y = Rotate(y + v.second + UNALIGNED_LOAD64(s + 48), 42) * k1;
@@ -200,11 +200,11 @@ uint64 CityHash64(const char *s, size_t len) noexcept {
                    HashLen16(v.second, w.second) + x);
 }
 
-uint64 CityHash64WithSeed(const char *s, size_t len, uint64 seed) noexcept {
+uint64 CityHash64WithSeed(const char *s, uint64_t len, uint64 seed) noexcept {
   return CityHash64WithSeeds(s, len, k2, seed);
 }
 
-uint64 CityHash64WithSeeds(const char *s, size_t len,
+uint64 CityHash64WithSeeds(const char *s, uint64_t len,
                            uint64 seed0, uint64 seed1) noexcept {
   return HashLen16(CityHash64(s, len) - seed0, seed1);
 }
