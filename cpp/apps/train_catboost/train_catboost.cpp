@@ -2,6 +2,7 @@
 #include <data/dataset.h>
 #include <data/load_data.h>
 #include <catboost_wrapper.h>
+#include <models/polynom/polynom.h>
 
 #define EPS 1e-5
 
@@ -41,6 +42,19 @@ int main(int /*argc*/, char* /*argv*/[]) {
     std::stringstream strStream;
     strStream << in.rdbuf(); //read the file
     std::string params = strStream.str();
-    Train(trainPool, testPool, params);
+    auto model = Train(trainPool, testPool, params);
+    Polynom polynom(PolynomBuilder().AddEnsemble(model).Build());
+    polynom.Lambda_ = 1000000;
+
+    int outDim = 1;
+    std::vector<float> out(outDim);
+    double error = 0;
+    for (int i = 0; i < testPool.SamplesCount; ++i) {
+        polynom.Forward(ds.sample(i).arrayRef(), out);
+        const double val = (out[0] - testPool.Labels[i]);
+        error += val * val;
+    }
+    std::cout << "polynom error: " << error << std::endl;
+
 }
 

@@ -7,5 +7,5 @@ project(catboost_ut)
 
 
 add_executable(train_catboost train_catboost.cpp)
-target_link_libraries(train_catboost core data vec_tools mx_tools trans funcs models methods ${CATBOOST})
+target_link_libraries(train_catboost core data vec_tools mx_tools trans funcs models methods ${CATBOOST} polynom)
 

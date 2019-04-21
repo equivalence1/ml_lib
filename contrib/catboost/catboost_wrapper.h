@@ -10,6 +10,10 @@ struct TSymmetricTree {
     std::vector<float> Conditions;
     std::vector<float> Leaves;
     std::vector<float> Weights;
+
+    int OutputDim() const {
+        return Leaves.size() ? Leaves.size() / Weights.size() : 0;
+    }
 };
 
 struct TEnsemble {
@@ -28,9 +32,9 @@ struct TPool {
 
 
 
-TEnsemble Train(const TPool& learn,
-                const TPool& test,
-                const std::string& paramsJson) {
+inline TEnsemble Train(const TPool& learn,
+                        const TPool& test,
+                        const std::string& paramsJson) {
     ResultHandle handle;
     TrainCatBoost(learn.Features,
                   learn.Labels,

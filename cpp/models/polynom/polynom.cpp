@@ -1,6 +1,7 @@
 #include "polynom.h"
-#include <util/exception.h>
 #include <map>
+#include <util/exception.h>
+#include <util/parallel_executor.h>
 
 struct PathBit {
     int Bits = 0;
@@ -103,5 +104,66 @@ void PolynomBuilder::AddTree(const TSymmetricTree& tree)  {
 }
 
 
+void Monom::Forward(double lambda, ConstArrayRef<float> features, ArrayRef<float> dst) {
+  double trueLogProb = 0;
+  for (const auto& split : Structure_.Splits) {
+    const double val = -lambda * (features[split.Feature] - split.Condition);
+//    log(1.0 / (1.0 + exp(-val))) = -log(1.0 + exp(-val));
+
+    const double expVal = exp(val);
+    if (std::isfinite(expVal)) {
+      trueLogProb -= log(1.0 + expVal);
+    } else {
+      trueLogProb -= val;
+    }
+  }
+  const double p = exp(trueLogProb);
+  for (int dim = 0; dim < dst.size(); ++dim) {
+    dst[dim] += p * Values_[dim];
+  }
+}
+
+void Monom::Backward(double lambda,
+                     ConstArrayRef<float> features,
+                     ConstArrayRef<float> outputsDer,
+                     ArrayRef<float> featuresDer) {
+
+  std::vector<float> logProbs(Structure_.Splits.size());
+
+  double totalLogProb = 0;
+
+  for (int i = 0; i < Structure_.Splits.size(); ++i) {
+    const auto& split = Structure_.Splits[i];
+    const double val = -lambda * (features[split.Feature] - split.Condition);
+//    log(1.0 / (1.0 + exp(-val))) = -log(1.0 + exp(-val));
+
+    const double expVal = exp(val);
+    if (std::isfinite(expVal)) {
+      logProbs[i] -= log(1.0 + expVal);
+    } else {
+      logProbs[i] -= val;
+    }
+    totalLogProb += logProbs[i];
+  }
+  const double p = exp(totalLogProb);
+
+  for (int i = 0; i < Structure_.Splits.size(); ++i) {
+    const auto& split = Structure_.Splits[i];
+    double totalDer = 0;
+    const double featureProb = exp(logProbs[i]);
+    const double monomDer = p * (1.0 - featureProb);
+    for (size_t dim = 0; dim < Values_.size(); ++dim) {
+      totalDer +=  monomDer * Values_[dim] * outputsDer[dim];
+    }
+    featuresDer[split.Feature] += totalDer;
+  }
+}
 
 
+void Polynom::Forward(ConstArrayRef<float> features,
+                      ArrayRef<float> dst) {
+
+}
+void Polynom::Backward(ConstArrayRef<float> features,
+                       ConstArrayRef<float> outputsDer,
+                       ArrayRef<float> featuresDer) {}
