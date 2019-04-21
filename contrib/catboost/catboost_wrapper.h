@@ -14,10 +14,28 @@ struct TSymmetricTree {
     int OutputDim() const {
         return Leaves.size() ? Leaves.size() / Weights.size() : 0;
     }
+
+    void Forward(const float* features, float* dst) const {
+        int bin = 0;
+        for (int k = 0; k < Conditions.size(); ++k) {
+            if (features[Features[k]] > Conditions[k]) {
+                bin |= 1 << k;
+            }
+        }
+        for (int dim = 0; dim < OutputDim(); ++dim) {
+            dst[dim] += Leaves[bin * OutputDim() + dim];
+        }
+
+    }
 };
 
 struct TEnsemble {
     std::vector<TSymmetricTree> Trees;
+    void Forward(const float* features, float* dst) {
+        for (const auto& tree : Trees) {
+            tree.Forward(features, dst);
+        }
+    }
 };
 
 
