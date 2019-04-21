@@ -1,8 +1,9 @@
 {
   "boosting_type": "Plain",
-  "iterations" : 1000,
+  "iterations" : 5000,
   "task_type": "GPU",
   "devices": "0",
+  "gpu_ram_part": 0.9,
   "eval_metric": "Accuracy",
   "od_type": "IncToDec",
   "logging_level" : "Debug",

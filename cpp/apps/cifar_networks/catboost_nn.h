@@ -12,7 +12,7 @@
 
 struct CatBoostNNConfig {
     uint32_t globalIterationsCount = 500;
-    uint32_t representationsIterations = 10;
+    uint32_t representationsIterations = 3;
 
     int batchSize = 256;
     double lambda_ = 1.0;

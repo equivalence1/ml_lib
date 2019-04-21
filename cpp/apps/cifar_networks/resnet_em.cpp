@@ -2,7 +2,7 @@
 #include "common_em.h"
 
 #include <cifar_nn/resnet.h>
-#include <cifar_nn/cifar10_reader.hpp>
+#include <cifar_nn/cifar10_reader.h>
 #include <cifar_nn/optimizer.h>
 #include <cifar_nn/cross_entropy_loss.h>
 #include <cifar_nn/em_like_train.h>
