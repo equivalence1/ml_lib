@@ -35,6 +35,7 @@ PolynomCuda::PolynomCuda(PolynomPtr polynom)
 
 
 torch::Tensor PolynomCuda::Forward(torch::Tensor batch) const {
+    batch = batch.contiguous();
     const int batchSize = batch.size(0);
     int fCount = batch.size(1);
 
@@ -43,10 +44,11 @@ torch::Tensor PolynomCuda::Forward(torch::Tensor batch) const {
 
     torch::Tensor result = torch::zeros({outDim, batchSize},
         TorchHelpers::tensorOptionsOnDevice(ComputeDeviceType::Gpu));
+
     torch::Tensor probs = torch::zeros({polynomCount, batchSize},
         TorchHelpers::tensorOptionsOnDevice(ComputeDeviceType::Gpu));
 
-    auto transposed = batch.transpose(0, 1);
+    auto transposed = batch.transpose(0, 1).contiguous();
 
     PolynomForward(Polynom_->Lambda_,
             transposed.data<float>(),
@@ -61,6 +63,6 @@ torch::Tensor PolynomCuda::Forward(torch::Tensor batch) const {
             probs.data<float>(),
             result.data<float>()
         );
-    return result.transpose(0, 1);
+    return result.transpose(0, 1).contiguous();
 
 }
