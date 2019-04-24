@@ -35,9 +35,11 @@ int main(int argc, char* argv[]) {
 
     CatBoostNNConfig catBoostNnConfig;
     catBoostNnConfig.batchSize = 256;
-    catBoostNnConfig.lambda_ = 10;
-    catBoostNnConfig.representationsIterations = 2;
+    catBoostNnConfig.lambda_ = 1;
+    catBoostNnConfig.representationsIterations = 10;
     catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_gpu.json";
+    catBoostNnConfig.catboostInitParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_init.json";
+    catBoostNnConfig.catboostFinalParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_final.json";
 
     PolynomPtr polynom = std::make_shared<Polynom>();
     polynom->Lambda_ = catBoostNnConfig.lambda_;
@@ -49,19 +51,29 @@ int main(int argc, char* argv[]) {
         polynom->Ensemble_.push_back(emptyMonom);
     }
 
-    auto resnet = std::make_shared<Vgg>(VggConfiguration::Vgg16, std::make_shared<PolynomModel>(polynom));
-    resnet->to(device);
+    auto vgg = std::make_shared<Vgg>(VggConfiguration::Vgg16, std::make_shared<PolynomModel>(polynom));
+    vgg->to(device);
 
-    CatBoostNN nnTrainer(catBoostNnConfig, resnet, device);
-
-
+    CatBoostNN nnTrainer(catBoostNnConfig, vgg, device);
     // Attach Listeners
 
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
+
+
+    nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
+        std::cout << "--------===============CATBOOST learn + test start ====================---------------  "  << std::endl;
+        auto learn = nnTrainer.applyConvLayers(dataset.first.map(getDefaultCifar10TestTransform()));
+        auto test =  nnTrainer.applyConvLayers(dataset.second.map(getDefaultCifar10TestTransform()));
+        nnTrainer.trainFinalDecision(learn, test);
+        std::cout << "--------===============CATBOOST learn + test finish ====================---------------  "  << std::endl;
+
+    });
+
     nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
         model->eval();
+        polynom->Lambda_ = 100000;
 
-        auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(128));
+        auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(400));
         int rightAnswersCnt = 0;
 
         for (auto& batch : *dloader) {
@@ -86,9 +98,13 @@ int main(int argc, char* argv[]) {
                 }
             }
         }
+        polynom->Lambda_ = catBoostNnConfig.lambda_;
 
         std::cout << "Test accuracy: " <<  rightAnswersCnt * 100.0f / dataset.second.size().value() << std::endl;
     });
+
+
+    polynom->Lambda_ = 10000;
 
     // Train
 
@@ -98,7 +114,7 @@ int main(int argc, char* argv[]) {
     // Eval model
 
     auto acc = evalModelTestAccEval(dataset.second,
-                                    resnet,
+                                    vgg,
                                     device,
                                     getDefaultCifar10TestTransform());
 

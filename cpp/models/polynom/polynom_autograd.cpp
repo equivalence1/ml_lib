@@ -46,3 +46,26 @@ torch::autograd::variable_list PolynomForward::apply(torch::autograd::variable_l
 
     return {result};
 }
+
+
+torch::autograd::variable_list PolynomForwardCuda::apply(torch::autograd::variable_list&& inputs) {
+   torch::autograd::Variable samplesBatch = inputs[0].contiguous();
+   torch::autograd::Variable result = polynom_->Forward(samplesBatch);
+
+    auto gradFunc = std::make_shared<PolynomBackwardCuda>(samplesBatch,
+                                                          polynom_,
+                                                          torch::autograd::collect_next_edges(inputs));
+   torch::autograd::create_gradient_edge(result,
+                                         gradFunc);
+  return {result};
+}
+
+
+torch::autograd::variable_list PolynomBackwardCuda::apply(torch::autograd::variable_list&& inputs) {
+  auto dims = samplesBatch_.sizes();
+  const auto batchSize = dims[0];
+  const auto featuresCount = dims[1];
+  auto backGrads = inputs[0];
+  torch::autograd::Variable result = polynom_->Backward(samplesBatch_.contiguous(), backGrads.contiguous());
+  return {result};
+}

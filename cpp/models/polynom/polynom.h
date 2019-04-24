@@ -1,6 +1,7 @@
 #pragma once
 
 #include <catboost_wrapper.h>
+#include <memory>
 #include <unordered_map>
 #include <util/array_ref.h>
 #include <util/city.h>
@@ -156,3 +157,4 @@ struct Polynom {
     }
 };
 
+using PolynomPtr = std::shared_ptr<Polynom>;

@@ -16,3 +16,16 @@ void PolynomForward(
     float* tempProbs,
     float* output
     );
+
+void PolynomBackward(int batchSize,
+                     float lambda,
+                     const float* features,
+                     int featuresCount,
+                     const float* outDer,
+                     int outputDim,
+                     const int* featureIds,
+                     const float* conditions,
+                     const float* values,
+                     const int* polynomOffsets,
+                     int polynomCount,
+                     float* featuresDer);

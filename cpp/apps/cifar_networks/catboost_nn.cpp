@@ -14,7 +14,7 @@ experiments::ModelPtr CatBoostNN::getTrainedModel(TensorPairDataset& ds, const L
 }
 
 inline TPool MakePool(const std::vector<float>& features,
-                      const std::vector<float>& labels,
+                      ConstVecRef<float> labels,
                       float* weights = nullptr) {
     const int fCount = features.size() / labels.size();
     TPool pool;
@@ -117,7 +117,49 @@ namespace {
             polynom.Lambda_ = lambda_;
             std::cout << "Model size: " << catboost.Trees.size() << std::endl;
             std::cout << "Polynom size: " << polynom.Ensemble_.size() << std::endl;
-            polynomModel->polynom_ = std::make_shared<Polynom>(polynom);
+            polynomModel->reset(std::make_shared<Polynom>(polynom));
+        }
+
+
+        void train(const TensorPairDataset& ds,
+                   const TensorPairDataset& testDs,
+                   experiments::ModelPtr model) const {
+            auto polynomModel = dynamic_cast<PolynomModel*>(model.get());
+            const int samplesCount = ds.data().size(0);
+            const int testsamplesCount = testDs.data().size(0);
+            auto yDim = TorchHelpers::totalSize(ds.data()) / samplesCount;
+            auto learnData = ds.data().reshape({samplesCount, yDim}).to(torch::kCPU);
+            auto testData = testDs.data().reshape({testsamplesCount, yDim}).to(torch::kCPU);
+            auto labels = Vec(ds.targets().to(torch::kCPU, torch::kFloat32));
+            auto testLabels = Vec(testDs.targets().to(torch::kCPU, torch::kFloat32));
+
+            std::vector<int> learnIndices(samplesCount);
+            std::vector<int> testIndices(testsamplesCount);
+            std::iota(learnIndices.begin(), learnIndices.end(), 0);
+            std::iota(testIndices.begin(), testIndices.end(), 0);
+
+
+            auto labelsRef = labels.arrayRef();
+            auto testLabelsRef = testLabels.arrayRef();
+
+            const int64_t featuresCount = yDim;
+
+            std::vector<float> learn(learnIndices.size() * featuresCount);
+            std::vector<float> test(testIndices.size() * featuresCount);
+
+            gather(learnData, learnIndices, featuresCount, learn);
+            gather(testData, testIndices, featuresCount, test);
+
+
+            TPool trainPool = MakePool(learn, labelsRef);
+            TPool testPool = MakePool(test, testLabelsRef);
+
+            auto catboost = Train(trainPool, testPool, catBoostOptions_);
+            Polynom polynom(PolynomBuilder().AddEnsemble(catboost).Build());
+            polynom.Lambda_ = lambda_;
+            std::cout << "Model size: " << catboost.Trees.size() << std::endl;
+            std::cout << "Polynom size: " << polynom.Ensemble_.size() << std::endl;
+            polynomModel->reset(std::make_shared<Polynom>(polynom));
         }
 
         void registerListener(std::shared_ptr<experiments::OptimizerBatchListener>) override {
@@ -156,10 +198,110 @@ inline std::string readFile(const std::string& path) {
 
 experiments::OptimizerPtr CatBoostNN::getDecisionOptimizer(const experiments::ModelPtr& decisionModel) {
     seed_ += 10000;
+    std::string params;
+    if (Init_) {
+        params = opts_.catboostInitParamsFile;
+        Init_ = false;
+    } else {
+        params = opts_.catboostParamsFile;
+    }
+
     return std::make_shared<CatBoostOptimizer>(
-        readFile(opts_.catboostParamsFile),
+        readFile(params),
         seed_,
         opts_.lambda_
         );
 }
+
+void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
+    initializer_->init(ds, loss, &representationsModel, &decisionModel);
+
+    trainDecision(ds, loss);
+
+    for (uint32_t i = 0; i < iterations_; ++i) {
+        std::cout << "EM iteration: " << i << std::endl;
+
+        trainRepr(ds, loss);
+        trainDecision(ds, loss);
+
+        fireListeners(i);
+    }
+}
+
+
+
+void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
+    for (auto& param : representationsModel->parameters()) {
+        param.set_requires_grad(false);
+    }
+    for (auto& param : decisionModel->parameters()) {
+        param.set_requires_grad(true);
+    }
+
+    std::cout << "    getting representations" << std::endl;
+
+    auto mds = ds.map(reprTransform_);
+    auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(100));
+    auto device = representationsModel->parameters().data()->device();
+    std::vector<torch::Tensor> reprList;
+    std::vector<torch::Tensor> targetsList;
+
+    for (auto& batch : *dloader) {
+        auto res = representationsModel->forward(batch.data.to(device));
+        auto target = batch.target.to(device);
+        reprList.push_back(res);
+        targetsList.push_back(target);
+    }
+
+    auto repr = torch::cat(reprList, 0);
+    auto targets = torch::cat(targetsList, 0);
+
+    std::cout << "    optimizing decision model" << std::endl;
+
+    auto decisionFuncOptimizer = getDecisionOptimizer(decisionModel);
+    decisionFuncOptimizer->train(repr, targets, loss, decisionModel);
+}
+
+void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
+    for (auto& param : representationsModel->parameters()) {
+        param.set_requires_grad(true);
+    }
+    for (auto& param : decisionModel->parameters()) {
+        param.set_requires_grad(false);
+    }
+
+    std::cout << "    optimizing representation model" << std::endl;
+
+    LossPtr representationLoss = makeRepresentationLoss(decisionModel, loss);
+    auto representationOptimizer = getReprOptimizer(representationsModel);
+    representationOptimizer->train(ds, representationLoss, representationsModel);
+
+}
+experiments::ModelPtr CatBoostNN::trainFinalDecision(const TensorPairDataset& learn, const TensorPairDataset& test) {
+    auto optimizer = std::make_shared<CatBoostOptimizer>(
+        readFile(opts_.catboostFinalParamsFile),
+        seed_,
+        1e10
+    );
+    auto result = std::make_shared<PolynomModel>();
+    optimizer->train(learn, test, result);
+    return result;
+}
+//
+//std::pair<torch::Tensor, torch::Tensor> CatBoostNN::representation(TensorPairDataset& ds) {
+//    auto dloader = torch::data::make_data_loader(ds, torch::data::DataLoaderOptions(100));
+//    auto device = representationsModel->parameters().data()->device();
+//    std::vector<torch::Tensor> reprList;
+//    std::vector<torch::Tensor> targetsList;
+//
+//    for (auto& batch : *dloader) {
+//        auto res = representationsModel->forward(batch.data.to(device));
+//        auto target = batch.target.to(device);
+//        reprList.push_back(res);
+//        targetsList.push_back(target);
+//    }
+//
+//    auto repr = torch::cat(reprList, 0);
+//    auto targets = torch::cat(targetsList, 0);
+//}
 

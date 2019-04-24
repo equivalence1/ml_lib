@@ -4,7 +4,6 @@
 #include <torch/torch.h>
 
 
-using PolynomPtr = std::shared_ptr<Polynom>;
 
 struct PolynomCuda {
     PolynomPtr Polynom_;
@@ -18,5 +17,8 @@ struct PolynomCuda {
 
     torch::Tensor Forward(torch::Tensor batch) const;
 
-
+    torch::Tensor Backward(torch::Tensor features, torch::Tensor outputDer) const;
 };
+
+using PolynomCudaPtr = std::shared_ptr<PolynomCuda>;
+

@@ -16,7 +16,7 @@ add_library(models
 #maybe_enable_cuda(models_kernels)
 
 enable_cxx17(models)
-maybe_enable_cuda(models)
+#maybe_enable_cuda(models)
 
 target_link_libraries(models "${TORCH_LIBRARIES}" core util data)
 #target_link_libraries(models_kernels util)

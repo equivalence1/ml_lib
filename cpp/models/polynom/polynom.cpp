@@ -40,8 +40,6 @@ inline void SortUnique(Vec& vec) {
 }
 
 void PolynomBuilder::AddTree(const TSymmetricTree& tree)  {
-
-
     const int maxDepth = static_cast<int>(tree.Conditions.size());
     const int leaves = 1 << maxDepth;
 
@@ -163,15 +161,16 @@ void Monom::Backward(double lambda,
   }
   const double p = exp(totalLogProb);
 
+  double tmp = 0;
+  for (size_t dim = 0; dim < Values_.size(); ++dim) {
+      tmp += Values_[dim] * outputsDer[dim];
+  }
+
   for (int i = 0; i < Structure_.Splits.size(); ++i) {
     const auto& split = Structure_.Splits[i];
-    double totalDer = 0;
     const double featureProb = exp(logProbs[i]);
     const double monomDer = p * (1.0 - featureProb);
-    for (size_t dim = 0; dim < Values_.size(); ++dim) {
-      totalDer +=  monomDer * Values_[dim] * outputsDer[dim];
-    }
-    featuresDer[split.Feature] += totalDer;
+    featuresDer[split.Feature] += monomDer * tmp;
   }
 }
 

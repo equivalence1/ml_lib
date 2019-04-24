@@ -38,6 +38,7 @@ int main(int argc, char* argv[]) {
     catBoostNnConfig.lambda_ = 10;
     catBoostNnConfig.representationsIterations = 2;
     catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_gpu.json";
+    catBoostNnConfig.catboostInitParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_init.json";
 
     PolynomPtr polynom = std::make_shared<Polynom>();
     polynom->Lambda_ = catBoostNnConfig.lambda_;

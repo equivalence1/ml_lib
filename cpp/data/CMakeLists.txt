@@ -18,7 +18,7 @@ add_library(data
 
 
 enable_cxx17(data)
-maybe_enable_cuda(data)
+#maybe_enable_cuda(data)
 
 target_link_libraries(data "${TORCH_LIBRARIES}" core util)
 

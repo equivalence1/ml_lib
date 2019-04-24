@@ -114,7 +114,7 @@ protected:
         return {nullptr};
     }
 
-private:
+protected:
     void fireListeners(uint32_t iteration) {
         std::cout << std::endl;
 

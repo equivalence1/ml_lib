@@ -45,6 +45,25 @@ namespace Detail {
             return TorchHelpers::totalSize(tensor);
         }
     };
+
+
+    template <>
+    class TorchBufferTrait<int> {
+    public:
+
+        static torch::Tensor create(int64_t size) {
+            return torch::zeros({static_cast<int64_t>(size)}, TorchHelpers::tensorOptionsOnDevice(CurrentDevice(),
+                                                                                                  torch::ScalarType::Int));
+        }
+
+        static int* data(const torch::Tensor& tensor) {
+            return tensor.data<int>();
+        }
+
+        static int64_t size(const torch::Tensor& tensor) {
+            return TorchHelpers::totalSize(tensor);
+        }
+    };
 }
 
 template <class T>

@@ -49,6 +49,10 @@ public:
     const float* labels() const {
         return target_.arrayRef().data();
     }
+
+    torch::Tensor tensorData() const {
+        return data_.data();
+    }
 private:
     Mx data_;
     Vec target_;

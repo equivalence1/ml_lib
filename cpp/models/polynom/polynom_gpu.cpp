@@ -66,3 +66,32 @@ torch::Tensor PolynomCuda::Forward(torch::Tensor batch) const {
     return result.transpose(0, 1).contiguous();
 
 }
+
+
+torch::Tensor PolynomCuda::Backward(torch::Tensor batch,
+                                    torch::Tensor outputDer) const {
+    const int batchSize = batch.size(0);
+    int fCount = batch.size(1);
+    outputDer = outputDer.to(torch::kCUDA).contiguous();
+    batch = batch.to(torch::kCUDA).contiguous();
+    auto outDim = Polynom_->OutDim();
+    const int polynomCount = PolynomOffsets.size(0) - 1;
+
+    VERIFY(outDim == outputDer.size(1), "error: out dim should be equal to polynom out dim");
+    torch::Tensor result = torch::zeros({batchSize, fCount},
+        TorchHelpers::tensorOptionsOnDevice(ComputeDeviceType::Gpu));
+    PolynomBackward(
+        batchSize,
+        Polynom_->Lambda_,
+        batch.data<float>(),
+        fCount,
+        outputDer.data<float>(),
+        outDim,
+        Features.data<int>(),
+        Conditions.data<float>(),
+        PolynomValues.data<float>(),
+        PolynomOffsets.data<int>(),
+        polynomCount,
+        result.data<float>());
+  return result;
+}

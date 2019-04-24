@@ -16,11 +16,11 @@ public:
         return x_.size(0);
     }
 
-    torch::Tensor data() {
+    torch::Tensor data() const {
         return x_;
     }
 
-    torch::Tensor targets() {
+    torch::Tensor targets() const {
         return y_;
     }
 

@@ -18,7 +18,7 @@
 int main(int argc, char* argv[]) {
     auto device = torch::kCPU;
     if (argc > 1 && std::string(argv[1]) == std::string("CUDA")
-            && torch::cuda::is_available()) {
+        && torch::cuda::is_available()) {
         device = torch::kCUDA;
         std::cout << "Using CUDA device for training" << std::endl;
     } else {
@@ -34,15 +34,18 @@ int main(int argc, char* argv[]) {
     // Init model
     CatBoostNNConfig catBoostNnConfig;
     catBoostNnConfig.batchSize = 32;
-    catBoostNnConfig.lambda_ = 10;
-    catBoostNnConfig.representationsIterations = 2;
-    catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params.json";
+    catBoostNnConfig.lambda_ = 1;
+    catBoostNnConfig.representationsIterations = 5;
+
+    catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_lenet.json";
+    catBoostNnConfig.catboostInitParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_init.json";
+    catBoostNnConfig.catboostFinalParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_final.json";
 
     PolynomPtr polynom = std::make_shared<Polynom>();
     polynom->Lambda_ = catBoostNnConfig.lambda_;
     {
         Monom emptyMonom;
-        emptyMonom.Structure_ .Splits.push_back({0, 0});
+        emptyMonom.Structure_.Splits.push_back({0, 0});
         const auto outDim = 10;
         emptyMonom.Values_.resize(outDim);
         polynom->Ensemble_.push_back(emptyMonom);
@@ -55,11 +58,21 @@ int main(int argc, char* argv[]) {
 
     // Attach Listeners
 
+    nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
+        std::cout << "--------===============CATBOOST learn + test start ====================---------------  "  << std::endl;
+        auto learn = nnTrainer.applyConvLayers(dataset.first.map(getDefaultCifar10TestTransform()));
+        auto test =  nnTrainer.applyConvLayers(dataset.second.map(getDefaultCifar10TestTransform()));
+        nnTrainer.trainFinalDecision(learn, test);
+        std::cout << "--------===============CATBOOST learn + test finish ====================---------------  "  << std::endl;
+
+    });
+
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
     nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
+        polynom->Lambda_ = 100000;
         model->eval();
 
-        auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(catBoostNnConfig.batchSize));
+        auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(catBoostNnConfig.batchSize * 2));
         int rightAnswersCnt = 0;
 
         for (auto& batch : *dloader) {
@@ -84,9 +97,11 @@ int main(int argc, char* argv[]) {
                 }
             }
         }
+        polynom->Lambda_ = catBoostNnConfig.lambda_;
 
-        std::cout << "Test accuracy: " <<  rightAnswersCnt * 100.0f / dataset.second.size().value() << std::endl;
+        std::cout << "Test accuracy: " << rightAnswersCnt * 100.0f / dataset.second.size().value() << std::endl;
     });
+
 
     // Train
 
@@ -96,10 +111,10 @@ int main(int argc, char* argv[]) {
     // Eval model
 
     auto acc = evalModelTestAccEval(dataset.second,
-            lenet,
-            device,
-            getDefaultCifar10TestTransform());
+                                    lenet,
+                                    device,
+                                    getDefaultCifar10TestTransform());
 
     std::cout << "LeNet EM test accuracy: " << std::setprecision(2)
-            << acc << "%" << std::endl;
+              << acc << "%" << std::endl;
 }
