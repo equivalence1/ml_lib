@@ -110,7 +110,6 @@ private:
     std::unordered_map<PolynomStructure, TStat> EnsemblePolynoms;
 };
 
-
 struct Monom {
     PolynomStructure Structure_;
     std::vector<double> Values_;

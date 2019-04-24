@@ -16,7 +16,6 @@ PolynomCuda::PolynomCuda(PolynomPtr polynom)
 
     int cursor = 0;
     for (const auto& monom : Polynom_->Ensemble_) {
-
         for (const auto& split : monom.Structure_.Splits) {
             flatFeatureIds.push_back(split.Feature);
             conditions.push_back(split.Condition);
@@ -25,6 +24,7 @@ PolynomCuda::PolynomCuda(PolynomPtr polynom)
         offsets.push_back(cursor);
         cursor += monom.Structure_.Splits.size();
     }
+
     offsets.push_back(cursor);
 
     Features = Buffer<int>::fromVector(flatFeatureIds).data().to(torch::kCUDA);
@@ -37,14 +37,19 @@ PolynomCuda::PolynomCuda(PolynomPtr polynom)
 torch::Tensor PolynomCuda::Forward(torch::Tensor batch) const {
     const int batchSize = batch.size(0);
     int fCount = batch.size(1);
+
     const int outDim = Polynom_->OutDim();
     const int polynomCount = PolynomOffsets.size(0) - 1;
-    torch::Tensor result = torch::zeros({batchSize, outDim}, TorchHelpers::tensorOptionsOnDevice(ComputeDeviceType::Gpu));
-    torch::Tensor probs = torch::zeros({polynomCount, batchSize}, TorchHelpers::tensorOptionsOnDevice(ComputeDeviceType::Gpu));
+
+    torch::Tensor result = torch::zeros({outDim, batchSize},
+        TorchHelpers::tensorOptionsOnDevice(ComputeDeviceType::Gpu));
+    torch::Tensor probs = torch::zeros({polynomCount, batchSize},
+        TorchHelpers::tensorOptionsOnDevice(ComputeDeviceType::Gpu));
+
     auto transposed = batch.transpose(0, 1);
 
     PolynomForward(Polynom_->Lambda_,
-        transposed.data<float>(),
+            transposed.data<float>(),
             fCount,
             batchSize,
             Features.data<int>(),
@@ -56,7 +61,6 @@ torch::Tensor PolynomCuda::Forward(torch::Tensor batch) const {
             probs.data<float>(),
             result.data<float>()
         );
-
-    return result;
+    return result.transpose(0, 1);
 
 }

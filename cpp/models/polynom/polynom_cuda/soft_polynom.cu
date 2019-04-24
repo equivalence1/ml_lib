@@ -8,27 +8,29 @@ __forceinline__ __device__ T __ldg(const T* data) {
 }
 #endif
 
-__forceinline__ __device__  float Sigmoid(float x) {
+__forceinline__ __device__ float Sigmoid(float x) {
     return 1.0f / (1.0f + expf(-x));
 }
 
-
-__forceinline__ __device__  float SigmoidDer(float x) {
+__forceinline__ __device__ float SigmoidDer(float x) {
     const float p = 1.0f / (1.0f + expf(-x));
     return p * (1.0f - p);
 }
 
-
-__global__ void PolynomProbsImpl(const float* features,
-                                 int batchSize,
-                                 const int* splits,
-                                 const float* conditions,
-                                 const int* polynomOffsets,
-                                 int polynomCount,
-                                 float lambda,
-                                 float* probs) {
+__global__ void PolynomProbsImpl(
+    const float* features,
+    int batchSize,
+    const int* splits,
+    const float* conditions,
+    const int* polynomOffsets,
+    int polynomCount,
+    float lambda,
+    float* probs) {
     if (threadIdx.x < batchSize) {
         int polynomId = blockIdx.x;
+
+        features +=  threadIdx.x;
+        probs += threadIdx.x;
 
         while (polynomId < polynomCount) {
             int offset = polynomOffsets[polynomId];
@@ -39,7 +41,7 @@ __global__ void PolynomProbsImpl(const float* features,
             for (int i = 0; i < depth; ++i) {
                 const int f = __ldg(splits + offset + i);
                 const float c = __ldg(conditions + offset + i);
-                const float x = __ldg(features + f * batchSize + threadIdx.x);
+                const float x = __ldg(features + f * batchSize);
                 const float val = -lambda * (x - c);
                 const float expVal = 1.0f + exp(val);
 
@@ -50,55 +52,44 @@ __global__ void PolynomProbsImpl(const float* features,
                 logProb -= isTrueLogProb;
             }
             const float prob = exp(logProb);
-            probs[polynomId * batchSize + threadIdx.x] = prob;
+            probs[polynomId * batchSize] = prob;
             polynomId += gridDim.x;
         }
     }
 }
 
-
 //batch size should be equal to BlockSize
 //we need to reduce polynoms for each output dim
-__global__ void PolynomForwardImpl(const float* probs,
-                                   int batchSize,
-                                   const float* values,
-                                   int polynomCount,
-                                   int outputDim,
-                                   float* out) {
+__global__ void PolynomForwardImpl(
+    const float* probs,
+    int batchSize,
+    const float* values,
+    int polynomCount,
+    int outputDim,
+    float* out) {
+
     //out: batch_elem0 dim0, dim1, dimk batch_elem1 dim0 dim1 dimk
     //so threads
+    int polynomId = blockIdx.x;
+    const int dimId = blockIdx.y;
 
-
-    const size_t totalElems = outputDim * batchSize * polynomCount;
-
-    const int flatElems = outputDim * batchSize;
-    const int stripeSize = gridDim.x * flatElems;
-
-    int tid = blockDim.x * blockIdx.x + threadIdx.x;
-
-
-    const int elemId = tid % flatElems;
-    const int dimId = elemId % outputDim;
-    const int batchId = elemId / outputDim;
-
-    /*
-     * batch size should be 2^k (128/256/512), so this will be always false
-     */
-    if (tid >= stripeSize) {
+    int tid = threadIdx.x;
+    if (tid >= batchSize) {
         return;
     }
 
     float sum = 0;
+    probs += threadIdx.x;
+    values += dimId;
 
-    while (tid < totalElems) {
-        const int polynomId = tid / flatElems;
-        const float polynomProb = __ldg(probs + polynomId);
-        const float out = __ldg(values + polynomId * outputDim + dimId);
+    while (polynomId < polynomCount) {
+        const float polynomProb = __ldg(probs + polynomId * batchSize);
+        const float out = __ldg(values + polynomId * outputDim);
         sum += polynomProb * out;
-
-        tid += stripeSize;
+        polynomId += gridDim.x;
     }
-    atomicAdd(out + batchId * outputDim + dimId, sum);
+
+    atomicAdd(out + dimId * batchSize + threadIdx.x, sum);
 }
 
 
@@ -118,17 +109,19 @@ void PolynomForward(
     int outDim,
     float* tempProbs,
     float* output
-    ) {
+) {
     const int blockSize = batchSize;
     const int numBlocks = min(polynomCount, 1000);
     assert(batchSize < 2048);
     assert(numBlocks);
 
-    PolynomProbsImpl<<<numBlocks, blockSize>>>(features, batchSize, splits, conditions, polynomOffsets, polynomCount, lambda, tempProbs);
+    PolynomProbsImpl << < numBlocks, blockSize >>> (features, batchSize, splits, conditions, polynomOffsets, polynomCount, lambda, tempProbs);
 
-    const int forwardBlocks = min(polynomCount * outDim, 1000);
-     assert(forwardBlocks);
-    PolynomForwardImpl<<<forwardBlocks, 256>>>(tempProbs, batchSize, values, polynomCount, outDim, output);
+    dim3 forwardBlocks;
+    forwardBlocks.z = 1;
+    forwardBlocks.y = outDim;
+    forwardBlocks.x = min(polynomCount, 512);
+    PolynomForwardImpl << < forwardBlocks, batchSize >> > (tempProbs, batchSize, values, polynomCount, outDim, output);
 }
 
 //
