@@ -7,7 +7,7 @@
 class PolynomModel : public experiments::Model {
 public:
 
-    PolynomModel(PolynomPtr polynom)
+    explicit PolynomModel(PolynomPtr polynom)
         : polynom_(polynom) {}
 
     PolynomModel() {
