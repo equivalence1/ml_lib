@@ -10,6 +10,7 @@ namespace experiments {
 class Model : public torch::nn::Module {
 public:
     virtual torch::Tensor forward(torch::Tensor x) = 0;
+
 };
 
 using ModelPtr = std::shared_ptr<Model>;
@@ -19,6 +20,11 @@ public:
     virtual ModelPtr conv() = 0;
 
     virtual ModelPtr classifier() = 0;
+
+    virtual void train(bool on = true) {
+        conv()->train(on);
+        classifier()->train(on);
+    }
 };
 
 }
@@ -33,6 +39,12 @@ public:
     torch::Tensor forward(torch::Tensor x) override {
         return second_->forward(first_->forward(x));
     }
+
+    virtual void train(bool on = true) {
+        first_->train(on);
+        second_->train(on);
+    }
+
 
 private:
     experiments::ModelPtr first_;

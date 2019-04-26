@@ -34,11 +34,14 @@ int main(int argc, char* argv[]) {
 
 
     CatBoostNNConfig catBoostNnConfig;
-    catBoostNnConfig.batchSize = 256;
-    catBoostNnConfig.lambda_ = 10;
-    catBoostNnConfig.representationsIterations = 2;
+    catBoostNnConfig.batchSize = 128;
+    catBoostNnConfig.lambda_ = 1;
+    catBoostNnConfig.adamStep = 0.01;
+    catBoostNnConfig.representationsIterations = 10;
     catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_gpu.json";
     catBoostNnConfig.catboostInitParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_init.json";
+    catBoostNnConfig.catboostFinalParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_final.json";
+
 
     PolynomPtr polynom = std::make_shared<Polynom>();
     polynom->Lambda_ = catBoostNnConfig.lambda_;
@@ -58,9 +61,21 @@ int main(int argc, char* argv[]) {
 
     // Attach Listeners
 
+
+    nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
+        std::cout << "--------===============CATBOOST learn + test start ====================---------------  "  << std::endl;
+        auto learn = nnTrainer.applyConvLayers(dataset.first.map(getDefaultCifar10TestTransform()));
+        auto test =  nnTrainer.applyConvLayers(dataset.second.map(getDefaultCifar10TestTransform()));
+        nnTrainer.trainFinalDecision(learn, test);
+        std::cout << "--------===============CATBOOST learn + test finish ====================---------------  "  << std::endl;
+
+    });
+
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
     nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
+        nnTrainer.setLambda(10000);
         model->eval();
+
 
         auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(128));
         int rightAnswersCnt = 0;
@@ -87,6 +102,8 @@ int main(int argc, char* argv[]) {
                 }
             }
         }
+        nnTrainer.setLambda(catBoostNnConfig.lambda_);
+
 
         std::cout << "Test accuracy: " <<  rightAnswersCnt * 100.0f / dataset.second.size().value() << std::endl;
     });

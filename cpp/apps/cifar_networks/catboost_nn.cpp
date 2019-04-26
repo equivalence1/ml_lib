@@ -32,15 +32,17 @@ experiments::OptimizerPtr CatBoostNN::getReprOptimizer(const experiments::ModelP
 
     experiments::OptimizerArgs<TransT> args(transform, opts_.representationsIterations, device_);
 
-    torch::optim::AdamOptions opt(opts_.adamStep);
+    torch::optim::SGDOptions opt(opts_.adamStep);
+//    torch::optim::AdamOptions opt(opts_.adamStep);
 //        opt.weight_decay_ = 5e-4;
-    auto optim = std::make_shared<torch::optim::Adam>(reprModel->parameters(), opt);
+//    auto optim = std::make_shared<torch::optim::Adam>(reprModel->parameters(), opt);
+    auto optim = std::make_shared<torch::optim::SGD>(reprModel->parameters(), opt);
     args.torchOptim_ = optim;
 
     auto lr = &(optim->options.learning_rate_);
     args.lrPtrGetter_ = [=]() { return lr; };
 
-    const auto batchSize= opts_.batchSize;
+    const auto batchSize = opts_.batchSize;
     auto dloaderOptions = torch::data::DataLoaderOptions(batchSize);
     args.dloaderOptions_ = std::move(dloaderOptions);
 
@@ -57,10 +59,13 @@ namespace {
 
         explicit CatBoostOptimizer(std::string catboostOptions,
             uint64_t seed,
-            double lambda)
+            double lambda,
+            double dropOut
+            )
         : catBoostOptions_(std::move(catboostOptions))
         , seed_(seed)
-        , lambda_(lambda) {
+        , lambda_(lambda)
+        , drouput_(dropOut) {
 
         }
 
@@ -105,8 +110,16 @@ namespace {
             std::vector<float> learn(learnIndices.size() * featuresCount);
             std::vector<float> test(testIndices.size() * featuresCount);
 
-            gather(data, learnIndices, featuresCount, learn);
-            gather(data, testIndices, featuresCount, test);
+            std::vector<int> usedFeatures;
+            usedFeatures.resize(featuresCount);
+            std::iota(usedFeatures.begin(), usedFeatures.end(), 0);
+
+            if (drouput_ > 0) {
+                std::shuffle(usedFeatures.begin(), usedFeatures.end(), engine_);
+                usedFeatures.resize(usedFeatures.size() * (1.0 - drouput_));
+            }
+            gather(data, learnIndices, featuresCount, learn, usedFeatures);
+            gather(data, testIndices, featuresCount, test, usedFeatures);
 
 
             TPool trainPool = MakePool(learn, learnTargets, learnWeights.data());
@@ -117,6 +130,23 @@ namespace {
             polynom.Lambda_ = lambda_;
             std::cout << "Model size: " << catboost.Trees.size() << std::endl;
             std::cout << "Polynom size: " << polynom.Ensemble_.size() << std::endl;
+            std::set<int> featureIds;
+            int fCount = 0;
+            for (const auto& monom : polynom.Ensemble_) {
+                for (const auto& split : monom.Structure_.Splits) {
+                    featureIds.insert(split.Feature);
+                    fCount = std::max<int>(fCount, split.Feature);
+                }
+            }
+            std::cout << "Polynom used features: " << fCount << std::endl;
+            for (int k = 0; k < fCount; ++k) {
+                if (featureIds.count(k)) {
+                    std::cout <<"1";
+                } else {
+                    std::cout<<"0";
+                }
+            }
+            std::cout << std::endl << "===============" << std::endl;
             polynomModel->reset(std::make_shared<Polynom>(polynom));
         }
 
@@ -147,8 +177,11 @@ namespace {
             std::vector<float> learn(learnIndices.size() * featuresCount);
             std::vector<float> test(testIndices.size() * featuresCount);
 
-            gather(learnData, learnIndices, featuresCount, learn);
-            gather(testData, testIndices, featuresCount, test);
+            std::vector<int> usedFeatures;
+            usedFeatures.resize(featuresCount);
+            std::iota(usedFeatures.begin(), usedFeatures.end(), 0);
+            gather(learnData, learnIndices, featuresCount, learn, usedFeatures);
+            gather(testData, testIndices, featuresCount, test, usedFeatures);
 
 
             TPool trainPool = MakePool(learn, labelsRef);
@@ -169,12 +202,12 @@ namespace {
             //pass, no epochs
         }
     private:
-        inline void gather(torch::Tensor data, VecRef<int> indices, int64_t featuresCount, VecRef<float> dst) const {
+        inline void gather(torch::Tensor data, VecRef<int> indices, int64_t featuresCount, VecRef<float> dst, const std::vector<int>& activeFeatures) const {
             for (uint64_t sample = 0; sample < indices.size(); ++sample) {
                 Vec features = Vec(data[indices[sample]]);
                 VERIFY(features.size() == featuresCount, "err");
                 auto featuresRef = features.arrayRef();
-                for (uint64_t f = 0; f < featuresCount; ++f) {
+                for (auto f : activeFeatures) {
                     dst[f * indices.size() + sample] = featuresRef[f];
                 }
             }
@@ -184,6 +217,7 @@ namespace {
         std::string catBoostOptions_;
         uint64_t seed_ = 0;
         double lambda_ = 1.0;
+        double drouput_ = 0.0;
     };
 }
 
@@ -209,7 +243,8 @@ experiments::OptimizerPtr CatBoostNN::getDecisionOptimizer(const experiments::Mo
     return std::make_shared<CatBoostOptimizer>(
         readFile(params),
         seed_,
-        opts_.lambda_
+        opts_.lambda_,
+        opts_.dropOut_
         );
 }
 
@@ -231,30 +266,28 @@ void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
 
 
 void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
-    for (auto& param : representationsModel->parameters()) {
-        param.set_requires_grad(false);
-    }
-    for (auto& param : decisionModel->parameters()) {
-        param.set_requires_grad(true);
-    }
+    representationsModel->train(false);
+    decisionModel->train(true);
 
     std::cout << "    getting representations" << std::endl;
 
     auto mds = ds.map(reprTransform_);
-    auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(100));
+    auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(1024));
     auto device = representationsModel->parameters().data()->device();
     std::vector<torch::Tensor> reprList;
     std::vector<torch::Tensor> targetsList;
 
     for (auto& batch : *dloader) {
-        auto res = representationsModel->forward(batch.data.to(device));
-        auto target = batch.target.to(device);
+        auto res = representationsModel->forward(batch.data.to(device)).to(torch::kCPU);
+        auto target = batch.target;
         reprList.push_back(res);
         targetsList.push_back(target);
     }
 
     auto repr = torch::cat(reprList, 0);
     auto targets = torch::cat(targetsList, 0);
+    reprList.clear();
+    targetsList.clear();
 
     std::cout << "    optimizing decision model" << std::endl;
 
@@ -263,12 +296,8 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
 }
 
 void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
-    for (auto& param : representationsModel->parameters()) {
-        param.set_requires_grad(true);
-    }
-    for (auto& param : decisionModel->parameters()) {
-        param.set_requires_grad(false);
-    }
+    representationsModel->train(true);
+    decisionModel->train(false);
 
     std::cout << "    optimizing representation model" << std::endl;
 
@@ -281,11 +310,18 @@ experiments::ModelPtr CatBoostNN::trainFinalDecision(const TensorPairDataset& le
     auto optimizer = std::make_shared<CatBoostOptimizer>(
         readFile(opts_.catboostFinalParamsFile),
         seed_,
-        1e10
+        1e10,
+        0.0
     );
     auto result = std::make_shared<PolynomModel>();
     optimizer->train(learn, test, result);
     return result;
+}
+void CatBoostNN::setLambda(double lambda) {
+    auto model = dynamic_cast<PolynomModel*>(decisionModel.get());
+    VERIFY(model != nullptr, "model is not polynom");
+    model->setLambda(lambda);
+
 }
 //
 //std::pair<torch::Tensor, torch::Tensor> CatBoostNN::representation(TensorPairDataset& ds) {

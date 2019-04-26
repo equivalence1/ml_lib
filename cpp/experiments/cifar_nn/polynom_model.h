@@ -20,6 +20,10 @@ public:
         polynom_ = polynom;
         polynomCuda_ = nullptr;
     }
+
+    void setLambda(double lambda) {
+        polynom_->Lambda_ = lambda;
+    }
 private:
     PolynomPtr polynom_;
     PolynomCudaPtr polynomCuda_;

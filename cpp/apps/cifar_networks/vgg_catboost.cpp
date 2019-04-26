@@ -34,9 +34,10 @@ int main(int argc, char* argv[]) {
 
 
     CatBoostNNConfig catBoostNnConfig;
-    catBoostNnConfig.batchSize = 256;
+    catBoostNnConfig.batchSize = 128;
+    catBoostNnConfig.dropOut_ = 0.5;
     catBoostNnConfig.lambda_ = 1;
-    catBoostNnConfig.representationsIterations = 10;
+    catBoostNnConfig.representationsIterations = 15;
     catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_gpu.json";
     catBoostNnConfig.catboostInitParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_init.json";
     catBoostNnConfig.catboostFinalParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_final.json";
@@ -70,10 +71,10 @@ int main(int argc, char* argv[]) {
     });
 
     nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
+        nnTrainer.setLambda(10000);
         model->eval();
-        polynom->Lambda_ = 100000;
 
-        auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(400));
+        auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(256));
         int rightAnswersCnt = 0;
 
         for (auto& batch : *dloader) {
@@ -98,13 +99,12 @@ int main(int argc, char* argv[]) {
                 }
             }
         }
-        polynom->Lambda_ = catBoostNnConfig.lambda_;
+        nnTrainer.setLambda(catBoostNnConfig.lambda_);
 
         std::cout << "Test accuracy: " <<  rightAnswersCnt * 100.0f / dataset.second.size().value() << std::endl;
     });
 
 
-    polynom->Lambda_ = 10000;
 
     // Train
 

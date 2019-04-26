@@ -1,13 +1,15 @@
 {
   "boosting_type": "Plain",
-  "iterations" : 3000,
+  "iterations" : 5000,
   "task_type": "GPU",
   "devices": "0",
-  "gpu_ram_part": 0.9,
+  "depth" : 6,
+  "gpu_ram_part": 0.75,
   "eval_metric": "Accuracy",
   "od_type": "IncToDec",
-  "logging_level" : "Debug",
+  "logging_level" : "Verbose",
   "loss_function": "MultiClass",
-  "learning_rate" : 0.001,
-  "bootstrap_type": "No"
+  "learning_rate" : 0.04,
+  "best_model_min_trees": 1000,
+  "random_strength": 1
 }

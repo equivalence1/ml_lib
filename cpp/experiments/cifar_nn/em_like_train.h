@@ -18,25 +18,22 @@ public:
 
         for (uint32_t i = 0; i < iterations_; ++i) {
             std::cout << "EM iteration: " << i << std::endl;
-
-            for (auto& param : representationsModel->parameters()) {
-                param.set_requires_grad(false);
-            }
-            for (auto& param : decisionModel->parameters()) {
-                param.set_requires_grad(true);
-            }
+            representationsModel->train(false);
+            decisionModel->train(true);
 
             std::cout << "    getting representations" << std::endl;
 
             auto mds = ds.map(reprTransform_);
-            auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(100));
+            auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(1024));
             auto device = representationsModel->parameters().data()->device();
+
+
             std::vector<torch::Tensor> reprList;
             std::vector<torch::Tensor> targetsList;
 
             for (auto& batch : *dloader) {
-                auto res = representationsModel->forward(batch.data.to(device));
-                auto target = batch.target.to(device);
+                auto res = representationsModel->forward(batch.data.to(device)).to(torch::kCPU);
+                auto target = batch.target;
                 reprList.push_back(res);
                 targetsList.push_back(target);
             }
@@ -49,17 +46,13 @@ public:
             auto decisionFuncOptimizer = getDecisionOptimizer(decisionModel);
             decisionFuncOptimizer->train(repr, targets, loss, decisionModel);
 
-            for (auto& param : representationsModel->parameters()) {
-                param.set_requires_grad(true);
-            }
-            for (auto& param : decisionModel->parameters()) {
-                param.set_requires_grad(false);
-            }
+            representationsModel->train(true);
+            decisionModel->train(false);
+
 
             std::cout << "    optimizing representation model" << std::endl;
 
             LossPtr representationLoss = makeRepresentationLoss(decisionModel, loss);
-
             auto representationOptimizer = getReprOptimizer(representationsModel);
             representationOptimizer->train(ds, representationLoss, representationsModel);
 

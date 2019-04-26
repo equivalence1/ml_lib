@@ -51,6 +51,8 @@ public:
 
     ~LeNet() override = default;
 
+
+
 private:
     std::shared_ptr<LeNetConv> conv_{nullptr};
     std::shared_ptr<experiments::Model> classifier_{nullptr};

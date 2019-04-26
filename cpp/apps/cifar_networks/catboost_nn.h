@@ -13,6 +13,7 @@
 struct CatBoostNNConfig {
     uint32_t globalIterationsCount = 500;
     uint32_t representationsIterations = 3;
+    double dropOut_ = 0;
 
     int batchSize = 256;
     double lambda_ = 1.0;
@@ -20,7 +21,7 @@ struct CatBoostNNConfig {
     std::string catboostInitParamsFile = "catboost_params.json";
     std::string catboostFinalParamsFile = "catboost_final_params.json";
 
-    double adamStep = 0.0005;
+    double adamStep = 0.001;
 
 };
 
@@ -63,6 +64,7 @@ public:
         return TensorPairDataset(repr, targets);
     }
 
+    void setLambda(double lambda);
     experiments::ModelPtr trainFinalDecision(const TensorPairDataset& learn, const TensorPairDataset& test);
 
     void train(TensorPairDataset& ds, const LossPtr& loss) override;
