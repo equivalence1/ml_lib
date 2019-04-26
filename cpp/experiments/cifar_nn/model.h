@@ -11,6 +11,14 @@ class Model : public torch::nn::Module {
 public:
     virtual torch::Tensor forward(torch::Tensor x) = 0;
 
+    //WTF torch, this should be default behaviour
+    void train(bool on = true) override {
+        for (auto& param : parameters()) {
+            param.set_requires_grad(on);
+        }
+        torch::nn::Module::train(on);
+    }
+
 };
 
 using ModelPtr = std::shared_ptr<Model>;
@@ -21,7 +29,7 @@ public:
 
     virtual ModelPtr classifier() = 0;
 
-    virtual void train(bool on = true) {
+    void train(bool on = true) override {
         conv()->train(on);
         classifier()->train(on);
     }
