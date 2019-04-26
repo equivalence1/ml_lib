@@ -272,7 +272,7 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
     std::cout << "    getting representations" << std::endl;
 
     auto mds = ds.map(reprTransform_);
-    auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(1024));
+    auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(256));
     auto device = representationsModel->parameters().data()->device();
     std::vector<torch::Tensor> reprList;
     std::vector<torch::Tensor> targetsList;
