@@ -78,9 +78,9 @@ public:
     }
 };
 
-class PyWrapperModel : public Model {
+class PyWrapperModel : public experiments::Model {
 public:
-    explicit PyWrapperModel(ModelPtr model) : model_(std::move(model)) {}
+    explicit PyWrapperModel(experiments::ModelPtr model) : model_(std::move(model)) {}
 
     torch::Tensor forward(torch::Tensor x) override {
         return model_->forward(x);
@@ -94,7 +94,7 @@ public:
     }
 
 private:
-    ModelPtr model_;
+    experiments::ModelPtr model_;
 };
 
 class PyLeNetLinearTrainer : public LeNetLinearTrainer {
@@ -103,15 +103,18 @@ public:
             uint32_t it_repr,
             uint32_t it_decision) : LeNetLinearTrainer(it_global, it_repr, it_decision) {}
 
-    ModelPtr getTrainedModel_py(PyTensorPairDataset* ds) {
+    experiments::ModelPtr getTrainedModel_py(PyTensorPairDataset* ds) {
         return std::make_shared<PyWrapperModel>(this->getTrainedModel(*ds));
     }
 };
 
 void py_train_model(std::shared_ptr<PyLeNet> model, PyTensorPairDataset* ds, int epochs = 10) {
-    DefaultSGDOptimizer optim(epochs);
-    auto loss = std::make_shared<CrossEntropyLoss>();
-    optim.train(*ds, loss, model);
+//    DefaultSGDOptimizer optim(epochs);
+//    auto loss = std::make_shared<CrossEntropyLoss>();
+//    optim.train(*ds, loss, model);
+
+    // TODO
+    assert(false);
 }
 
 PYBIND11_MODULE(cifar_nn_py, m) {

@@ -39,14 +39,14 @@ public:
             metricsCalcer->addMetric(Accuracy(dsLst.target(), 0.1, 0), "Accuracy");
             boosting.addListener(metricsCalcer);
             CrossEntropy target(dsLst, 0.1);
-            decisionModel = std::make_shared<ObliviousTreeModel>(boosting.fit(dsLst, target));
+            decisionModel_ = std::make_shared<ObliviousTreeModel>(boosting.fit(dsLst, target));
 //        }
     }
 
     experiments::ModelPtr getTrainedModel(TensorPairDataset& ds) {
         LossPtr loss = std::make_shared<CrossEntropyLoss>();
         train(ds, loss);
-        auto res = decisionModel;
+        auto res = decisionModel_;
         return res;
     }
 

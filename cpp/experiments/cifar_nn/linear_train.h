@@ -12,8 +12,8 @@ public:
     LeNetLinearTrainer(uint32_t it_global,
             uint32_t it_repr,
             uint32_t it_decision) : EMLikeTrainer(torch::data::transforms::Stack<>(), it_global) {
-        representationsModel = std::make_shared<LeNetConv>();
-        representationsModel->to(torch::kCUDA);
+        representationsModel_ = std::make_shared<LeNetConv>();
+        representationsModel_->to(torch::kCUDA);
 
         // TODO optimizers
 
@@ -26,7 +26,7 @@ public:
 //            auto dloaderOptions = torch::data::DataLoaderOptions(4);
 //            args.dloaderOptions_ = std::move(dloaderOptions);
 //
-//            auto optim = std::make_shared<torch::optim::SGD>(representationsModel->parameters(), reprOptimOptions);
+//            auto optim = std::make_shared<torch::optim::SGD>(representationsModel_->parameters(), reprOptimOptions);
 //            args.torchOptim_ = optim;
 //
 //            auto lr = &(optim->options.learning_rate_);
@@ -37,8 +37,8 @@ public:
 //            representationOptimizer_ = optimizer;
 //        }
 //
-//        decisionModel = std::make_shared<LinearModel>(16 * 5 * 5, 10);
-//        decisionModel->to(torch::kCUDA);
+//        decisionModel_ = std::make_shared<LinearModel>(16 * 5 * 5, 10);
+//        decisionModel_->to(torch::kCUDA);
 //
 //        {
 //            torch::optim::SGDOptions decisionOptimOptions(0.1);
@@ -48,7 +48,7 @@ public:
 //            auto dloaderOptions = torch::data::DataLoaderOptions(4);
 //            args.dloaderOptions_ = std::move(dloaderOptions);
 //
-//            auto optim = std::make_shared<torch::optim::SGD>(decisionModel->parameters(), decisionOptimOptions);
+//            auto optim = std::make_shared<torch::optim::SGD>(decisionModel_->parameters(), decisionOptimOptions);
 //            args.torchOptim_ = optim;
 //
 //            auto lr = &(optim->options.learning_rate_);

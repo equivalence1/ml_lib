@@ -18,7 +18,7 @@
 class ObliviousTreeTrainer : public EMLikeTrainer<torch::data::transforms::Stack<>> {
 public:
     ObliviousTreeTrainer() : EMLikeTrainer(torch::data::transforms::Stack<>(), 0) {
-        representationsModel = std::make_shared<SimpleConvNet>();
+        representationsModel_ = std::make_shared<SimpleConvNet>();
 
         torch::optim::SGDOptions reprOptimOptions(0.0002);
 
@@ -30,18 +30,18 @@ public:
     }
 
     void train(TensorPairDataset& ds, const LossPtr& loss) override {
-        initializer_->init(ds, loss, &representationsModel, &decisionModel);
+        initializer_->init(ds, loss, &representationsModel_, &decisionModel_);
 
-        for (auto& param : representationsModel->parameters()) {
+        for (auto& param : representationsModel_->parameters()) {
             param = torch::randn(param.sizes());
         }
         iterations_ = 20;
         for (uint32_t i = 0; i < iterations_ + 1; ++i) {
             std::cout << "EM iteration: " << i << std::endl;
-            for (auto& param : representationsModel->parameters()) {
+            for (auto& param : representationsModel_->parameters()) {
                 param.set_requires_grad(false);
             }
-            torch::Tensor lastLayer = representationsModel->forward(ds.data());
+            torch::Tensor lastLayer = representationsModel_->forward(ds.data());
             int64_t lsSz = lastLayer.sizes()[0];
             Vec nwDs = Vec(lastLayer.view({-1}));
             Mx dt(nwDs, lastLayer.sizes()[0], lastLayer.sizes()[1]);
@@ -64,19 +64,19 @@ public:
             metricsCalcer->addMetric(Accuracy(dsLst.target(), 0.1, 0), "Accuracy");
             boosting.addListener(metricsCalcer);
             CrossEntropy target(dsLst, 0.1);
-            decisionModel = std::make_shared<ObliviousTreeModel>(boosting.fit(dsLst, target));
+            decisionModel_ = std::make_shared<ObliviousTreeModel>(boosting.fit(dsLst, target));
 
             if (i == iterations_) break;
 
-            for (auto& param : representationsModel->parameters()) {
+            for (auto& param : representationsModel_->parameters()) {
                 param.set_requires_grad(true);
             }
 
-            LossPtr representationLoss = makeRepresentationLoss(decisionModel, loss);
+            LossPtr representationLoss = makeRepresentationLoss(decisionModel_, loss);
 
             // TODO train
 
-//            representationOptimizer_->train_adam(ds, representationLoss, representationsModel);
+//            representationOptimizer_->train_adam(ds, representationLoss, representationsModel_);
         }
     }
 

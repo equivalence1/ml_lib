@@ -3,12 +3,14 @@ project(cifar_networks)
 
 include_directories(../../experiments)
 
-add_executable(lenet lenet.cpp common.h common.cpp vgg_em.cpp common_em.h)
+add_executable(lenet lenet.cpp common.h common.cpp)
 target_link_libraries(lenet "${TORCH_LIBRARIES}" cifar_nn)
-
 
 add_executable(lenet_em lenet_em.cpp common.h common.cpp common_em.h)
 target_link_libraries(lenet_em "${TORCH_LIBRARIES}" cifar_nn)
+
+add_executable(lenet_em_exact_classifier lenet_em_exact_classifier.cpp common.h common.cpp common_em.h)
+target_link_libraries(lenet_em_exact_classifier "${TORCH_LIBRARIES}" cifar_nn)
 
 add_executable(lenet_save_restore lenet_save_restore.cpp)
 target_link_libraries(lenet_save_restore "${TORCH_LIBRARIES}" cifar_nn)

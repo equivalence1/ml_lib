@@ -1,4 +1,5 @@
 #include "common.h"
+
 #include <cifar_nn/cifar10_reader.h>
 #include <cifar_nn/optimizer.h>
 #include <cifar_nn/cross_entropy_loss.h>
@@ -9,6 +10,8 @@
 #include <string>
 #include <memory>
 #include <iostream>
+
+// CommonEm
 
 struct CommonEmOptions {
     uint32_t globalIterationsCount = 0;
@@ -21,22 +24,24 @@ public:
     using ConvModelPtr = std::shared_ptr<experiments::ConvModel>;
 
     CommonEm(CommonEmOptions opts,
-        ConvModelPtr model,
-        torch::DeviceType device)
+             experiments::ModelPtr reprModel,
+             experiments::ModelPtr decisionModel,
+             torch::DeviceType device)
             : EMLikeTrainer(getDefaultCifar10TrainTransform(), opts.globalIterationsCount)
             , opts_(opts)
-            , model_(std::move(model))
             , device_(device) {
 
         initializer_ = std::make_shared<NoopInitializer>();
 
-        representationsModel = model_->conv();
-        decisionModel = model_->classifier();
+        representationsModel_ = std::move(reprModel);
+        decisionModel_ = std::move(decisionModel);
     }
 
-    experiments::ModelPtr getTrainedModel(TensorPairDataset& ds, const LossPtr& loss) override {
-        train(ds, loss);
-        return model_;
+    CommonEm(CommonEmOptions opts,
+        const ConvModelPtr& model,
+        torch::DeviceType device)
+            : CommonEm(opts, model->conv(), model->classifier(), device) {
+
     }
 
 protected:
@@ -88,7 +93,84 @@ protected:
 
 private:
     CommonEmOptions opts_;
-    ConvModelPtr model_;
     torch::DeviceType device_;
+
+};
+
+
+// ExactLinearEm & co
+
+class LinearClassifier : public experiments::Model {
+public:
+    LinearClassifier(int in, int out) {
+        linear_ = register_module("linear", torch::nn::Linear(in, out));
+    }
+
+    torch::Tensor forward(torch::Tensor x) override {
+        x = x.view({x.size(0), -1});
+        return linear_->forward(x);
+    }
+
+    void setParameters(torch::Tensor weight, torch::Tensor bias) {
+        weight = weight.to(linear_->weight.device());
+        linear_->weight = std::move(weight);
+        bias = bias.to(linear_->bias.device());
+        linear_->bias = std::move(bias);
+    }
+
+private:
+    torch::nn::Linear linear_{nullptr};
+
+};
+
+class ExactLinearOptimizer : public experiments::Optimizer {
+public:
+    ExactLinearOptimizer() = default;
+
+    void train(TensorPairDataset& ds, LossPtr loss, experiments::ModelPtr model) const override {
+        auto x = ds.data();
+        x = x.view({x.size(0), -1});
+        auto y = ds.targets();
+        y = y.view({-1, 1});
+        auto yOnehot = torch::zeros({y.size(0), 10}, torch::kFloat32);
+        yOnehot.scatter_(1, y, 1);
+
+        auto b = torch::ones({x.size(0), 1}, torch::kFloat32);
+        x = torch::cat({x, b}, 1);
+        auto solution = linearLeastSquares(x, yOnehot);
+        auto weight = solution.slice(1, 0, solution.size(1) - 1, 1);
+        auto bias = solution.slice(1, solution.size(1) - 1, solution.size(1), 1);
+        bias = bias.view({-1});
+
+        auto m = std::dynamic_pointer_cast<LinearClassifier>(model);
+        m->setParameters(weight, bias);
+    }
+
+    ~ExactLinearOptimizer() override = default;
+
+private:
+    torch::Tensor linearLeastSquares(const torch::Tensor& x, const torch::Tensor& y) const {
+        auto tmp = (torch::mm(x.t(), x)).inverse();
+        tmp = torch::mm(tmp, x.t());
+        tmp = torch::mm(tmp, y);
+        return tmp.t();
+    }
+
+};
+
+class ExactLinearEm : public CommonEm {
+public:
+    ExactLinearEm(CommonEmOptions opts,
+                  experiments::ModelPtr reprModel,
+                  experiments::ModelPtr decisionModel,
+                  torch::DeviceType device)
+            : CommonEm(opts, std::move(reprModel), std::move(decisionModel), device) {
+
+    }
+
+protected:
+    experiments::OptimizerPtr getDecisionOptimizer(const experiments::ModelPtr& decisionModel) override {
+        return std::make_shared<ExactLinearOptimizer>();
+    }
 
 };

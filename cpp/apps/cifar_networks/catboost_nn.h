@@ -39,21 +39,21 @@ public:
 
         initializer_ = std::make_shared<NoopInitializer>();
 
-        representationsModel = model_->conv();
-        decisionModel = model_->classifier();
+        representationsModel_ = model_->conv();
+        decisionModel_ = model_->classifier();
     }
 
     template <class Ds>
     TensorPairDataset applyConvLayers(const Ds& ds) {
-        representationsModel->eval();
+        representationsModel_->eval();
 
         auto dloader = torch::data::make_data_loader(ds, torch::data::DataLoaderOptions(256));
-        auto device = representationsModel->parameters().data()->device();
+        auto device = representationsModel_->parameters().data()->device();
         std::vector<torch::Tensor> reprList;
         std::vector<torch::Tensor> targetsList;
 
         for (auto& batch : *dloader) {
-            auto res = representationsModel->forward(batch.data.to(device));
+            auto res = representationsModel_->forward(batch.data.to(device));
             auto target = batch.target.to(device);
             reprList.push_back(res);
             targetsList.push_back(target);

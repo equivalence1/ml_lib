@@ -195,12 +195,6 @@ namespace {
             polynomModel->reset(std::make_shared<Polynom>(polynom));
         }
 
-        void registerListener(std::shared_ptr<experiments::OptimizerBatchListener>) override {
-            //pass, no batchs
-        }
-        void registerListener(std::shared_ptr<experiments::OptimizerEpochListener>) override {
-            //pass, no epochs
-        }
     private:
         inline void gather(torch::Tensor data, VecRef<int> indices, int64_t featuresCount, VecRef<float> dst, const std::vector<int>& activeFeatures) const {
             for (uint64_t sample = 0; sample < indices.size(); ++sample) {
@@ -249,7 +243,7 @@ experiments::OptimizerPtr CatBoostNN::getDecisionOptimizer(const experiments::Mo
 }
 
 void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
-    initializer_->init(ds, loss, &representationsModel, &decisionModel);
+    initializer_->init(ds, loss, &representationsModel_, &decisionModel_);
 
     trainDecision(ds, loss);
 
@@ -266,19 +260,19 @@ void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
 
 
 void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
-    representationsModel->train(false);
-    decisionModel->train(true);
+    representationsModel_->train(false);
+    decisionModel_->train(true);
 
     std::cout << "    getting representations" << std::endl;
 
     auto mds = ds.map(reprTransform_);
     auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(256));
-    auto device = representationsModel->parameters().data()->device();
+    auto device = representationsModel_->parameters().data()->device();
     std::vector<torch::Tensor> reprList;
     std::vector<torch::Tensor> targetsList;
 
     for (auto& batch : *dloader) {
-        auto res = representationsModel->forward(batch.data.to(device)).to(torch::kCPU);
+        auto res = representationsModel_->forward(batch.data.to(device)).to(torch::kCPU);
         auto target = batch.target;
         reprList.push_back(res);
         targetsList.push_back(target);
@@ -291,19 +285,19 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
 
     std::cout << "    optimizing decision model" << std::endl;
 
-    auto decisionFuncOptimizer = getDecisionOptimizer(decisionModel);
-    decisionFuncOptimizer->train(repr, targets, loss, decisionModel);
+    auto decisionFuncOptimizer = getDecisionOptimizer(decisionModel_);
+    decisionFuncOptimizer->train(repr, targets, loss, decisionModel_);
 }
 
 void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
-    representationsModel->train(true);
-    decisionModel->train(false);
+    representationsModel_->train(true);
+    decisionModel_->train(false);
 
     std::cout << "    optimizing representation model" << std::endl;
 
-    LossPtr representationLoss = makeRepresentationLoss(decisionModel, loss);
-    auto representationOptimizer = getReprOptimizer(representationsModel);
-    representationOptimizer->train(ds, representationLoss, representationsModel);
+    LossPtr representationLoss = makeRepresentationLoss(decisionModel_, loss);
+    auto representationOptimizer = getReprOptimizer(representationsModel_);
+    representationOptimizer->train(ds, representationLoss, representationsModel_);
 
 }
 experiments::ModelPtr CatBoostNN::trainFinalDecision(const TensorPairDataset& learn, const TensorPairDataset& test) {
@@ -318,7 +312,7 @@ experiments::ModelPtr CatBoostNN::trainFinalDecision(const TensorPairDataset& le
     return result;
 }
 void CatBoostNN::setLambda(double lambda) {
-    auto model = dynamic_cast<PolynomModel*>(decisionModel.get());
+    auto model = dynamic_cast<PolynomModel*>(decisionModel_.get());
     VERIFY(model != nullptr, "model is not polynom");
     model->setLambda(lambda);
 
@@ -326,12 +320,12 @@ void CatBoostNN::setLambda(double lambda) {
 //
 //std::pair<torch::Tensor, torch::Tensor> CatBoostNN::representation(TensorPairDataset& ds) {
 //    auto dloader = torch::data::make_data_loader(ds, torch::data::DataLoaderOptions(100));
-//    auto device = representationsModel->parameters().data()->device();
+//    auto device = representationsModel_->parameters().data()->device();
 //    std::vector<torch::Tensor> reprList;
 //    std::vector<torch::Tensor> targetsList;
 //
 //    for (auto& batch : *dloader) {
-//        auto res = representationsModel->forward(batch.data.to(device));
+//        auto res = representationsModel_->forward(batch.data.to(device));
 //        auto target = batch.target.to(device);
 //        reprList.push_back(res);
 //        targetsList.push_back(target);

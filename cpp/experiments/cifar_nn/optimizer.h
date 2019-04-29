@@ -126,7 +126,13 @@ public:
         this->train(ds, std::move(loss), std::move(model));
     }
 
-    virtual void registerListener(std::shared_ptr<OptimizerBatchListener> listener) = 0;
+    void registerListener(const std::shared_ptr<OptimizerBatchListener>& listener) {
+        batchListeners_.push_back(listener);
+    }
+
+    void registerListener(const std::shared_ptr<OptimizerEpochListener>& listener) {
+        epochListeners_.push_back(listener);
+    }
 
     template <class Listener, class ... Args>
     static void emplaceEpochListener(Optimizer* optimizer, Args... args) {
@@ -134,7 +140,37 @@ public:
         optimizer->registerListener(listener);
     }
 
-    virtual void registerListener(std::shared_ptr<OptimizerEpochListener> listener) = 0;
+protected:
+    void fireEpochResetListeners() const {
+        for (auto& listener : epochListeners_) {
+            listener->epochReset();
+        }
+    }
+
+    void fireOnEpochListeners(int epoch, double* lr, const ModelPtr& model) const {
+        std::cout << std::endl;
+        for (auto& listener : epochListeners_) {
+            listener->onEpoch(epoch, lr, model);
+        }
+        std::cout << std::endl;
+    }
+
+    void fireBatchResetListeners() const {
+        for (auto& listener : batchListeners_) {
+            listener->batchReset();
+        }
+    }
+
+    void fireOnBatchListeners(int epoch, int batchId, float batchLoss) const {
+        for (auto& listener : batchListeners_) {
+            listener->onBatch(epoch, batchId, batchLoss);
+        }
+    }
+
+private:
+    std::vector<std::shared_ptr<OptimizerBatchListener>> batchListeners_;
+    std::vector<std::shared_ptr<OptimizerEpochListener>> epochListeners_;
+
 };
 
 using OptimizerPtr = std::shared_ptr<Optimizer>;
@@ -174,14 +210,6 @@ public:
 
     }
 
-    void registerListener(std::shared_ptr<OptimizerBatchListener> listener) override {
-        batchListeners_.push_back(listener);
-    }
-
-    void registerListener(std::shared_ptr<OptimizerEpochListener> listener) override {
-        epochListeners_.push_back(listener);
-    }
-
     void train(TensorPairDataset& ds, LossPtr loss, ModelPtr model) const override {
         auto mds = ds.map(args_.transform_);
         auto dloader = torch::data::make_data_loader(mds, args_.dloaderOptions_);
@@ -214,36 +242,7 @@ public:
     ~DefaultOptimizer() override = default;
 
 private:
-    void fireEpochResetListeners() const {
-        for (auto& listener : epochListeners_) {
-            listener->epochReset();
-        }
-    }
-
-    void fireOnEpochListeners(int epoch, double* lr, ModelPtr model) const {
-        std::cout << std::endl;
-        for (auto& listener : epochListeners_) {
-            listener->onEpoch(epoch, lr, model);
-        }
-        std::cout << std::endl;
-    }
-
-    void fireBatchResetListeners() const {
-        for (auto& listener : batchListeners_) {
-            listener->batchReset();
-        }
-    }
-
-    void fireOnBatchListeners(int epoch, int batchId, float batchLoss) const {
-        for (auto& listener : batchListeners_) {
-            listener->onBatch(epoch, batchId, batchLoss);
-        }
-    }
-
-private:
     OptimizerArgs<TransformType> args_;
-    std::vector<std::shared_ptr<OptimizerBatchListener>> batchListeners_;
-    std::vector<std::shared_ptr<OptimizerEpochListener>> epochListeners_;
 
 };
 
