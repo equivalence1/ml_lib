@@ -47,7 +47,8 @@ add_library(cifar_nn
         transform.h
         polynom_model.h
         polynom_model.cpp
-        )
+        mobile_net_v2.h
+        mobile_net_v2.cpp)
 target_link_libraries(cifar_nn "${TORCH_LIBRARIES}"  Eigen3::Eigen methods core models targets)
 enable_cxx14(cifar_nn)
 

@@ -33,6 +33,15 @@ target_link_libraries(resnet_em "${TORCH_LIBRARIES}" cifar_nn)
 add_executable(resnet_save_restore resnet_save_restore.cpp)
 target_link_libraries(resnet_save_restore "${TORCH_LIBRARIES}" cifar_nn)
 
+add_executable(mobile_net_v2 mobile_net_v2.cpp common.h common.cpp)
+target_link_libraries(mobile_net_v2 "${TORCH_LIBRARIES}" cifar_nn)
+
+add_executable(mobile_net_v2_em mobile_net_v2_em.cpp common.h common.cpp common_em.h)
+target_link_libraries(mobile_net_v2_em "${TORCH_LIBRARIES}" cifar_nn)
+
+add_executable(mobile_net_v2_save_restore mobile_net_v2_save_restore.cpp)
+target_link_libraries(mobile_net_v2_save_restore "${TORCH_LIBRARIES}" cifar_nn)
+
 add_executable(check_cuda_libtorch check_cuda_libtorch.cpp)
 target_link_libraries(check_cuda_libtorch "${TORCH_LIBRARIES}")
 
@@ -43,6 +52,8 @@ target_link_libraries(lenet_catboost "${TORCH_LIBRARIES}" cifar_nn  polynom ${CA
 add_executable(resnet_catboost resnet_catboost.cpp common.h common.cpp catboost_nn.h catboost_nn.cpp)
 target_link_libraries(resnet_catboost "${TORCH_LIBRARIES}" cifar_nn  polynom ${CATBOOST})
 
-
 add_executable(vgg_catboost vgg_catboost.cpp common.h common.cpp catboost_nn.h catboost_nn.cpp)
 target_link_libraries(vgg_catboost "${TORCH_LIBRARIES}" cifar_nn  polynom ${CATBOOST})
+
+add_executable(mobile_net_v2_catboost mobile_net_v2_catboost.cpp common.h common.cpp catboost_nn.h catboost_nn.cpp)
+target_link_libraries(mobile_net_v2_catboost "${TORCH_LIBRARIES}" cifar_nn  polynom ${CATBOOST})

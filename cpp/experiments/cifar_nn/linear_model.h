@@ -5,6 +5,7 @@
 
 #include <torch/torch.h>
 #include <torch/csrc/autograd/function.h>
+
 #include <cstdint>
 
 class LinearModel : public experiments::Model {
@@ -13,7 +14,7 @@ public:
 //        weights_ = register_parameter("weights", torch::zeros({out, in}, torch::kFloat32));
 //        biases_ = register_parameter("biases", torch::zeros({out}, torch::kFloat32));
 //        torch::nn::init::xavier_uniform_(weights_);
-        fc1_ = register_module("fc1_", torch::nn::Linear(16 * 5 * 5, 10));
+        fc1_ = register_module("fc1_", torch::nn::Linear(in, out));
     }
 
     torch::Tensor forward(torch::Tensor x) override {
@@ -28,4 +29,5 @@ private:
 //    torch::Tensor weights_;
 //    torch::Tensor biases_;
     torch::nn::Linear fc1_{nullptr};
+
 };

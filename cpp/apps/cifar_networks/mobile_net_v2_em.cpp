@@ -1,12 +1,14 @@
 #include "common.h"
-#include <cifar_nn/resnet.h>
+#include "common_em.h"
+
+#include <cifar_nn/mobile_net_v2.h>
 #include <cifar_nn/cifar10_reader.h>
 #include <cifar_nn/optimizer.h>
 #include <cifar_nn/cross_entropy_loss.h>
+#include <cifar_nn/em_like_train.h>
 #include <cifar_nn/transform.h>
 
 #include <torch/torch.h>
-
 #include <string>
 #include <memory>
 #include <iostream>
@@ -14,35 +16,30 @@
 int main(int argc, char* argv[]) {
     auto device = torch::kCPU;
     if (argc > 1 && std::string(argv[1]) == std::string("CUDA")
-            && torch::cuda::is_available()) {
+        && torch::cuda::is_available()) {
         device = torch::kCUDA;
         std::cout << "Using CUDA device for training" << std::endl;
     } else {
         std::cout << "Using CPU device for training" << std::endl;
     }
 
-    // Init model
-
-    auto resnet = std::make_shared<ResNet>(ResNetConfiguration::ResNet18);
-    resnet->to(device);
-
-    // Load data
+    // Read dataset
 
     const std::string& path = "../../../../resources/cifar10/cifar-10-batches-bin";
     auto dataset = cifar::read_dataset(path);
 
-    // Create optimizer
+    // Init model
 
-    auto optimizer = getDefaultCifar10Optimizer(400, resnet, device);
-    auto loss = std::make_shared<CrossEntropyLoss>();
+    auto mobileNetV2 = std::make_shared<MobileNetV2>();
+    mobileNetV2->to(device);
 
-    // AttachListeners
+    CommonEm emTrainer({500, 1, 1}, mobileNetV2, device);
 
-    attachDefaultListeners(optimizer, 50000 / 128 / 10, "resnet_checkpoint.pt");
+    // Attach Listeners
 
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
-    experiments::Optimizer::emplaceEpochListener<experiments::EpochEndCallback>(optimizer.get(), [&](int epoch, experiments::Model& model) {
-        model.eval();
+    emTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
+        model->eval();
 
         auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(128));
         int rightAnswersCnt = 0;
@@ -52,7 +49,7 @@ int main(int argc, char* argv[]) {
             data = data.to(device);
             torch::Tensor target = batch.target;
 
-            torch::Tensor prediction = model.forward(data);
+            torch::Tensor prediction = model->forward(data);
             prediction = torch::argmax(prediction, 1);
 
             prediction = prediction.to(torch::kCPU);
@@ -73,17 +70,18 @@ int main(int argc, char* argv[]) {
         std::cout << "Test accuracy: " <<  rightAnswersCnt * 100.0f / dataset.second.size().value() << std::endl;
     });
 
-    // Train model
+    // Train
 
-    optimizer->train(dataset.first, loss, resnet);
+    auto loss = std::make_shared<CrossEntropyLoss>();
+    emTrainer.train(dataset.first, loss);
 
-    // Evaluate on test set
+    // Eval model
 
     auto acc = evalModelTestAccEval(dataset.second,
-            resnet,
-            device,
-            getDefaultCifar10TestTransform());
+                                    mobileNetV2,
+                                    device,
+                                    getDefaultCifar10TestTransform());
 
-    std::cout << "ResNet test accuracy: " << std::setprecision(2)
+    std::cout << "MobileNetV2 EM test accuracy: " << std::setprecision(4)
               << acc << "%" << std::endl;
 }

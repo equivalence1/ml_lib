@@ -1,5 +1,6 @@
 #include "common.h"
-#include <cifar_nn/resnet.h>
+
+#include <cifar_nn/mobile_net_v2.h>
 #include <cifar_nn/cifar10_reader.h>
 #include <cifar_nn/optimizer.h>
 #include <cifar_nn/cross_entropy_loss.h>
@@ -23,8 +24,8 @@ int main(int argc, char* argv[]) {
 
     // Init model
 
-    auto resnet = std::make_shared<ResNet>(ResNetConfiguration::ResNet18);
-    resnet->to(device);
+    auto mobileNetV2 = std::make_shared<MobileNetV2>();
+    mobileNetV2->to(device);
 
     // Load data
 
@@ -33,12 +34,12 @@ int main(int argc, char* argv[]) {
 
     // Create optimizer
 
-    auto optimizer = getDefaultCifar10Optimizer(400, resnet, device);
+    auto optimizer = getDefaultCifar10Optimizer(400, mobileNetV2, device);
     auto loss = std::make_shared<CrossEntropyLoss>();
 
     // AttachListeners
 
-    attachDefaultListeners(optimizer, 50000 / 128 / 10, "resnet_checkpoint.pt");
+    attachDefaultListeners(optimizer, 50000 / 128 / 10, "mobile_net_v2_checkpoint.pt");
 
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
     experiments::Optimizer::emplaceEpochListener<experiments::EpochEndCallback>(optimizer.get(), [&](int epoch, experiments::Model& model) {
@@ -75,15 +76,15 @@ int main(int argc, char* argv[]) {
 
     // Train model
 
-    optimizer->train(dataset.first, loss, resnet);
+    optimizer->train(dataset.first, loss, mobileNetV2);
 
     // Evaluate on test set
 
     auto acc = evalModelTestAccEval(dataset.second,
-            resnet,
+            mobileNetV2,
             device,
             getDefaultCifar10TestTransform());
 
-    std::cout << "ResNet test accuracy: " << std::setprecision(2)
+    std::cout << "MobileNetV2 test accuracy: " << std::setprecision(4)
               << acc << "%" << std::endl;
 }
