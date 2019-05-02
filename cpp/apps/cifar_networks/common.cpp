@@ -50,19 +50,43 @@ TransformType getDefaultCifar10TestTransform() {
     return transform;
 }
 
+
+TransformType getCifar10TrainFinalCatboostTransform() {
+  // transforms are similar to https://github.com/kuangliu/pytorch-cifar/blob/master/main.py#L38
+  auto normTransformTrain = std::make_shared<torch::data::transforms::Normalize<>>(
+      std::vector<double>({0.4914, 0.4822, 0.4465}),
+      std::vector<double>({0.2023, 0.1994, 0.2010}));
+  auto stackTransformTrain = std::make_shared<torch::data::transforms::Stack<>>();
+
+  auto transformFunc = [=](std::vector<torch::data::Example<>>&& batch){
+    batch = normTransformTrain->apply_batch(batch);
+    const int batchSize = batch.size();
+    for (int i = 0; i < batchSize; ++i) {
+      auto example = batch[i];
+      torch::data::Example flippedExample = {example.data.flip(2), example.target};
+      batch.push_back(flippedExample);
+    }
+    return stackTransformTrain->apply_batch(batch);
+  };
+
+  TransformType transform(transformFunc);
+  return transform;
+}
+
+
 OptimizerType<TransformType> getDefaultCifar10Optimizer(int epochs, const experiments::ModelPtr& model,
         torch::DeviceType device) {
     experiments::OptimizerArgs<TransformType> args(getDefaultCifar10TrainTransform(),
             epochs, device);
 
     args.epochs_ = epochs;
-
     args.dloaderOptions_ = torch::data::DataLoaderOptions(128);
 
-    torch::optim::AdamOptions opt(0.001);
-//    opt.momentum_ = 0.9;
-//    opt.weight_decay_ = 5e-4;
-    auto optim = std::make_shared<torch::optim::Adam>(model->parameters(), opt);
+//    torch::optim::AdamOptions opt(0.1);
+    torch::optim::SGDOptions opt(0.1);
+    opt.momentum_ = 0.9;
+    opt.weight_decay_ = 5e-4;
+    auto optim = std::make_shared<torch::optim::SGD>(model->parameters(), opt);
     args.torchOptim_ = optim;
 
     auto learningRatePtr = &(optim->options.learning_rate_);
@@ -82,9 +106,11 @@ void attachDefaultListeners(const experiments::OptimizerPtr& optimizer,
     optimizer->registerListener(epochReportOptimizerListener);
 
     // see https://github.com/kuangliu/pytorch-cifar/blob/master/README.md#learning-rate-adjustment
+    auto lrDecayListener = std::make_shared<experiments::LrDecayOptimizerListener>(10,
+                                                                                   std::vector<int>({150, 250, 350}));
 //    auto lrDecayListener = std::make_shared<experiments::LrDecayOptimizerListener>(10,
-//                                                                                   std::vector<int>({150, 250, 350}));
-//    optimizer->registerListener(lrDecayListener);
+//                                                                                   std::vector<int>({50, 100, 150, 200}));
+    optimizer->registerListener(lrDecayListener);
 
 //    auto msListener = std::make_shared<experiments::ModelSaveOptimizerListener>(1, savePath);
 //    optimizer->registerListener(msListener);

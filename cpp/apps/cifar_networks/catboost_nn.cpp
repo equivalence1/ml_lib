@@ -2,11 +2,12 @@
 
 #include <utility>
 
-#include <random>
-#include <core/vec.h>
 #include <catboost_wrapper.h>
-#include <models/polynom/polynom.h>
 #include <cifar_nn/polynom_model.h>
+#include <core/vec.h>
+#include <models/model.h>
+#include <models/polynom/polynom.h>
+#include <random>
 
 experiments::ModelPtr CatBoostNN::getTrainedModel(TensorPairDataset& ds, const LossPtr& loss) {
     train(ds, loss);
@@ -25,6 +26,46 @@ inline TPool MakePool(const std::vector<float>& features,
     pool.Weights = weights;
     return pool;
 }
+
+
+class LrLinearDecayOptimizerListener : public experiments::OptimizerEpochListener {
+public:
+  LrLinearDecayOptimizerListener(double from, double to, int lastEpoch)
+  : from_(from)
+  , to_(to)
+  , lastEpoch_(lastEpoch) {
+
+  }
+
+  void epochReset() override {
+
+  }
+
+  void onEpoch(int epoch, double* lr, experiments::ModelPtr model) override {
+    *lr = from_ + (to_ - from_) * epoch / lastEpoch_;
+  }
+
+private:
+  double from_;
+  double to_;
+  int lastEpoch_;
+};
+
+
+static void attachReprListeners(const experiments::OptimizerPtr& optimizer,
+                            int nBatchesReport, int epochs, double startLr, double endLr) {
+  // report 10 times per epoch
+  auto brListener = std::make_shared<experiments::BatchReportOptimizerListener>(nBatchesReport);
+  optimizer->registerListener(brListener);
+
+  auto epochReportOptimizerListener = std::make_shared<experiments::EpochReportOptimizerListener>();
+  optimizer->registerListener(epochReportOptimizerListener);
+
+  auto lrDecayListener = std::make_shared<LrLinearDecayOptimizerListener>(startLr, endLr, epochs);
+  optimizer->registerListener(lrDecayListener);
+}
+
+
 
 experiments::OptimizerPtr CatBoostNN::getReprOptimizer(const experiments::ModelPtr& reprModel) {
     auto transform = getDefaultCifar10TrainTransform();
@@ -48,7 +89,8 @@ experiments::OptimizerPtr CatBoostNN::getReprOptimizer(const experiments::ModelP
     args.dloaderOptions_ = std::move(dloaderOptions);
 
     auto optimizer = std::make_shared<experiments::DefaultOptimizer<TransT>>(args);
-    attachDefaultListeners(optimizer, 50000 / batchSize / 10, "lenet_em_conv_checkpoint.pt");
+    attachReprListeners(optimizer, 50000 / batchSize / 10, opts_.representationsIterations, lr_, lr_ / 1000);
+//    attachDefaultListeners(optimizer, 50000 / batchSize / 10, "lenet_em_conv_checkpoint.pt");
     return optimizer;
 }
 
@@ -267,8 +309,6 @@ void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
         trainDecision(ds, loss);
 
         fireListeners(i);
-
-
     }
 }
 

@@ -16,6 +16,8 @@ TransformType getDefaultCifar10TrainTransform();
 
 TransformType getDefaultCifar10TestTransform();
 
+TransformType getCifar10TrainFinalCatboostTransform();
+
 template <typename T>
 using OptimizerType = std::shared_ptr<experiments::DefaultOptimizer<T>>;
 

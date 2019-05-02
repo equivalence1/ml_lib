@@ -35,9 +35,10 @@ int main(int argc, char* argv[]) {
 
     CatBoostNNConfig catBoostNnConfig;
     catBoostNnConfig.batchSize = 128;
-    catBoostNnConfig.dropOut_ = 0.5;
+    catBoostNnConfig.dropOut_ = 0.0;
     catBoostNnConfig.lambda_ = 1;
-    catBoostNnConfig.representationsIterations = 15;
+    catBoostNnConfig.adamStep = 0.1;
+    catBoostNnConfig.representationsIterations = 10;
     catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_gpu.json";
     catBoostNnConfig.catboostInitParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_init.json";
     catBoostNnConfig.catboostFinalParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_final.json";
@@ -52,10 +53,11 @@ int main(int argc, char* argv[]) {
         polynom->Ensemble_.push_back(emptyMonom);
     }
 
-    auto vgg = std::make_shared<Vgg>(VggConfiguration::Vgg16, std::make_shared<PolynomModel>(polynom));
+    auto vgg = std::make_shared<Vgg>(VggConfiguration::Vgg16,
+        std::make_shared<PolynomModel>(polynom));
     vgg->to(device);
 
-    CatBoostNN nnTrainer(catBoostNnConfig, vgg, device);
+    CatBoostNN nnTrainer(catBoostNnConfig, vgg, device,  std::make_shared<VggClassifier>());
     // Attach Listeners
 
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
@@ -63,7 +65,7 @@ int main(int argc, char* argv[]) {
 
     nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
         std::cout << "--------===============CATBOOST learn + test start ====================---------------  "  << std::endl;
-        auto learn = nnTrainer.applyConvLayers(dataset.first.map(getDefaultCifar10TestTransform()));
+        auto learn = nnTrainer.applyConvLayers(dataset.first.map(getCifar10TrainFinalCatboostTransform()));
         auto test =  nnTrainer.applyConvLayers(dataset.second.map(getDefaultCifar10TestTransform()));
         nnTrainer.trainFinalDecision(learn, test);
         std::cout << "--------===============CATBOOST learn + test finish ====================---------------  "  << std::endl;
