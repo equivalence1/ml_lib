@@ -48,7 +48,7 @@ public:
         return second_->forward(first_->forward(x));
     }
 
-    virtual void train(bool on = true) {
+    virtual void train(bool on = true) override {
         first_->train(on);
         second_->train(on);
     }

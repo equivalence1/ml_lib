@@ -32,9 +32,10 @@ experiments::OptimizerPtr CatBoostNN::getReprOptimizer(const experiments::ModelP
 
     experiments::OptimizerArgs<TransT> args(transform, opts_.representationsIterations, device_);
 
-    torch::optim::SGDOptions opt(opts_.adamStep);
+    torch::optim::SGDOptions opt(lr_);
+    opt.momentum_ = 0.9;
 //    torch::optim::AdamOptions opt(opts_.adamStep);
-//        opt.weight_decay_ = 5e-4;
+    opt.weight_decay_ = 5e-4;
 //    auto optim = std::make_shared<torch::optim::Adam>(reprModel->parameters(), opt);
     auto optim = std::make_shared<torch::optim::SGD>(reprModel->parameters(), opt);
     args.torchOptim_ = optim;
@@ -243,17 +244,31 @@ experiments::OptimizerPtr CatBoostNN::getDecisionOptimizer(const experiments::Mo
 }
 
 void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
+    lr_ = opts_.adamStep;
     initializer_->init(ds, loss, &representationsModel_, &decisionModel_);
+
+    if (initClassifier_) {
+      initialTrainRepr(ds, loss);
+    }
 
     trainDecision(ds, loss);
 
+    std::set<uint32_t> decayIters = {100 / opts_.representationsIterations,
+                                     200 / opts_.representationsIterations,
+                                     300 / opts_.representationsIterations};
+
     for (uint32_t i = 0; i < iterations_; ++i) {
         std::cout << "EM iteration: " << i << std::endl;
+        if (decayIters.count(i)) {
+          lr_ /= 10;
+        }
 
         trainRepr(ds, loss);
         trainDecision(ds, loss);
 
         fireListeners(i);
+
+
     }
 }
 
@@ -316,6 +331,13 @@ void CatBoostNN::setLambda(double lambda) {
     VERIFY(model != nullptr, "model is not polynom");
     model->setLambda(lambda);
 
+}
+void CatBoostNN::initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss) {
+  auto model = std::make_shared<CompositionalModel>(representationsModel_, initClassifier_);
+  model->train(true);
+  LossPtr representationLoss = makeRepresentationLoss(initClassifier_, loss);
+  auto representationOptimizer = getReprOptimizer(representationsModel_);
+  representationOptimizer->train(ds, representationLoss, representationsModel_);
 }
 //
 //std::pair<torch::Tensor, torch::Tensor> CatBoostNN::representation(TensorPairDataset& ds) {

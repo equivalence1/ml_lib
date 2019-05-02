@@ -56,7 +56,7 @@ private:
 
 // Vgg
 
-class Vgg : public experiments::ConvModel {
+class  Vgg : public experiments::ConvModel {
 public:
     explicit Vgg(VggConfiguration cfg, std::shared_ptr<experiments::Model> classifier = std::make_shared<VggClassifier>());
 

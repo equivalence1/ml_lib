@@ -31,7 +31,8 @@ public:
 
     CatBoostNN(const CatBoostNNConfig& opts,
         ConvModelPtr model,
-        torch::DeviceType device)
+        torch::DeviceType device,
+        experiments::ModelPtr initClassifier = nullptr)
             : EMLikeTrainer(getDefaultCifar10TrainTransform(), opts.globalIterationsCount)
             , opts_(opts)
             , model_(std::move(model))
@@ -41,6 +42,10 @@ public:
 
         representationsModel_ = model_->conv();
         decisionModel_ = model_->classifier();
+        initClassifier_ = initClassifier;
+        if (initClassifier_) {
+          initClassifier_->to(device);
+        }
     }
 
     template <class Ds>
@@ -65,6 +70,7 @@ public:
     }
 
     void setLambda(double lambda);
+
     experiments::ModelPtr trainFinalDecision(const TensorPairDataset& learn, const TensorPairDataset& test);
 
     void train(TensorPairDataset& ds, const LossPtr& loss) override;
@@ -78,10 +84,13 @@ protected:
     experiments::OptimizerPtr getReprOptimizer(const experiments::ModelPtr& reprModel) override;
 
     experiments::OptimizerPtr getDecisionOptimizer(const experiments::ModelPtr& decisionModel) override;
+
+    void initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss);
 private:
     const CatBoostNNConfig& opts_;
     ConvModelPtr model_;
     torch::DeviceType device_;
     int64_t seed_ = 0;
     bool Init_ = true;
+    double lr_ = 0;
 };
