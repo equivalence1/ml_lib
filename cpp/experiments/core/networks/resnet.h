@@ -1,20 +1,18 @@
 #pragma once
 
-#include "model.h"
+#include "experiments/core/model.h"
 
 #include <torch/torch.h>
 
 #include <vector>
+
+namespace experiments {
 
 enum class ResNetConfiguration {
     ResNet18,
     ResNet34,
 };
 
-// TODO(equivalence1) ResNet and Vgg don't support save/restore features, since
-// they store layers using vectors, functions, etc. I need to figure out how to
-// properly register submodules to be able to restore models. (Sequential might help).
-// Also might be some trouble with private/public fields.
 
 
 // BasicBlock
@@ -38,10 +36,10 @@ private:
 
 // ResNetConv
 
-class ResNetConv : public experiments::Model {
+class ResNetConv : public Model {
 public:
     ResNetConv(std::vector<int> numBlocks,
-               const std::function<experiments::ModelPtr(int, int, int)>& blocksBuilder);
+               const std::function<ModelPtr(int, int, int)> &blocksBuilder);
 
     torch::Tensor forward(torch::Tensor x) override;
 
@@ -51,12 +49,12 @@ private:
     torch::nn::Conv2d conv1_{nullptr};
     torch::nn::BatchNorm bn1_{nullptr};
 
-    std::vector<experiments::ModelPtr> blocks_;
+    std::vector<ModelPtr> blocks_;
 };
 
 // ResNetClassifier
 
-class ResNetClassifier : public experiments::Model {
+class ResNetClassifier : public Model {
 public:
     explicit ResNetClassifier(int expansion);
 
@@ -70,22 +68,25 @@ private:
 
 // ResNet
 
-class ResNet : public experiments::ConvModel {
+class ResNet : public ConvModel {
 public:
-    explicit ResNet(ResNetConfiguration cfg, experiments::ClassifierPtr classifier = makeClassifier<ResNetClassifier>(1));
+    explicit ResNet(ResNetConfiguration cfg,
+                    ClassifierPtr classifier = makeClassifier<ResNetClassifier>(1));
 
     torch::Tensor forward(torch::Tensor x) override;
 
-    experiments::ModelPtr conv() override;
+    ModelPtr conv() override;
 
-    experiments::ClassifierPtr classifier() override;
+    ClassifierPtr classifier() override;
 
     ~ResNet() override = default;
 
 private:
-    void init(std::vector<int> nBlocks, experiments::ClassifierPtr classifier);
+    void init(std::vector<int> nBlocks, ClassifierPtr classifier);
 
 private:
     std::shared_ptr<ResNetConv> conv_{nullptr};
-    experiments::ClassifierPtr classifier_{nullptr};
+    ClassifierPtr classifier_{nullptr};
 };
+
+}

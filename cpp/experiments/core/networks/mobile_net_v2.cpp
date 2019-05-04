@@ -1,5 +1,9 @@
 #include "mobile_net_v2.h"
 
+#include <torch/torch.h>
+
+namespace experiments {
+
 // BasicBlock
 
 BasicBlock::BasicBlock(int inChannels, int outChannels, int expansion, int stride) {
@@ -76,10 +80,10 @@ MobileNetV2Conv::MobileNetV2Conv() {
     }
 
     static const int kIterations = 7;
-    static const int expansion[kIterations]   = { 1,  6,  6,  6,  6,   6,   6};
+    static const int expansion[kIterations] = {1, 6, 6, 6, 6, 6, 6};
     static const int outChannels[kIterations] = {16, 24, 32, 64, 96, 160, 320};
-    static const int nBlocks[kIterations]     = { 1,  2,  3,  4,  3,   3,   1};
-    static const int stride[kIterations]      = { 1,  1,  2,  2,  1,   2,   1};
+    static const int nBlocks[kIterations] = {1, 2, 3, 4, 3, 3, 1};
+    static const int stride[kIterations] = {1, 1, 2, 2, 1, 2, 1};
 
     int inChannels = 32;
     for (int i = 0; i < kIterations; ++i) {
@@ -105,7 +109,7 @@ MobileNetV2Conv::MobileNetV2Conv() {
 
 torch::Tensor MobileNetV2Conv::forward(torch::Tensor x) {
     x = torch::relu(bn1_->forward(conv1_->forward(x)));
-    for (auto& block : blocks_) {
+    for (auto &block : blocks_) {
         x = block->forward(x);
     }
     x = torch::relu(bn2_->forward(conv2_->forward(x)));
@@ -139,4 +143,6 @@ experiments::ModelPtr MobileNetV2::conv() {
 
 experiments::ClassifierPtr MobileNetV2::classifier() {
     return classifier_;
+}
+
 }

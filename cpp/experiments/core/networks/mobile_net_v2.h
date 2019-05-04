@@ -1,12 +1,14 @@
 #pragma once
 
-#include "model.h"
+#include "experiments/core/model.h"
 
 #include <torch/torch.h>
 
 #include <vector>
 
 // reference implementation: https://github.com/kuangliu/pytorch-cifar/blob/master/models/mobilenetv2.py
+
+namespace experiments {
 
 // BasicBlock
 
@@ -83,3 +85,5 @@ private:
     std::shared_ptr<MobileNetV2Conv> conv_{nullptr};
     experiments::ClassifierPtr classifier_{nullptr};
 };
+
+}

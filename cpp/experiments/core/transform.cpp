@@ -6,33 +6,28 @@
 
 namespace experiments {
 
-// RandomCrop
+// ChannelReplicate
 
-RandomCrop::RandomCrop(std::vector<int> size, std::vector<int> padding)
-        : size_(std::move(size))
-        , padding_(std::move(padding))
-        , eng_(rd_()) {
+ChannelReplicate::ChannelReplicate(int replics)
+        : replics_(replics) {
 
 }
 
-torch::data::Example<> RandomCrop::apply(torch::data::Example<> input) {
-    torch::Tensor out = this->pad(input.data);
-
-    int minX = 0;
-    int maxX = out.size(1) - size_[0];
-
-    int minY = 0;
-    int maxY = out.size(2) - size_[1];
-
-    distrX_.param(std::uniform_int_distribution<>::param_type(minX, maxX));
-    distrY_.param(std::uniform_int_distribution<>::param_type(minY, maxY));
-
-    out = this->crop(distrX_(eng_), distrY_(eng_), out);
-
-    return {out, input.target};
+torch::data::Example<> ChannelReplicate::apply(torch::data::Example<> x) {
+    std::vector<torch::Tensor> xs(3, x.data);
+    return {torch::cat(xs, 0), x.target};
 }
 
-torch::Tensor RandomCrop::pad(torch::Tensor x) {
+// Padding
+
+Padding::Padding(std::vector<int> padding)
+        : padding_(std::move(padding)) {
+
+}
+
+torch::data::Example<> Padding::apply(torch::data::Example<> input) {
+    auto x = input.data;
+
     int padY = padding_[0];
     int padX = padY;
     if (padding_.size() > 1) {
@@ -53,7 +48,33 @@ torch::Tensor RandomCrop::pad(torch::Tensor x) {
         }
     }
 
-    return t;
+    return {t, input.target};
+}
+
+// RandomCrop
+
+RandomCrop::RandomCrop(std::vector<int> size, std::vector<int> padding)
+        : size_(std::move(size))
+        , padding_(std::move(padding))
+        , eng_(rd_()) {
+
+}
+
+torch::data::Example<> RandomCrop::apply(torch::data::Example<> input) {
+    torch::Tensor out = padding_.apply(input).data;
+
+    int minX = 0;
+    int maxX = out.size(1) - size_[0];
+
+    int minY = 0;
+    int maxY = out.size(2) - size_[1];
+
+    distrX_.param(std::uniform_int_distribution<>::param_type(minX, maxX));
+    distrY_.param(std::uniform_int_distribution<>::param_type(minY, maxY));
+
+    out = this->crop(distrX_(eng_), distrY_(eng_), out);
+
+    return {out, input.target};
 }
 
 torch::Tensor RandomCrop::crop(int x, int y, torch::Tensor t) {

@@ -1,4 +1,4 @@
-#include "lenet.h"
+#include "experiments/networks/lenet.h"
 #include "tensor_pair_dataset.h"
 #include "linear_train.h"
 

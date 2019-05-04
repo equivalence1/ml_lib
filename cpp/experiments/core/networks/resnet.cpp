@@ -5,8 +5,10 @@
 #include <cassert>
 #include <memory>
 
+namespace experiments {
+
 static torch::nn::ConvOptions<2> buildConvOptions(int inChannels,
-        int outChannels, int kernelSize, int stride = 1, bool bias = false) {
+                                                  int outChannels, int kernelSize, int stride = 1, bool bias = false) {
     auto convOptions = torch::nn::ConvOptions<2>(inChannels, outChannels, kernelSize);
     convOptions.padding(kernelSize / 2);
     convOptions.stride(stride);
@@ -30,7 +32,7 @@ BasicBlock::BasicBlock(int inChannels, int outChannels, int stride) {
         shortcut_ = register_module("shortcut_", torch::nn::Sequential(
                 torch::nn::Conv2d(options),
                 torch::nn::BatchNorm(outChannels)
-                ));
+        ));
     }
 }
 
@@ -48,7 +50,7 @@ torch::Tensor BasicBlock::forward(torch::Tensor x) {
 // ResNetConv
 
 ResNetConv::ResNetConv(std::vector<int> numBlocks,
-                       const std::function<experiments::ModelPtr(int, int, int)>& blocksBuilder) {
+                       const std::function<ModelPtr(int, int, int)> &blocksBuilder) {
     assert(numBlocks.size() == 4);
 
     static const int blockOutChannelSizes[] = {64, 128, 256, 512};
@@ -60,7 +62,7 @@ ResNetConv::ResNetConv(std::vector<int> numBlocks,
     conv1_ = register_module("conv1_", torch::nn::Conv2d(options));
     bn1_ = register_module("bn1_", torch::nn::BatchNorm(64));
 
-    for (int i = 0; i < (int)numBlocks.size(); ++i) {
+    for (int i = 0; i < (int) numBlocks.size(); ++i) {
         int stride = initStrides[i];
         for (int j = 0; j < numBlocks.at(std::size_t(i)); ++j) {
             int outChannels = blockOutChannelSizes[i];
@@ -77,7 +79,7 @@ ResNetConv::ResNetConv(std::vector<int> numBlocks,
 
 torch::Tensor ResNetConv::forward(torch::Tensor x) {
     x = torch::relu(bn1_->forward(conv1_->forward(x)));
-    for (const auto& block : blocks_) {
+    for (const auto &block : blocks_) {
         x = block->forward(x);
     }
     x = torch::avg_pool2d(x, 4);
@@ -97,24 +99,25 @@ torch::Tensor ResNetClassifier::forward(torch::Tensor x) {
 
 // ResNet
 
-ResNet::ResNet(ResNetConfiguration cfg, experiments::ClassifierPtr classifier) {
+ResNet::ResNet(ResNetConfiguration cfg, ClassifierPtr classifier) {
     if (cfg == ResNetConfiguration::ResNet34) {
-        init(std::move(std::vector<int>({3, 4, 6, 3})), classifier);
+        init(std::move(std::vector<int>({3, 4, 6, 3})), std::move(classifier));
     } else if (cfg == ResNetConfiguration::ResNet18) {
-        init(std::move(std::vector<int>({2, 2, 2, 2})), classifier);
+        init(std::move(std::vector<int>({2, 2, 2, 2})), std::move(classifier));
     } else {
         throw "Unsupported configuration";
     }
 }
 
-void ResNet::init(std::vector<int> nBlocks, experiments::ClassifierPtr classifier) {
-    std::function<experiments::ModelPtr(int, int, int)> blocksBuilder = [](int inChannels, int outChannels, int stride){
+void ResNet::init(std::vector<int> nBlocks, ClassifierPtr classifier) {
+    std::function<ModelPtr(int, int, int)> blocksBuilder = [](int inChannels, int outChannels,
+                                                                           int stride) {
         return std::make_shared<BasicBlock>(inChannels, outChannels, stride);
     };
     conv_ = std::make_shared<ResNetConv>(
             nBlocks,
             blocksBuilder);
-    classifier_ = classifier;
+    classifier_ = std::move(classifier);
     conv_ = register_module("conv_", conv_);
     classifier_ = register_module("classifier", classifier_);
 }
@@ -125,10 +128,12 @@ torch::Tensor ResNet::forward(torch::Tensor x) {
     return x;
 }
 
-experiments::ModelPtr ResNet::conv() {
+ModelPtr ResNet::conv() {
     return conv_;
 }
 
-experiments::ClassifierPtr ResNet::classifier() {
+ClassifierPtr ResNet::classifier() {
     return classifier_;
+}
+
 }

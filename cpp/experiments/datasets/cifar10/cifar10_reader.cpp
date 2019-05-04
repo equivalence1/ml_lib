@@ -13,7 +13,7 @@
 #ifndef CIFAR10_READER_HPP
 #define CIFAR10_READER_HPP
 
-#include "tensor_pair_dataset.h"
+#include "experiments/core/tensor_pair_dataset.h"
 
 #include <torch/torch.h>
 
@@ -27,7 +27,7 @@
 #include <cstdint>
 #include <chrono>
 
-namespace cifar {
+namespace experiments::cifar10 {
 
 #define CIFAR10_FILE_SIZE 10000
 #define IMAGE_SIZE (3 * 32 * 32)
@@ -108,7 +108,23 @@ namespace cifar {
     }
 }
 
- std::pair<TensorPairDataset, TensorPairDataset> read_dataset(const std::string& folder, int training_limit, int test_limit) {
+TensorPairDataset normalize(TensorPairDataset ds) {
+    auto mds = ds
+            .map(torch::data::transforms::Normalize(
+                    std::vector<double>({0.4914, 0.4822, 0.4465}),
+                    std::vector<double>({0.2023, 0.1994, 0.2010})))
+            .map(torch::data::transforms::Stack<>());
+
+    std::vector<unsigned long> indices;
+    for (int i = 0; i < ds.size().value(); ++i) {
+        indices.push_back(i);
+    }
+
+    auto examples = mds.get_batch(indices);
+    return {examples.data, examples.target};
+}
+
+std::pair<TensorPairDataset, TensorPairDataset> read_dataset(const std::string& folder, int training_limit, int test_limit) {
     torch::Tensor trainX = torch::zeros({50000, 3, 32, 32}, torch::kFloat32);
     torch::Tensor trainY = torch::zeros({50000}, torch::kLong);
 
@@ -125,8 +141,8 @@ namespace cifar {
 
     std::cout << "read cifar10 dataset in " << elapsedTimeMs.count() << "ms" << std::endl;
 
-    TensorPairDataset trainDs(trainX, trainY);
-    TensorPairDataset testDs(testX, testY);
+    auto trainDs = normalize(std::move(TensorPairDataset(trainX, trainY)));
+    auto testDs = normalize(std::move(TensorPairDataset(testX, testY)));
 
     return std::make_pair(trainDs, testDs);
 }

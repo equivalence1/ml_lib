@@ -1,8 +1,9 @@
 #include "common.h"
-#include <cifar_nn/lenet.h>
-#include <cifar_nn/cifar10_reader.h>
+#include <cifar_nn/resnet.h>
+#include <datasets/cifar10/cifar10_reader.h>
 #include <cifar_nn/optimizer.h>
 #include <cifar_nn/cross_entropy_loss.h>
+#include <cifar_nn/transform.h>
 
 #include <torch/torch.h>
 
@@ -22,29 +23,27 @@ int main(int argc, char* argv[]) {
 
     // Init model
 
-    auto lenet = std::make_shared<LeNet>();
-    lenet->to(device);
+    auto resnet = std::make_shared<ResNet>(ResNetConfiguration::ResNet18);
+    resnet->to(device);
 
-    // Read dataset
+    // Load data
 
     const std::string& path = "../../../../resources/cifar10/cifar-10-batches-bin";
     auto dataset = cifar::read_dataset(path);
 
-    // Create opimizer
+    // Create optimizer
 
-    auto optimizer = getDefaultCifar10Optimizer(500, lenet, device, 0.01);
+    auto optimizer = getDefaultCifar10Optimizer(800, resnet, device, 0.1);
     auto loss = std::make_shared<CrossEntropyLoss>();
 
+    // AttachListeners
 
-
-
-    // Attach listeners
-
-    attachDefaultListeners(optimizer, 50000 / 128 / 10, "lenet_checkpoint.pt");
+    attachDefaultListeners(optimizer, 50000 / 128 / 10, "resnet_checkpoint.pt");
 
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
     experiments::Optimizer::emplaceEpochListener<experiments::EpochEndCallback>(optimizer.get(), [&](int epoch, experiments::Model& model) {
         model.eval();
+        model.to(device);
 
         auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(128));
         int rightAnswersCnt = 0;
@@ -75,17 +74,17 @@ int main(int argc, char* argv[]) {
         std::cout << "Test accuracy: " <<  rightAnswersCnt * 100.0f / dataset.second.size().value() << std::endl;
     });
 
-    // Train
+    // Train model
 
-    optimizer->train(dataset.first, loss, lenet);
+    optimizer->train(dataset.first, loss, resnet);
 
-    // Eval model
+    // Evaluate on test set
 
     auto acc = evalModelTestAccEval(dataset.second,
-            lenet,
+            resnet,
             device,
             getDefaultCifar10TestTransform());
 
-    std::cout << "LeNet test accuracy: " << std::setprecision(2)
-            << acc << "%" << std::endl;
+    std::cout << "ResNet test accuracy: " << std::setprecision(2)
+              << acc << "%" << std::endl;
 }

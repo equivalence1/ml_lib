@@ -1,15 +1,23 @@
 #pragma once
 
-#include "layer_norm.h"
-#include "model.h"
+#include "experiments/core/layer_norm.h"
+#include "experiments/core/model.h"
 
 #include <torch/torch.h>
 
 #include <memory>
 
+namespace experiments {
+
+// LeNetConfig
+
+struct LeNetConfig {
+
+};
+
 // LeNetConv
 
-class LeNetConv : public experiments::Model {
+class LeNetConv : public Model {
 public:
     LeNetConv();
 
@@ -24,7 +32,7 @@ private:
 
 // LeNetClassifier
 
-class LeNetClassifier : public experiments::Model {
+class LeNetClassifier : public Model {
 public:
     LeNetClassifier();
 
@@ -41,18 +49,19 @@ private:
 
 // LeNet
 
-class LeNet : public experiments::ConvModel {
+class LeNet : public ConvModel {
 public:
-    LeNet(experiments::ClassifierPtr classifier = makeClassifier<LeNetClassifier>());
+    explicit LeNet(ClassifierPtr classifier = makeClassifier<LeNetClassifier>());
 
-    experiments::ModelPtr conv() override;
+    ModelPtr conv() override;
 
-    experiments::ClassifierPtr classifier() override;
+    ClassifierPtr classifier() override;
 
     ~LeNet() override = default;
 
 private:
     std::shared_ptr<LeNetConv> conv_{nullptr};
-    experiments::ClassifierPtr classifier_{nullptr};
+    ClassifierPtr classifier_{nullptr};
 };
 
+}

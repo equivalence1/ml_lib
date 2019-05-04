@@ -9,6 +9,36 @@
 
 namespace experiments {
 
+// ChannelReplicate
+
+class ChannelReplicate final
+        : public torch::data::transforms::Transform<torch::data::Example<>, torch::data::Example<>> {
+public:
+    explicit ChannelReplicate(int replics);
+
+    torch::data::Example<> apply(torch::data::Example<> x) override;
+
+    ~ChannelReplicate() override = default;
+
+private:
+    int replics_;
+};
+
+// Padding
+
+class Padding final
+        : public torch::data::transforms::Transform<torch::data::Example<>, torch::data::Example<>> {
+public:
+    explicit Padding(std::vector<int> padding);
+
+    torch::data::Example<> apply(torch::data::Example<> x) override;
+
+    ~Padding() override = default;
+
+private:
+    std::vector<int> padding_;
+};
+
 // RandomCrop
 
 class RandomCrop final
@@ -21,13 +51,11 @@ public:
     ~RandomCrop() override = default;
 
 private:
-    torch::Tensor pad(torch::Tensor x);
-
     torch::Tensor crop(int x, int y, torch::Tensor t);
 
 private:
     std::vector<int> size_;
-    std::vector<int> padding_;
+    Padding padding_;
 
     std::random_device rd_;
     std::mt19937 eng_;

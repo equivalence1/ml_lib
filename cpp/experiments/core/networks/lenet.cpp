@@ -1,5 +1,9 @@
 #include "lenet.h"
-using namespace experiments;
+
+#include <torch/torch.h>
+
+namespace experiments {
+
 // LeNetConv
 
 LeNetConv::LeNetConv() {
@@ -46,5 +50,7 @@ experiments::ClassifierPtr LeNet::classifier() {
 
 LeNet::LeNet(ClassifierPtr classifier) {
     conv_ = register_module("conv_", std::make_shared<LeNetConv>());
-    classifier_ = register_module("classifier_", classifier);
+    classifier_ = register_module("classifier_", std::move(classifier));
+}
+
 }

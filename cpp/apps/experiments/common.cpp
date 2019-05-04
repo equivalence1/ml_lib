@@ -1,8 +1,10 @@
 #include "common.h"
 
-#include <cifar_nn/transform.h>
-#include <cifar_nn/model.h>
-#include <cifar_nn/tensor_pair_dataset.h>
+#include "experiments/core/transform.h"
+#include "experiments/core/model.h"
+#include "experiments/core/tensor_pair_dataset.h"
+#include "experiments/datasets/cifar10/cifar10_reader.h"
+#include "experiments/datasets/mnist/mnist_reader.h"
 
 #include <torch/torch.h>
 
@@ -12,10 +14,10 @@
 
 TransformType getDefaultCifar10TrainTransform() {
     // transforms are similar to https://github.com/kuangliu/pytorch-cifar/blob/master/main.py#L31
-
-    auto normTransformTrain = std::make_shared<torch::data::transforms::Normalize<>>(
-            torch::ArrayRef<double>({0.4914, 0.4822, 0.4465}),
-            torch::ArrayRef<double>({0.2023, 0.1994, 0.2010}));
+    // We do normalization when we load dataset
+//    auto normTransformTrain = std::make_shared<torch::data::transforms::Normalize<>>(
+//            torch::ArrayRef<double>({0.4914, 0.4822, 0.4465}),
+//            torch::ArrayRef<double>({0.2023, 0.1994, 0.2010}));
 //    auto cropTransformTrain = std::make_shared<experiments::RandomCrop>(
 //            std::vector<int>({32, 32}),
 //            std::vector<int>({4, 4}));
@@ -23,7 +25,7 @@ TransformType getDefaultCifar10TrainTransform() {
     auto stackTransformTrain = std::make_shared<torch::data::transforms::Stack<>>();
 
     auto transformFunc = [=](std::vector<torch::data::Example<>>&& batch){
-        batch = normTransformTrain->apply_batch(batch);
+//        batch = normTransformTrain->apply_batch(batch);
         batch = flipTransformTrain->apply_batch(batch);
 //        batch = cropTransformTrain->apply_batch(batch);
         return stackTransformTrain->apply_batch(batch);
@@ -35,14 +37,14 @@ TransformType getDefaultCifar10TrainTransform() {
 
 TransformType getDefaultCifar10TestTransform() {
     // transforms are similar to https://github.com/kuangliu/pytorch-cifar/blob/master/main.py#L38
-
-    auto normTransformTrain = std::make_shared<torch::data::transforms::Normalize<>>(
-        std::vector<double>({0.4914, 0.4822, 0.4465}),
-        std::vector<double>({0.2023, 0.1994, 0.2010}));
+    // We do normalization when we load dataset
+//    auto normTransformTrain = std::make_shared<torch::data::transforms::Normalize<>>(
+//        std::vector<double>({0.4914, 0.4822, 0.4465}),
+//        std::vector<double>({0.2023, 0.1994, 0.2010}));
     auto stackTransformTrain = std::make_shared<torch::data::transforms::Stack<>>();
 
     auto transformFunc = [=](std::vector<torch::data::Example<>>&& batch){
-        batch = normTransformTrain->apply_batch(batch);
+//        batch = normTransformTrain->apply_batch(batch);
         return stackTransformTrain->apply_batch(batch);
     };
 
@@ -53,13 +55,14 @@ TransformType getDefaultCifar10TestTransform() {
 
 TransformType getCifar10TrainFinalCatboostTransform() {
   // transforms are similar to https://github.com/kuangliu/pytorch-cifar/blob/master/main.py#L38
-  auto normTransformTrain = std::make_shared<torch::data::transforms::Normalize<>>(
-      std::vector<double>({0.4914, 0.4822, 0.4465}),
-      std::vector<double>({0.2023, 0.1994, 0.2010}));
+  // We do normalization when we load dataset
+//  auto normTransformTrain = std::make_shared<torch::data::transforms::Normalize<>>(
+//      std::vector<double>({0.4914, 0.4822, 0.4465}),
+//      std::vector<double>({0.2023, 0.1994, 0.2010}));
   auto stackTransformTrain = std::make_shared<torch::data::transforms::Stack<>>();
 
   auto transformFunc = [=](std::vector<torch::data::Example<>>&& batch){
-    batch = normTransformTrain->apply_batch(batch);
+//    batch = normTransformTrain->apply_batch(batch);
     const int batchSize = batch.size();
     for (int i = 0; i < batchSize; ++i) {
       auto example = batch[i];
@@ -114,4 +117,55 @@ void attachDefaultListeners(const experiments::OptimizerPtr& optimizer,
 
 //    auto msListener = std::make_shared<experiments::ModelSaveOptimizerListener>(1, savePath);
 //    optimizer->registerListener(msListener);
+}
+
+torch::DeviceType getDevice(int argc, char* argv[]) {
+    auto device = torch::kCPU;
+
+    for (int i = 0; i < argc; ++i) {
+        if (std::string(argv[i]) == std::string("CUDA")
+            && torch::cuda::is_available()) {
+            device = torch::kCUDA;
+
+            std::cout << "Using CUDA device for training" << std::endl;
+            return device;
+        }
+    }
+
+    std::cout << "Using CPU device for training" << std::endl;
+    return device;
+}
+
+enum class Dataset {
+    cifar10,
+    mnist,
+};
+
+static Dataset getDataset(int argc, char* argv[]) {
+    auto dataset = Dataset::cifar10;
+
+    for (int i = 0; i < argc; ++i) {
+        if (std::string(argv[i]) == std::string("mnist")) {
+            dataset = Dataset::mnist;
+
+            std::cout << "Using MNIST dataset" << std::endl;
+            return dataset;
+        }
+    }
+
+    std::cout << "Using CIFAR-10 dataset" << std::endl;
+    return dataset;
+}
+
+std::pair<TensorPairDataset, TensorPairDataset> readDataset(int argc, char* argv[]) {
+    auto dataset = getDataset(argc, argv);
+    if (dataset == Dataset::cifar10) {
+        const std::string& path = "../../../../resources/cifar10/cifar-10-batches-bin";
+        return experiments::cifar10::read_dataset(path);
+    } else if (dataset == Dataset::mnist) {
+        const std::string& path = "../../../../resources/mnist";
+        return experiments::mnist::read_dataset(path);
+    } else {
+        throw "Unsupported dataset";
+    }
 }

@@ -1,12 +1,14 @@
 #pragma once
 
-#include "layer_norm.h"
-#include "model.h"
+#include "experiments/core/layer_norm.h"
+#include "experiments/core/model.h"
 
 #include <torch/torch.h>
 
 #include <functional>
 #include <vector>
+
+namespace experiments {
 
 enum class VggConfiguration {
     Vgg16,
@@ -58,10 +60,10 @@ private:
 
 // Vgg
 
-class  Vgg : public experiments::ConvModel {
+class Vgg : public experiments::ConvModel {
 public:
     explicit Vgg(VggConfiguration cfg,
-                  experiments::ClassifierPtr classifier = makeClassifier<VggClassifier>());
+                 experiments::ClassifierPtr classifier = makeClassifier<VggClassifier>());
 
     torch::Tensor forward(torch::Tensor x) override;
 
@@ -75,3 +77,5 @@ private:
     std::shared_ptr<VggConv> conv_;
     experiments::ClassifierPtr classifier_;
 };
+
+}

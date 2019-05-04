@@ -1,14 +1,15 @@
 #pragma once
 
-#include <cifar_nn/optimizer.h>
-#include <cifar_nn/model.h>
-#include <cifar_nn/tensor_pair_dataset.h>
+#include "experiments/core/optimizer.h"
+#include "experiments/core/model.h"
+#include "experiments/core/tensor_pair_dataset.h"
 
 #include <torch/torch.h>
 
 #include <memory>
 #include <string>
 #include <vector>
+#include <utility>
 
 using TransformType = torch::data::transforms::BatchLambda<std::vector<torch::data::Example<>>, torch::data::Example<>>;
 
@@ -56,3 +57,7 @@ float evalModelTestAccEval(TensorPairDataset& ds,
 
     return rightAnswersCnt * 100.0f / ds.size().value();
 }
+
+torch::DeviceType getDevice(int argc, char* argv[]);
+
+std::pair<TensorPairDataset, TensorPairDataset> readDataset(int argc, char* argv[]);

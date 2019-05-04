@@ -12,7 +12,7 @@
  */
 
 
-#include "tensor_pair_dataset.h"
+#include "experiments/core/tensor_pair_dataset.h"
 
 #include <torch/torch.h>
 
@@ -26,7 +26,7 @@
 #include <cstdint>
 #include <chrono>
 
-namespace cifar {
+namespace experiments::cifar10 {
 
 #define CIFAR10_FILE_SIZE 10000
 #define IMAGE_SIZE (3 * 32 * 32)

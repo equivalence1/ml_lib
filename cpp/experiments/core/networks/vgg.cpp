@@ -3,6 +3,8 @@
 #include <memory>
 #include <string>
 
+namespace experiments {
+
 static torch::nn::ConvOptions<2> buildConvOptions(int inChannels, int outChannels, int kernelSize) {
     auto convOptions = torch::nn::ConvOptions<2>(inChannels, outChannels, kernelSize);
     convOptions.padding(kernelSize / 2);
@@ -21,7 +23,7 @@ Vgg16Conv::Vgg16Conv() {
 
     for (auto outChannels : layersLayout) {
         if (outChannels == -1) {
-            std::function<torch::Tensor(torch::Tensor)> layer = [=](torch::Tensor x){
+            std::function<torch::Tensor(torch::Tensor)> layer = [=](torch::Tensor x) {
                 return torch::max_pool2d(x, 2, 2);
             };
             layers_.push_back(layer);
@@ -46,7 +48,7 @@ Vgg16Conv::Vgg16Conv() {
         }
     }
 
-    layers_.emplace_back([](torch::Tensor x){
+    layers_.emplace_back([](torch::Tensor x) {
         return torch::avg_pool2d(x, 1, 1);
     });
 //    layerNorm_ = register_module("layerNorm_", std::make_shared<LayerNorm>(512));
@@ -54,7 +56,7 @@ Vgg16Conv::Vgg16Conv() {
 }
 
 torch::Tensor Vgg16Conv::forward(torch::Tensor x) {
-    for (const auto& l : layers_) {
+    for (const auto &l : layers_) {
         x = l(x);
     }
 //    layerNorm_->forward(x);
@@ -73,7 +75,7 @@ torch::Tensor VggClassifier::forward(torch::Tensor x) {
 
 // Vgg
 
-Vgg::Vgg(VggConfiguration cfg,  experiments::ClassifierPtr classifier) {
+Vgg::Vgg(VggConfiguration cfg, experiments::ClassifierPtr classifier) {
     if (cfg == VggConfiguration::Vgg16) {
         conv_ = register_module("conv_", std::make_shared<Vgg16Conv>());
         classifier_ = register_module("classifier_", classifier);
@@ -94,4 +96,6 @@ experiments::ModelPtr Vgg::conv() {
 
 experiments::ClassifierPtr Vgg::classifier() {
     return classifier_;
+}
+
 }

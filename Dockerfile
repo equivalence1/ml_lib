@@ -21,5 +21,5 @@ COPY . /app
 WORKDIR /app/build
 RUN cmake .. -DCMAKE_PREFIX_PATH=/libtorch -DCMAKE_BUILD_TYPE=Release
 RUN make resnet
-WORKDIR /app/build/cpp/apps/cifar_networks 
+WORKDIR /app/build/cpp/apps/experiments
 ENTRYPOINT ./resnet CUDA
