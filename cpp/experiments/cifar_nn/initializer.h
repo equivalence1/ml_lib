@@ -23,3 +23,4 @@ public:
     void init(const TensorPairDataset& ds, LossPtr loss, experiments::ModelPtr* representation, experiments::ModelPtr* decisionFunc) override {
     }
 };
+

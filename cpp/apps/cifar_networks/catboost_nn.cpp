@@ -14,16 +14,21 @@ experiments::ModelPtr CatBoostNN::getTrainedModel(TensorPairDataset& ds, const L
     return model_;
 }
 
-inline TPool MakePool(const std::vector<float>& features,
+inline TDataSet MakePool(const std::vector<float>& features,
                       ConstVecRef<float> labels,
-                      float* weights = nullptr) {
+                      float* weights = nullptr,
+                      const float* baseline = nullptr,
+                      int baselineDim = 0
+                      ) {
     const int fCount = features.size() / labels.size();
-    TPool pool;
+    TDataSet pool;
     pool.Features = features.data();
     pool.Labels =  labels.data();
     pool.FeaturesCount = fCount;
     pool.SamplesCount = labels.size();
     pool.Weights = weights;
+    pool.Baseline = baseline;
+    pool.BaselineDim = baselineDim;
     return pool;
 }
 
@@ -67,7 +72,8 @@ static void attachReprListeners(const experiments::OptimizerPtr& optimizer,
 
 
 
-experiments::OptimizerPtr CatBoostNN::getReprOptimizer(const experiments::ModelPtr& reprModel) {
+experiments::OptimizerPtr CatBoostNN::getReprOptimizer(const experiments::ModelPtr& model) {
+
     auto transform = getDefaultCifar10TrainTransform();
     using TransT = decltype(transform);
 
@@ -78,7 +84,7 @@ experiments::OptimizerPtr CatBoostNN::getReprOptimizer(const experiments::ModelP
 //    torch::optim::AdamOptions opt(opts_.adamStep);
     opt.weight_decay_ = 5e-4;
 //    auto optim = std::make_shared<torch::optim::Adam>(reprModel->parameters(), opt);
-    auto optim = std::make_shared<torch::optim::SGD>(reprModel->parameters(), opt);
+    auto optim = std::make_shared<torch::optim::SGD>(model->parameters(), opt);
     args.torchOptim_ = optim;
 
     auto lr = &(optim->options.learning_rate_);
@@ -116,11 +122,16 @@ namespace {
         void train(TensorPairDataset& ds,
                    LossPtr loss,
                    experiments::ModelPtr model) const override {
-            auto polynomModel = dynamic_cast<PolynomModel*>(model.get());
+            auto classifier = dynamic_cast<experiments::Classifier*>(model.get());
+            auto polynomModel = dynamic_cast<PolynomModel*>(classifier->classifier().get());
             auto data = ds.data();
+
+
             const int samplesCount = data.size(0);
             auto yDim = TorchHelpers::totalSize(data) / samplesCount;
             data = data.reshape({samplesCount, yDim}).to(torch::kCPU);
+            std::vector<float> baseline = maybeMakeBaseline(data, classifier);
+            auto baselineDim = baseline.size() / samplesCount;
             auto labels = Vec(ds.targets().to(torch::kCPU, torch::kFloat32));
 
             std::default_random_engine engine_(seed_);
@@ -142,6 +153,7 @@ namespace {
                 if (w > 0) {
                     learnIndices.push_back(i);
                     learnTargets.push_back(t);
+                    learnWeights.push_back(w);
                 } else {
                     testIndices.push_back(i);
                     testTargets.push_back(t);
@@ -164,9 +176,17 @@ namespace {
             gather(data, learnIndices, featuresCount, learn, usedFeatures);
             gather(data, testIndices, featuresCount, test, usedFeatures);
 
+            auto learnBaseline = gatherBaseline(baseline, learnIndices, baselineDim);
+            auto testBaseline = gatherBaseline(baseline, testIndices, baselineDim);
 
-            TPool trainPool = MakePool(learn, learnTargets, learnWeights.data());
-            TPool testPool = MakePool(test, testTargets);
+            TDataSet trainPool = MakePool(learn,
+                learnTargets,
+                learnWeights.data(),
+                learnBaseline.size() ? learnBaseline.data() : nullptr,
+                baselineDim);
+            TDataSet testPool = MakePool(test, testTargets, nullptr,
+                testBaseline.size() ? testBaseline.data() : nullptr,
+                baselineDim);
 
             auto catboost = Train(trainPool, testPool, catBoostOptions_);
             Polynom polynom(PolynomBuilder().AddEnsemble(catboost).Build());
@@ -197,7 +217,9 @@ namespace {
         void train(const TensorPairDataset& ds,
                    const TensorPairDataset& testDs,
                    experiments::ModelPtr model) const {
-            auto polynomModel = dynamic_cast<PolynomModel*>(model.get());
+            auto classifier = dynamic_cast<experiments::Classifier*>(model.get());
+            auto polynomModel = dynamic_cast<PolynomModel*>(classifier->classifier().get());
+
             const int samplesCount = ds.data().size(0);
             const int testsamplesCount = testDs.data().size(0);
             auto yDim = TorchHelpers::totalSize(ds.data()) / samplesCount;
@@ -206,6 +228,8 @@ namespace {
             auto labels = Vec(ds.targets().to(torch::kCPU, torch::kFloat32));
             auto testLabels = Vec(testDs.targets().to(torch::kCPU, torch::kFloat32));
 
+            auto learnBaseline = maybeMakeBaseline(learnData, classifier);
+            auto testBaseline = maybeMakeBaseline(testData, classifier);
             std::vector<int> learnIndices(samplesCount);
             std::vector<int> testIndices(testsamplesCount);
             std::iota(learnIndices.begin(), learnIndices.end(), 0);
@@ -227,8 +251,13 @@ namespace {
             gather(testData, testIndices, featuresCount, test, usedFeatures);
 
 
-            TPool trainPool = MakePool(learn, labelsRef);
-            TPool testPool = MakePool(test, testLabelsRef);
+            auto baselineDim = learnBaseline.size() / labelsRef.size();
+            TDataSet trainPool = MakePool(learn, labelsRef, nullptr,
+                learnBaseline.size() ? learnBaseline.data() : nullptr,
+                baselineDim);
+            TDataSet testPool = MakePool(test, testLabelsRef, nullptr,
+                testBaseline.size() ? testBaseline.data() : nullptr,
+                baselineDim);
 
             auto catboost = Train(trainPool, testPool, catBoostOptions_);
             Polynom polynom(PolynomBuilder().AddEnsemble(catboost).Build());
@@ -248,6 +277,40 @@ namespace {
                     dst[f * indices.size() + sample] = featuresRef[f];
                 }
             }
+        }
+
+        std::vector<float> gatherBaseline(ConstVecRef<float> baseline, ConstVecRef<int> indices, int dim) const {
+            std::vector<float> result;
+            if (!baseline.empty()) {
+                const int samplCount = baseline.size() / dim;
+                result.resize(indices.size() * dim);
+                for (int currentDim = 0; currentDim < dim; ++currentDim) {
+                    for (size_t i = 0; i < indices.size(); ++i) {
+                        result[currentDim * indices.size() + i] = baseline[currentDim * samplCount  + indices[i]];
+                    }
+                }
+            }
+            return result;
+        }
+
+
+        std::vector<float> maybeMakeBaseline(torch::Tensor data, experiments::Classifier* classifier) const {
+            std::vector<float> baseline;
+            if (classifier->baseline()) {
+                classifier->baseline()->to(data.device());
+                auto baselineTensor = classifier->baseline()->forward(data).to(torch::kCPU).contiguous();
+                const int baselineDim = baselineTensor.size(1);
+                const size_t samplesCount = baselineTensor.size(0);
+                size_t baselineSize = samplesCount * baselineDim;
+                baseline.resize(baselineSize);
+                auto srcData = baselineTensor.data<float>();
+                for (int  baselineIdx = 0;  baselineIdx<  baselineDim; ++ baselineIdx) {
+                    for (int32_t i = 0; i < samplesCount; ++i) {
+                        baseline[baselineIdx * samplesCount + i] = srcData[i * baselineDim + baselineIdx];
+                    }
+                }
+            }
+            return baseline;
         }
 
     private:
@@ -286,14 +349,7 @@ experiments::OptimizerPtr CatBoostNN::getDecisionOptimizer(const experiments::Mo
 }
 
 void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
-    lr_ = opts_.adamStep;
-    initializer_->init(ds, loss, &representationsModel_, &decisionModel_);
-
-    if (initClassifier_) {
-      initialTrainRepr(ds, loss);
-    }
-
-    trainDecision(ds, loss);
+    lr_ = opts_.sgdStep_;
 
     std::set<uint32_t> decayIters = {100 / opts_.representationsIterations,
                                      200 / opts_.representationsIterations,
@@ -306,8 +362,10 @@ void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
         }
 
         trainRepr(ds, loss);
+
         trainDecision(ds, loss);
 
+        model_->to(device_);
         fireListeners(i);
     }
 }
@@ -315,19 +373,27 @@ void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
 
 
 void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
-    representationsModel_->train(false);
-    decisionModel_->train(true);
+    model_->to(device_);
+    auto representationsModel = model_->conv();
+    auto decisionModel = model_->classifier();
+    representationsModel->train(false);
+
+    if (model_->classifier()->baseline()) {
+        model_->classifier()->baseline()->train(false);
+    }
+    model_->classifier()->classifier()->train(true);
+
 
     std::cout << "    getting representations" << std::endl;
 
     auto mds = ds.map(reprTransform_);
     auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(256));
-    auto device = representationsModel_->parameters().data()->device();
+    auto device = representationsModel->parameters().data()->device();
     std::vector<torch::Tensor> reprList;
     std::vector<torch::Tensor> targetsList;
 
     for (auto& batch : *dloader) {
-        auto res = representationsModel_->forward(batch.data.to(device)).to(torch::kCPU);
+        auto res = representationsModel->forward(batch.data.to(device)).to(torch::kCPU);
         auto target = batch.target;
         reprList.push_back(res);
         targetsList.push_back(target);
@@ -340,19 +406,26 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
 
     std::cout << "    optimizing decision model" << std::endl;
 
-    auto decisionFuncOptimizer = getDecisionOptimizer(decisionModel_);
-    decisionFuncOptimizer->train(repr, targets, loss, decisionModel_);
+    auto decisionFuncOptimizer = getDecisionOptimizer(decisionModel);
+    decisionFuncOptimizer->train(repr, targets, loss, decisionModel);
 }
 
 void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
-    representationsModel_->train(true);
-    decisionModel_->train(false);
+    model_->to(device_);
+
+    auto representationsModel = model_->conv();
+    representationsModel->train(true);
+    auto decisionModel = model_->classifier();
+    decisionModel->train(false);
+    if (decisionModel->baseline()) {
+        decisionModel->baseline()->train(true);
+    }
 
     std::cout << "    optimizing representation model" << std::endl;
 
-    LossPtr representationLoss = makeRepresentationLoss(decisionModel_, loss);
-    auto representationOptimizer = getReprOptimizer(representationsModel_);
-    representationOptimizer->train(ds, representationLoss, representationsModel_);
+    LossPtr representationLoss = makeRepresentationLoss(decisionModel, loss);
+    auto representationOptimizer = getReprOptimizer(model_);
+    representationOptimizer->train(ds, representationLoss, representationsModel);
 
 }
 experiments::ModelPtr CatBoostNN::trainFinalDecision(const TensorPairDataset& learn, const TensorPairDataset& test) {
@@ -362,23 +435,23 @@ experiments::ModelPtr CatBoostNN::trainFinalDecision(const TensorPairDataset& le
         1e10,
         0.0
     );
-    auto result = std::make_shared<PolynomModel>();
-    optimizer->train(learn, test, result);
-    return result;
+    experiments::ClassifierPtr classifier;
+    auto baseline = model_->classifier()->baseline();
+    if (baseline) {
+        classifier = makeClassifierWithBaseline<PolynomModel>(model_->classifier()->baseline(), std::make_shared<Polynom>());
+    } else {
+        classifier = makeClassifier<PolynomModel>(std::make_shared<Polynom>());
+    }
+    optimizer->train(learn, test, classifier);
+    return classifier;
 }
 void CatBoostNN::setLambda(double lambda) {
-    auto model = dynamic_cast<PolynomModel*>(decisionModel_.get());
+    auto model = dynamic_cast<PolynomModel*>(model_->classifier()->classifier().get());
     VERIFY(model != nullptr, "model is not polynom");
     model->setLambda(lambda);
 
 }
-void CatBoostNN::initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss) {
-  auto model = std::make_shared<CompositionalModel>(representationsModel_, initClassifier_);
-  model->train(true);
-  LossPtr representationLoss = makeRepresentationLoss(initClassifier_, loss);
-  auto representationOptimizer = getReprOptimizer(representationsModel_);
-  representationOptimizer->train(ds, representationLoss, representationsModel_);
-}
+
 //
 //std::pair<torch::Tensor, torch::Tensor> CatBoostNN::representation(TensorPairDataset& ds) {
 //    auto dloader = torch::data::make_data_loader(ds, torch::data::DataLoaderOptions(100));

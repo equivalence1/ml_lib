@@ -97,7 +97,7 @@ torch::Tensor ResNetClassifier::forward(torch::Tensor x) {
 
 // ResNet
 
-ResNet::ResNet(ResNetConfiguration cfg, std::shared_ptr<experiments::Model> classifier) {
+ResNet::ResNet(ResNetConfiguration cfg, experiments::ClassifierPtr classifier) {
     if (cfg == ResNetConfiguration::ResNet34) {
         init(std::move(std::vector<int>({3, 4, 6, 3})), classifier);
     } else if (cfg == ResNetConfiguration::ResNet18) {
@@ -107,7 +107,7 @@ ResNet::ResNet(ResNetConfiguration cfg, std::shared_ptr<experiments::Model> clas
     }
 }
 
-void ResNet::init(std::vector<int> nBlocks, std::shared_ptr<experiments::Model> classifier) {
+void ResNet::init(std::vector<int> nBlocks, experiments::ClassifierPtr classifier) {
     std::function<experiments::ModelPtr(int, int, int)> blocksBuilder = [](int inChannels, int outChannels, int stride){
         return std::make_shared<BasicBlock>(inChannels, outChannels, stride);
     };
@@ -129,6 +129,6 @@ experiments::ModelPtr ResNet::conv() {
     return conv_;
 }
 
-experiments::ModelPtr ResNet::classifier() {
+experiments::ClassifierPtr ResNet::classifier() {
     return classifier_;
 }

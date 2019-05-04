@@ -1,5 +1,5 @@
 #include "lenet.h"
-
+using namespace experiments;
 // LeNetConv
 
 LeNetConv::LeNetConv() {
@@ -18,6 +18,7 @@ torch::Tensor LeNetConv::forward(torch::Tensor x) {
 // LeNetClassifier
 
 LeNetClassifier::LeNetClassifier() {
+    layerNorm_ = register_module("layerNorm_", std::make_shared<LayerNorm>(16 * 5 * 5));
     fc1_ = register_module("fc1_", torch::nn::Linear(16 * 5 * 5, 120));
     fc2_ = register_module("fc2_", torch::nn::Linear(120, 84));
     fc3_ = register_module("fc3_", torch::nn::Linear(84, 10));
@@ -25,6 +26,7 @@ LeNetClassifier::LeNetClassifier() {
 
 torch::Tensor LeNetClassifier::forward(torch::Tensor x) {
     x = x.view({x.size(0), -1});
+
     x = torch::relu(fc1_->forward(x));
     x = torch::relu(fc2_->forward(x));
     x = fc3_->forward(x);
@@ -34,21 +36,15 @@ torch::Tensor LeNetClassifier::forward(torch::Tensor x) {
 // LeNet
 
 
-torch::Tensor LeNet::forward(torch::Tensor x) {
-    x = conv_->forward(x);
-    x = classifier_->forward(x);
-    return x;
-}
-
 experiments::ModelPtr LeNet::conv() {
     return conv_;
 }
 
-experiments::ModelPtr LeNet::classifier() {
+experiments::ClassifierPtr LeNet::classifier() {
     return classifier_;
 }
 
-LeNet::LeNet(std::shared_ptr<experiments::Model> classifier) {
+LeNet::LeNet(ClassifierPtr classifier) {
     conv_ = register_module("conv_", std::make_shared<LeNetConv>());
     classifier_ = register_module("classifier_", classifier);
 }

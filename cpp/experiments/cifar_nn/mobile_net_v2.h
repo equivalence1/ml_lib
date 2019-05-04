@@ -67,20 +67,19 @@ private:
 
 class MobileNetV2 : public experiments::ConvModel {
 public:
-    explicit MobileNetV2(std::shared_ptr<experiments::Model> classifier = std::make_shared<MobileNetV2Classifier>());
+    explicit MobileNetV2(experiments::ClassifierPtr classifier = makeClassifier<MobileNetV2Classifier>());
 
-    torch::Tensor forward(torch::Tensor x) override;
 
     experiments::ModelPtr conv() override;
 
-    experiments::ModelPtr classifier() override;
+    experiments::ClassifierPtr classifier() override;
 
     ~MobileNetV2() override = default;
 
 private:
-    void init(std::vector<int> nBlocks, std::shared_ptr<experiments::Model> classifier);
+    void init(std::vector<int> nBlocks, experiments::ClassifierPtr classifier);
 
 private:
     std::shared_ptr<MobileNetV2Conv> conv_{nullptr};
-    experiments::ModelPtr classifier_{nullptr};
+    experiments::ClassifierPtr classifier_{nullptr};
 };

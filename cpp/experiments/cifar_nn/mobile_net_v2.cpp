@@ -127,21 +127,16 @@ torch::Tensor MobileNetV2Classifier::forward(torch::Tensor x) {
 
 // MobileNetV2
 
-MobileNetV2::MobileNetV2(std::shared_ptr<experiments::Model> classifier) {
+MobileNetV2::MobileNetV2(experiments::ClassifierPtr classifier) {
     conv_ = register_module("conv_", std::make_shared<MobileNetV2Conv>());
     classifier_ = register_module("classifier_", std::move(classifier));
 }
 
-torch::Tensor MobileNetV2::forward(torch::Tensor x) {
-    x = conv_->forward(x);
-    x = classifier_->forward(x);
-    return x;
-}
 
 experiments::ModelPtr MobileNetV2::conv() {
     return conv_;
 }
 
-experiments::ModelPtr MobileNetV2::classifier() {
+experiments::ClassifierPtr MobileNetV2::classifier() {
     return classifier_;
 }

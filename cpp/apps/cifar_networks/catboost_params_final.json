@@ -1,6 +1,6 @@
 {
   "boosting_type": "Plain",
-  "iterations" : 20000,
+  "iterations" : 9000,
   "depth" : 6,
   "gpu_ram_part": 0.5,
   "task_type": "GPU",
@@ -8,6 +8,7 @@
   "eval_metric": "Accuracy",
   "od_type": "IncToDec",
   "loss_function": "MultiClass",
-  "learning_rate" : 0.01,
+  "learning_rate" : 0.04,
   "logging_level" : "Verbose"
 }
+

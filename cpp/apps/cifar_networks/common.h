@@ -22,7 +22,7 @@ template <typename T>
 using OptimizerType = std::shared_ptr<experiments::DefaultOptimizer<T>>;
 
 OptimizerType<TransformType> getDefaultCifar10Optimizer(int epochs, const experiments::ModelPtr& model,
-        torch::DeviceType device);
+        torch::DeviceType device, double step=0.1);
 
 void attachDefaultListeners(const experiments::OptimizerPtr& optimizer,
         int nBatchesReport, std::string savePath);

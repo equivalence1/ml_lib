@@ -30,5 +30,6 @@ int main(int argc, char* argv[]) {
     std::cout << resBeforeSave << std::endl;
     std::cout << resAfterLoad << std::endl;
 
+
     assert(resBeforeSave.equal(resAfterLoad));
 }

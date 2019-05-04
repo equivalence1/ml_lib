@@ -32,12 +32,15 @@ int main(int argc, char* argv[]) {
 
     // Create opimizer
 
-    auto optimizer = getDefaultCifar10Optimizer(10, lenet, device);
+    auto optimizer = getDefaultCifar10Optimizer(500, lenet, device, 0.01);
     auto loss = std::make_shared<CrossEntropyLoss>();
+
+
+
 
     // Attach listeners
 
-    attachDefaultListeners(optimizer, 50000 / 4 / 10, "lenet_checkpoint.pt");
+    attachDefaultListeners(optimizer, 50000 / 128 / 10, "lenet_checkpoint.pt");
 
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
     experiments::Optimizer::emplaceEpochListener<experiments::EpochEndCallback>(optimizer.get(), [&](int epoch, experiments::Model& model) {

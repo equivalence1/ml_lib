@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
     CatBoostNNConfig catBoostNnConfig;
     catBoostNnConfig.batchSize = 128;
     catBoostNnConfig.lambda_ = 1;
-    catBoostNnConfig.adamStep = 0.01;
+    catBoostNnConfig.sgdStep_ = 0.01;
     catBoostNnConfig.representationsIterations = 10;
     catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_gpu.json";
     catBoostNnConfig.catboostInitParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_init.json";

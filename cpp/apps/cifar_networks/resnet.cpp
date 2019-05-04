@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
 
     // Create optimizer
 
-    auto optimizer = getDefaultCifar10Optimizer(400, resnet, device);
+    auto optimizer = getDefaultCifar10Optimizer(800, resnet, device, 0.1);
     auto loss = std::make_shared<CrossEntropyLoss>();
 
     // AttachListeners

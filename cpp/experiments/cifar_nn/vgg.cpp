@@ -37,7 +37,7 @@ Vgg16Conv::Vgg16Conv() {
             auto batchNorm = register_module(bnName, torch::nn::BatchNorm(outChannels));
 
             std::function<torch::Tensor(torch::Tensor)> layer = [conv, batchNorm](torch::Tensor x){
-                return torch::relu(batchNorm->forward(conv->forward(x)));
+                return torch::tanh(batchNorm->forward(conv->forward(x)));
             };
             layers_.push_back(layer);
 
@@ -49,12 +49,15 @@ Vgg16Conv::Vgg16Conv() {
     layers_.emplace_back([](torch::Tensor x){
         return torch::avg_pool2d(x, 1, 1);
     });
+//    layerNorm_ = register_module("layerNorm_", std::make_shared<LayerNorm>(512));
+
 }
 
 torch::Tensor Vgg16Conv::forward(torch::Tensor x) {
     for (const auto& l : layers_) {
         x = l(x);
     }
+//    layerNorm_->forward(x);
     return x;
 }
 
@@ -70,7 +73,7 @@ torch::Tensor VggClassifier::forward(torch::Tensor x) {
 
 // Vgg
 
-Vgg::Vgg(VggConfiguration cfg,  std::shared_ptr<experiments::Model> classifier) {
+Vgg::Vgg(VggConfiguration cfg,  experiments::ClassifierPtr classifier) {
     if (cfg == VggConfiguration::Vgg16) {
         conv_ = register_module("conv_", std::make_shared<Vgg16Conv>());
         classifier_ = register_module("classifier_", classifier);
@@ -89,6 +92,6 @@ experiments::ModelPtr Vgg::conv() {
     return conv_;
 }
 
-experiments::ModelPtr Vgg::classifier() {
+experiments::ClassifierPtr Vgg::classifier() {
     return classifier_;
 }

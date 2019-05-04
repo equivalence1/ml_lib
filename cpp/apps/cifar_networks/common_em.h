@@ -21,26 +21,13 @@ struct CommonEmOptions {
 
 class CommonEm : public EMLikeTrainer<decltype(getDefaultCifar10TrainTransform())> {
 public:
-    using ConvModelPtr = std::shared_ptr<experiments::ConvModel>;
 
     CommonEm(CommonEmOptions opts,
-             experiments::ModelPtr reprModel,
-             experiments::ModelPtr decisionModel,
-             torch::DeviceType device)
-            : EMLikeTrainer(getDefaultCifar10TrainTransform(), opts.globalIterationsCount)
-            , opts_(opts)
-            , device_(device) {
-
-        initializer_ = std::make_shared<NoopInitializer>();
-
-        representationsModel_ = std::move(reprModel);
-        decisionModel_ = std::move(decisionModel);
-    }
-
-    CommonEm(CommonEmOptions opts,
-        const ConvModelPtr& model,
+        experiments::ConvModelPtr model,
         torch::DeviceType device)
-            : CommonEm(opts, model->conv(), model->classifier(), device) {
+        : EMLikeTrainer(getDefaultCifar10TrainTransform(), opts.globalIterationsCount, model)
+        , opts_(opts)
+        , device_(device) {
 
     }
 
@@ -162,9 +149,9 @@ class ExactLinearEm : public CommonEm {
 public:
     ExactLinearEm(CommonEmOptions opts,
                   experiments::ModelPtr reprModel,
-                  experiments::ModelPtr decisionModel,
+                  experiments::ClassifierPtr decisionModel,
                   torch::DeviceType device)
-            : CommonEm(opts, std::move(reprModel), std::move(decisionModel), device) {
+            : CommonEm(opts, experiments::ConvModelPtr(new experiments::CompositionalModel(reprModel, decisionModel)), device) {
 
     }
 

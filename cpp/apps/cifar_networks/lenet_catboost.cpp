@@ -33,11 +33,12 @@ int main(int argc, char* argv[]) {
 
     // Init model
     CatBoostNNConfig catBoostNnConfig;
-    catBoostNnConfig.batchSize = 32;
+    catBoostNnConfig.batchSize = 128;
     catBoostNnConfig.lambda_ = 1;
-    catBoostNnConfig.representationsIterations = 5;
+    catBoostNnConfig.sgdStep_ = 0.01;
+    catBoostNnConfig.representationsIterations =5;
 
-    catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_lenet.json";
+    catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_gpu.json";
     catBoostNnConfig.catboostInitParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_init.json";
     catBoostNnConfig.catboostFinalParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_final.json";
 
@@ -51,16 +52,22 @@ int main(int argc, char* argv[]) {
         polynom->Ensemble_.push_back(emptyMonom);
     }
 
-    auto lenet = std::make_shared<LeNet>(std::make_shared<PolynomModel>(polynom));
+    auto lenet = std::make_shared<LeNet>(makeClassifierWithBaseline<PolynomModel>(
+        makeCifarLinearClassifier(16 * 5 * 5),
+        polynom));
+//    auto lenet = std::make_shared<LeNet>(makeClassifier<PolynomModel>(
+//        polynom));
     lenet->to(device);
+
+    torch::setNumThreads(16);
 
     CatBoostNN nnTrainer(catBoostNnConfig, lenet, device);
 
-    // Attach Listeners
+    // Attach Listener
 
     nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
         std::cout << "--------===============CATBOOST learn + test start ====================---------------  "  << std::endl;
-        auto learn = nnTrainer.applyConvLayers(dataset.first.map(getDefaultCifar10TestTransform()));
+        auto learn = nnTrainer.applyConvLayers(dataset.first.map(getCifar10TrainFinalCatboostTransform()));
         auto test =  nnTrainer.applyConvLayers(dataset.second.map(getDefaultCifar10TestTransform()));
         nnTrainer.trainFinalDecision(learn, test);
         std::cout << "--------===============CATBOOST learn + test finish ====================---------------  "  << std::endl;
@@ -71,6 +78,7 @@ int main(int argc, char* argv[]) {
     nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
         polynom->Lambda_ = 100000;
         model->eval();
+        model->to(device);
 
         auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(catBoostNnConfig.batchSize * 2));
         int rightAnswersCnt = 0;

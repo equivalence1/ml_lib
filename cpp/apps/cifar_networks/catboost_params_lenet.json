@@ -1,7 +1,7 @@
 {
   "boosting_type": "Plain",
   "iterations" : 2000,
-  "depth" : 6,
+  "depth" : 2,
   "task_type": "GPU",
   "devices": "0",
   "gpu_ram_part": 0.5,
@@ -9,6 +9,7 @@
   "od_type": "IncToDec",
   "logging_level" : "Debug",
   "loss_function": "MultiClass",
-  "learning_rate" : 0.1,
+  "learning_rate" : 0.0001,
+  "use_best_model": false,
   "bootstrap_type": "No"
 }

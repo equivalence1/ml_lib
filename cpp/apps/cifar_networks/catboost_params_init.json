@@ -1,17 +1,16 @@
 {
   "boosting_type": "Plain",
-  "iterations" : 1000,
+  "iterations" : 1,
   "depth" : 6,
-  "task_type": "GPU",
   "devices": "0",
+  "task_type": "GPU",
   "gpu_ram_part": 0.5,
   "eval_metric": "Accuracy",
   "od_type": "IncToDec",
   "loss_function": "MultiClass",
-  "learning_rate" : 0.04,
-  "rsm": 0.5,
-  "bootstrap_type": "No",
+  "learning_rate" : 0.01,
   "use_best_model": false,
-  "logging_level" : "Verbose",
+  "rsm": 0.5,
+  "logging_level" : "Debug",
   "random_strength": 1
 }

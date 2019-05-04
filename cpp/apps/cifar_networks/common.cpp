@@ -75,7 +75,7 @@ TransformType getCifar10TrainFinalCatboostTransform() {
 
 
 OptimizerType<TransformType> getDefaultCifar10Optimizer(int epochs, const experiments::ModelPtr& model,
-        torch::DeviceType device) {
+        torch::DeviceType device, double step) {
     experiments::OptimizerArgs<TransformType> args(getDefaultCifar10TrainTransform(),
             epochs, device);
 
@@ -83,7 +83,7 @@ OptimizerType<TransformType> getDefaultCifar10Optimizer(int epochs, const experi
     args.dloaderOptions_ = torch::data::DataLoaderOptions(128);
 
 //    torch::optim::AdamOptions opt(0.1);
-    torch::optim::SGDOptions opt(0.1);
+    torch::optim::SGDOptions opt(step);
     opt.momentum_ = 0.9;
     opt.weight_decay_ = 5e-4;
     auto optim = std::make_shared<torch::optim::SGD>(model->parameters(), opt);

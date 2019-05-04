@@ -1,5 +1,6 @@
 #pragma once
 
+#include "layer_norm.h"
 #include "model.h"
 
 #include <torch/torch.h>
@@ -27,6 +28,7 @@ public:
 
 protected:
     std::vector<std::function<torch::Tensor(torch::Tensor)>> layers_;
+    LayerNormPtr layerNorm_{nullptr};
 };
 
 // Vgg16Conv
@@ -58,17 +60,18 @@ private:
 
 class  Vgg : public experiments::ConvModel {
 public:
-    explicit Vgg(VggConfiguration cfg, std::shared_ptr<experiments::Model> classifier = std::make_shared<VggClassifier>());
+    explicit Vgg(VggConfiguration cfg,
+                  experiments::ClassifierPtr classifier = makeClassifier<VggClassifier>());
 
     torch::Tensor forward(torch::Tensor x) override;
 
     experiments::ModelPtr conv() override;
 
-    experiments::ModelPtr classifier() override;
+    experiments::ClassifierPtr classifier() override;
 
     ~Vgg() override = default;
 
 private:
     std::shared_ptr<VggConv> conv_;
-    std::shared_ptr<experiments::Model> classifier_;
+    experiments::ClassifierPtr classifier_;
 };

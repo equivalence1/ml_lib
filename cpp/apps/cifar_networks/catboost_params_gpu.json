@@ -8,8 +8,8 @@
   "od_type": "IncToDec",
   "logging_level" : "Verbose",
   "loss_function": "MultiClass",
-  "learning_rate" : 0.04,
+  "learning_rate" : 0.01,
   "rsm": 0.5,
-  "use_best_model": false,
+  "use_best_model": true,
   "random_strength": 1
 }

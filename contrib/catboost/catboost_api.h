@@ -28,14 +28,18 @@ EXPORT int TreeDepth(ResultHandle handle, int treeIndex);
 EXPORT bool CopyTree(ResultHandle handle, int treeIndex, int* features, float* conditions, float* leaves, float* weights);
 
 
-EXPORT bool TrainCatBoost(const float* features,
-                          const float* labels,
-                          const float* weights,
-                          int featuresCount, int samplesCount,
-                          const float* testFeatures,
-                          const float* testLabels,
-                          const float* testWeights,
-                          int testSamplesCount,
+struct TDataSet {
+    const float* Features = nullptr;
+    const float* Labels = nullptr;
+    const float* Weights = nullptr;
+    const float* Baseline = nullptr;
+    int BaselineDim = 0;
+    int FeaturesCount = 0;
+    int SamplesCount = 0;
+
+};
+EXPORT bool TrainCatBoost(const TDataSet& train,
+                          const TDataSet& test,
                           const char* params,
                           ResultHandle* handle);
 

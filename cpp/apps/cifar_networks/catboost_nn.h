@@ -21,7 +21,7 @@ struct CatBoostNNConfig {
     std::string catboostInitParamsFile = "catboost_params.json";
     std::string catboostFinalParamsFile = "catboost_final_params.json";
 
-    double adamStep = 0.001;
+    double sgdStep_ = 0.001;
 
 };
 
@@ -31,34 +31,25 @@ public:
 
     CatBoostNN(const CatBoostNNConfig& opts,
         ConvModelPtr model,
-        torch::DeviceType device,
-        experiments::ModelPtr initClassifier = nullptr)
-            : EMLikeTrainer(getDefaultCifar10TrainTransform(), opts.globalIterationsCount)
+        torch::DeviceType device)
+            : EMLikeTrainer(getDefaultCifar10TrainTransform(), opts.globalIterationsCount, model)
             , opts_(opts)
-            , model_(std::move(model))
             , device_(device) {
 
-        initializer_ = std::make_shared<NoopInitializer>();
-
-        representationsModel_ = model_->conv();
-        decisionModel_ = model_->classifier();
-        initClassifier_ = initClassifier;
-        if (initClassifier_) {
-          initClassifier_->to(device);
-        }
     }
 
     template <class Ds>
     TensorPairDataset applyConvLayers(const Ds& ds) {
-        representationsModel_->eval();
+        auto representationsModel = model_->conv();
+        representationsModel->eval();
 
         auto dloader = torch::data::make_data_loader(ds, torch::data::DataLoaderOptions(256));
-        auto device = representationsModel_->parameters().data()->device();
+        auto device = representationsModel->parameters().data()->device();
         std::vector<torch::Tensor> reprList;
         std::vector<torch::Tensor> targetsList;
 
         for (auto& batch : *dloader) {
-            auto res = representationsModel_->forward(batch.data.to(device));
+            auto res = representationsModel->forward(batch.data.to(device));
             auto target = batch.target.to(device);
             reprList.push_back(res);
             targetsList.push_back(target);
@@ -85,10 +76,8 @@ protected:
 
     experiments::OptimizerPtr getDecisionOptimizer(const experiments::ModelPtr& decisionModel) override;
 
-    void initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss);
 private:
     const CatBoostNNConfig& opts_;
-    ConvModelPtr model_;
     torch::DeviceType device_;
     int64_t seed_ = 0;
     bool Init_ = true;

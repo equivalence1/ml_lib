@@ -1,5 +1,6 @@
 #pragma once
 
+#include "layer_norm.h"
 #include "model.h"
 
 #include <torch/torch.h>
@@ -32,6 +33,7 @@ public:
     ~LeNetClassifier() override = default;
 
 private:
+    LayerNormPtr layerNorm_{nullptr};
     torch::nn::Linear fc1_{nullptr};
     torch::nn::Linear fc2_{nullptr};
     torch::nn::Linear fc3_{nullptr};
@@ -41,20 +43,16 @@ private:
 
 class LeNet : public experiments::ConvModel {
 public:
-    LeNet(std::shared_ptr<experiments::Model> classifier = std::make_shared<LeNetClassifier>());
-
-    torch::Tensor forward(torch::Tensor x) override;
+    LeNet(experiments::ClassifierPtr classifier = makeClassifier<LeNetClassifier>());
 
     experiments::ModelPtr conv() override;
 
-    experiments::ModelPtr classifier() override;
+    experiments::ClassifierPtr classifier() override;
 
     ~LeNet() override = default;
 
-
-
 private:
     std::shared_ptr<LeNetConv> conv_{nullptr};
-    std::shared_ptr<experiments::Model> classifier_{nullptr};
+    experiments::ClassifierPtr classifier_{nullptr};
 };
 

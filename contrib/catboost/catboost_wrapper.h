@@ -40,31 +40,14 @@ struct TEnsemble {
 
 
 
-struct TPool {
-    const float* Features = nullptr;
-    const float* Labels = nullptr;
-    const float* Weights = nullptr;
-    size_t FeaturesCount = 0;
-    size_t SamplesCount = 0;
-};
-
-
-
-inline TEnsemble Train(const TPool& learn,
-                        const TPool& test,
+inline TEnsemble Train(const TDataSet& learn,
+                        const TDataSet& test,
                         const std::string& paramsJson) {
     ResultHandle handle;
-    TrainCatBoost(learn.Features,
-                  learn.Labels,
-                  learn.Weights,
-                  learn.FeaturesCount,
-                  learn.SamplesCount,
-                  test.Features, test.Labels,
-                  test.Weights,
-                  test.SamplesCount,
+    TrainCatBoost(learn,
+                  test,
                   paramsJson.data(),
-                  &handle
-        );
+                  &handle);
 
     if (!handle) {
         throw std::exception();
@@ -84,12 +67,12 @@ inline TEnsemble Train(const TPool& learn,
         currentTree.Weights.resize((1 << depth));
 
         CopyTree(handle,
-            tree,
-            currentTree.Features.data(),
-            currentTree.Conditions.data(),
-            currentTree.Leaves.data(),
-            currentTree.Weights.data()
-            );
+                 tree,
+                 currentTree.Features.data(),
+                 currentTree.Conditions.data(),
+                 currentTree.Leaves.data(),
+                 currentTree.Weights.data()
+        );
     }
 
 

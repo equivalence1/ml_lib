@@ -140,6 +140,7 @@ public:
         optimizer->registerListener(listener);
     }
 
+
 protected:
     void fireEpochResetListeners() const {
         for (auto& listener : epochListeners_) {

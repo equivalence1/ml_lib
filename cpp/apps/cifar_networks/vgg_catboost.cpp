@@ -37,12 +37,12 @@ int main(int argc, char* argv[]) {
     catBoostNnConfig.batchSize = 128;
     catBoostNnConfig.dropOut_ = 0.0;
     catBoostNnConfig.lambda_ = 1;
-    catBoostNnConfig.adamStep = 0.1;
+    catBoostNnConfig.sgdStep_ = 0.1;
     catBoostNnConfig.representationsIterations = 10;
     catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_gpu.json";
     catBoostNnConfig.catboostInitParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_init.json";
     catBoostNnConfig.catboostFinalParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_final.json";
-
+    torch::setNumThreads(16);
     PolynomPtr polynom = std::make_shared<Polynom>();
     polynom->Lambda_ = catBoostNnConfig.lambda_;
     {
@@ -53,11 +53,16 @@ int main(int argc, char* argv[]) {
         polynom->Ensemble_.push_back(emptyMonom);
     }
 
+    auto classifier = makeClassifierWithBaseline<PolynomModel>(
+        makeCifarLinearClassifier(512),
+        polynom);
+
     auto vgg = std::make_shared<Vgg>(VggConfiguration::Vgg16,
-        std::make_shared<PolynomModel>(polynom));
+        classifier);
+
     vgg->to(device);
 
-    CatBoostNN nnTrainer(catBoostNnConfig, vgg, device,  std::make_shared<VggClassifier>());
+    CatBoostNN nnTrainer(catBoostNnConfig, vgg, device);
     // Attach Listeners
 
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());

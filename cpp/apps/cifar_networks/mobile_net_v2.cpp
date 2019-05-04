@@ -32,9 +32,10 @@ int main(int argc, char* argv[]) {
     const std::string& path = "../../../../resources/cifar10/cifar-10-batches-bin";
     auto dataset = cifar::read_dataset(path);
 
+
     // Create optimizer
 
-    auto optimizer = getDefaultCifar10Optimizer(400, mobileNetV2, device);
+    auto optimizer = getDefaultCifar10Optimizer(800, mobileNetV2, device);
     auto loss = std::make_shared<CrossEntropyLoss>();
 
     // AttachListeners

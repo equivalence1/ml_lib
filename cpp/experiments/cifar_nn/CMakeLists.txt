@@ -18,8 +18,8 @@ add_library(cifar_nn
         optimizer.h
         initializer.cpp
         initializer.h
-        linear_train.cpp
-        linear_train.h
+#        linear_train.cpp
+#        linear_train.h
         linear_model.cpp
         linear_model.h
         linear_function.cpp
@@ -40,13 +40,15 @@ add_library(cifar_nn
         oblivious_tree_function.h
         oblivious_tree_model.cpp
         oblivious_tree_model.h
-        oblivious_tree_train.cpp
-        oblivious_tree_train.h
+#        oblivious_tree_train.cpp
+#        oblivious_tree_train.h
         tree_train.h
         transform.cpp
         transform.h
         polynom_model.h
         polynom_model.cpp
+        layer_norm.h
+        layer_norm.cpp
         mobile_net_v2.h
         mobile_net_v2.cpp)
 target_link_libraries(cifar_nn "${TORCH_LIBRARIES}"  Eigen3::Eigen methods core models targets)

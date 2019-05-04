@@ -66,9 +66,9 @@ public:
 
     void applyBinarizedRow(const Buffer<uint8_t>& x, Vec to) const;
 
-    double value(const Vec& x);
+    double value(const Vec& x) override;
 
-    void grad(const Vec& x, Vec to);
+    void grad(const Vec& x, Vec to) override ;
 
 private:
     uint32_t bits(uint32_t i);
