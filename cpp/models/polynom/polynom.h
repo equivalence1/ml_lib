@@ -148,6 +148,9 @@ struct Polynom {
     Polynom() {
 
     }
+
+    void PrintHistogram();
+
     //forward/backward will append to dst
     void Forward(ConstVecRef<float> features, VecRef<float> dst) const;
     void Backward(ConstVecRef<float> features, ConstVecRef<float> outputsDer, VecRef<float> featuresDer) const;

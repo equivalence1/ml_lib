@@ -4,7 +4,7 @@
 #include <map>
 #include <util/exception.h>
 #include <util/parallel_executor.h>
-
+#include <iostream>
 struct PathBit {
     int Bits = 0;
     int Sign = 1;
@@ -60,7 +60,7 @@ void PolynomBuilder::AddTree(const TSymmetricTree& tree)  {
     for (int path = 0; path < leaves; ++path) {
         for (int i = 0; i < leaves; ++i) {
             if ((i & path) == path) {
-                weights[path] += tree.Weights[i];
+                weights[i] += tree.Weights[path];
             }
         }
     }
@@ -101,6 +101,7 @@ void PolynomBuilder::AddTree(const TSymmetricTree& tree)  {
             dst.Value[dim] += values[i * tree.OutputDim() + dim];
         }
     }
+
 }
 
 
@@ -202,5 +203,33 @@ void Polynom::Backward(ConstVecRef<float> features,
                        VecRef<float> featuresDer) const {
     for (const auto& monom : Ensemble_) {
         monom.Backward(Lambda_, features, outputsDer, featuresDer);
+    }
+}
+
+void Polynom::PrintHistogram() {
+    for (int dim = 0; dim < OutDim(); ++dim) {
+        double min = Ensemble_.back().Values_[dim];
+        double max = min;
+        for (const auto& monom : Ensemble_) {
+            min = std::min<double>(monom.Values_[dim], min);
+            max = std::max<double>(monom.Values_[dim], max);
+        }
+        const int binCount = 32;
+
+        std::vector<int> bins(binCount);
+        double total = 0;
+        for (const auto& monom : Ensemble_) {
+            double v = monom.Values_[dim];
+            int bin = (v - min) * binCount / (max - min);
+            bin = std::max<int>(bin, 0);
+            bin = std::min<int>(bin, binCount - 1);
+            ++bins[bin];
+            ++total;
+        }
+        std::cout << "dim=" << dim << ", min=" << min <<", max=" << max << std::endl;
+        for (const auto& binCount : bins) {
+            std::cout << binCount * 1.0 / total << " ";
+        }
+        std::cout << std::endl;
     }
 }

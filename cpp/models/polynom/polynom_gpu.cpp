@@ -1,6 +1,44 @@
 #include "polynom_gpu.h"
 #include "soft_polynom.h"
 #include <core/buffer.h>
+#include <util/singleton.h>
+#include <ostream>
+
+using namespace std;
+namespace {
+    class PolynomForwardBackwardLog {
+    public:
+        PolynomForwardBackwardLog()
+        : out_("features_der.txt") {
+
+        }
+
+
+        void invokeBackward(torch::Tensor batch,
+                            torch::Tensor featureDer) {
+            auto derNorm = featureDer.norm(2).to(torch::kCPU).data<float>()[0];
+            out_ << i << " der norm " << derNorm << std::endl;
+            auto batchDerCpu = featureDer.mean({0}).to(torch::kCPU).contiguous();
+            auto meanDers = batchDerCpu.data<float>();
+            const int fCount = featureDer.size(1);
+            out_ << i << " " << "derSigns" << std::endl;
+            for (int i = 0; i < fCount; ++i) {
+                out_<< (meanDers[i] > 0 ? 1 : -1) << " ";
+            }
+            out_ << std::endl;
+            out_ << i << " " << "meanDers" << std::endl;
+            for (int i = 0; i < fCount; ++i) {
+                out_<< meanDers[i] << " ";
+            }
+            out_ << std::endl;
+            ++i;
+        }
+
+    private:
+        int i = 0;
+        std::ofstream out_;
+    };
+}
 
 PolynomCuda::PolynomCuda(PolynomPtr polynom)
 : Polynom_(polynom) {
@@ -50,6 +88,7 @@ torch::Tensor PolynomCuda::Forward(torch::Tensor batch) const {
 
     auto transposed = batch.transpose(0, 1).contiguous();
 
+
     PolynomForward(Polynom_->Lambda_,
             transposed.data<float>(),
             fCount,
@@ -66,6 +105,7 @@ torch::Tensor PolynomCuda::Forward(torch::Tensor batch) const {
     return result.transpose(0, 1).contiguous();
 
 }
+
 
 
 torch::Tensor PolynomCuda::Backward(torch::Tensor batch,
@@ -93,5 +133,8 @@ torch::Tensor PolynomCuda::Backward(torch::Tensor batch,
         PolynomOffsets.data<int>(),
         polynomCount,
         result.data<float>());
-  return result;
+
+    Singleton<PolynomForwardBackwardLog>().invokeBackward(batch, result);
+
+    return result;
 }
