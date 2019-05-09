@@ -60,16 +60,18 @@ void PolynomBuilder::AddTree(const TSymmetricTree& tree)  {
     for (int path = 0; path < leaves; ++path) {
         for (int i = 0; i < leaves; ++i) {
             if ((i & path) == path) {
-                weights[i] += tree.Weights[path];
+                weights[path] += tree.Weights[i];
             }
         }
     }
 
 
     for (int i = 0; i < leaves; ++i) {
-        if (weights[i] == 0) {
-            continue;
-        }
+        // co c1 (1 - c2)
+        //if 0 points in c0 c1 c2 => -c0c1c2 with weight 0, but valuee will not be zero
+//        if (weights[i] == 0) {
+//            continue;
+//        }
         PolynomStructure polynomStructure;
         std::map<int, float> polynom;
 
