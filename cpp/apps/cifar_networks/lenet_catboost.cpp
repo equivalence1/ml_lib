@@ -35,8 +35,9 @@ int main(int argc, char* argv[]) {
     CatBoostNNConfig catBoostNnConfig;
     catBoostNnConfig.batchSize = 128;
     catBoostNnConfig.lambda_ = 1;
-    catBoostNnConfig.sgdStep_ = 0.01;
-    catBoostNnConfig.representationsIterations =5;
+    catBoostNnConfig.sgdStep_ = 0.1;
+    catBoostNnConfig.representationsIterations = 10;
+    catBoostNnConfig.globalIterationsCount = 1000;
 
     catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_gpu.json";
     catBoostNnConfig.catboostInitParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_init.json";
@@ -54,6 +55,7 @@ int main(int argc, char* argv[]) {
 
     auto lenet = std::make_shared<LeNet>(makeClassifierWithBaseline<PolynomModel>(
         makeCifarLinearClassifier(16 * 5 * 5),
+//        makeCifarBias(),
         polynom));
 //    auto lenet = std::make_shared<LeNet>(makeClassifier<PolynomModel>(
 //        polynom));
@@ -61,22 +63,30 @@ int main(int argc, char* argv[]) {
 
     torch::setNumThreads(16);
 
-    CatBoostNN nnTrainer(catBoostNnConfig, lenet, device);
+    CatBoostNN nnTrainer(catBoostNnConfig,
+                         lenet,
+                         device,
+                         makeClassifier<experiments::LinearCifarClassifier>(16 *5 *5));
 
     // Attach Listener
 
     nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
-        std::cout << "--------===============CATBOOST learn + test start ====================---------------  "  << std::endl;
-        auto learn = nnTrainer.applyConvLayers(dataset.first.map(getCifar10TrainFinalCatboostTransform()));
-        auto test =  nnTrainer.applyConvLayers(dataset.second.map(getDefaultCifar10TestTransform()));
-        nnTrainer.trainFinalDecision(learn, test);
-        std::cout << "--------===============CATBOOST learn + test finish ====================---------------  "  << std::endl;
-
+        if (epoch % 2 != 0) {
+            std::cout << "--------===============CATBOOST learn + test start ====================---------------  "
+                      << std::endl;
+            auto learn = nnTrainer.applyConvLayers(dataset.first.map(getCifar10TrainFinalCatboostTransform()));
+            auto test = nnTrainer.applyConvLayers(dataset.second.map(getDefaultCifar10TestTransform()));
+            nnTrainer.trainFinalDecision(learn, test);
+            std::cout << "--------===============CATBOOST learn + test finish ====================---------------  "
+                      << std::endl;
+        }
     });
 
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
     nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
-        polynom->Lambda_ = 100000;
+        if (epoch % 2 != 0) {
+            polynom->Lambda_ = 100000;
+        }
         model->eval();
         model->to(device);
 
@@ -109,6 +119,7 @@ int main(int argc, char* argv[]) {
 
         std::cout << "Test accuracy: " << rightAnswersCnt * 100.0f / dataset.second.size().value() << std::endl;
     });
+
 
 
     // Train

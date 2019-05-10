@@ -32,13 +32,14 @@ int main(int argc, char* argv[]) {
 
     // Init model
 
+    torch::setNumThreads(16);
 
     CatBoostNNConfig catBoostNnConfig;
     catBoostNnConfig.batchSize = 128;
     catBoostNnConfig.lambda_ = 1.0;
 
     catBoostNnConfig.sgdStep_ = 0.1;
-    catBoostNnConfig.representationsIterations = 20;
+    catBoostNnConfig.representationsIterations = 10;
     catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/resnet_params/catboost_params_gpu.json";
     catBoostNnConfig.catboostInitParamsFile = "../../../../cpp/apps/cifar_networks/resnet_params/catboost_params_init.json";
     catBoostNnConfig.catboostFinalParamsFile = "../../../../cpp/apps/cifar_networks/resnet_params/catboost_params_final.json";
@@ -90,13 +91,14 @@ int main(int argc, char* argv[]) {
             std::cout << "--------===============CATBOOST learn + test finish ====================---------------  "
                       << std::endl;
         }
-
     });
 
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
     nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
         model->to(device);
-        nnTrainer.setLambda(10000);
+        if (epoch % 2 != 0) {
+            nnTrainer.setLambda(10000);
+        }
         model->eval();
 
 
