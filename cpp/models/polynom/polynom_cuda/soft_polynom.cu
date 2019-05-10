@@ -37,13 +37,15 @@ __global__ void PolynomProbsImpl(
             int nextOffset = polynomOffsets[polynomId + 1];
             const int depth = nextOffset - offset;
 
+//            bool isTrue = true;
             float logProb = 0;
             for (int i = 0; i < depth; ++i) {
                 const int f = __ldg(splits + offset + i);
                 const float c = __ldg(conditions + offset + i);
                 const float x = __ldg(features + f * batchSize);
                 const float val = -lambda * (x - c);
-                const float expVal = 1.0f + exp(val);
+//                isTrue = x <= c? false : isTrue;
+                const float expVal = 1.0f + expf(val);
 
 //            p( split = 1) = 1.0 / (1.0 + exp(-(x - c)))
 //            c = 0, x= inf, p = 1.0 / (1.0 + exp(-inf) = 0
@@ -51,7 +53,8 @@ __global__ void PolynomProbsImpl(
                 const float isTrueLogProb = isfinite(expVal) ? log(expVal) : val;
                 logProb -= isTrueLogProb;
             }
-            const float prob = exp(logProb);
+            const float prob = expf(logProb);
+//            const float prob = isTrue ? 1 : 0;//exp(logProb);
             probs[polynomId * batchSize] = prob;
             polynomId += gridDim.x;
         }

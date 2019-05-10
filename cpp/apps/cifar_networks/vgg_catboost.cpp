@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
     catBoostNnConfig.dropOut_ = 0.0;
     catBoostNnConfig.lambda_ = 1.0;
     catBoostNnConfig.sgdStep_ = 0.1;
-    catBoostNnConfig.representationsIterations = 20;
+    catBoostNnConfig.representationsIterations = 10;
 
     catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_gpu.json";
     catBoostNnConfig.catboostInitParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_init.json";
@@ -76,6 +76,10 @@ int main(int argc, char* argv[]) {
 
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
 
+    nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
+        AccuracyCalcer<decltype(mds)>(device, catBoostNnConfig, mds, nnTrainer)(epoch, model);
+    });
+
 
     nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
         if (epoch % 2 == 0) {
@@ -87,45 +91,6 @@ int main(int argc, char* argv[]) {
         nnTrainer.trainFinalDecision(learn, test);
         std::cout << "--------===============CATBOOST learn + test finish ====================---------------  "  << std::endl;
     });
-
-    nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
-        model->to(device);
-        if (epoch % 2 != 0) {
-            nnTrainer.setLambda(10000);
-        }
-        model->eval();
-
-        auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(256));
-        int rightAnswersCnt = 0;
-
-        for (auto& batch : *dloader) {
-            auto data = batch.data;
-            data = data.to(device);
-            torch::Tensor target = batch.target;
-
-            torch::Tensor prediction = model->forward(data);
-            prediction = torch::argmax(prediction, 1);
-
-            prediction = prediction.to(torch::kCPU);
-
-            auto targetAccessor = target.accessor<int64_t, 1>();
-            auto predictionsAccessor = prediction.accessor<int64_t, 1>();
-            int size = target.size(0);
-
-            for (int i = 0; i < size; ++i) {
-                const int targetClass = targetAccessor[i];
-                const int predictionClass = predictionsAccessor[i];
-                if (targetClass == predictionClass) {
-                    rightAnswersCnt++;
-                }
-            }
-        }
-        nnTrainer.setLambda(catBoostNnConfig.lambda_);
-
-        std::cout << "Test accuracy: " <<  rightAnswersCnt * 100.0f / dataset.second.size().value() << std::endl;
-    });
-
-
 
     // Train
 

@@ -89,3 +89,68 @@ private:
     double lambdaMult_ = 1.0;
     int iter_ = 1;
 };
+
+
+
+
+template <class DataSet>
+class AccuracyCalcer {
+public:
+    AccuracyCalcer(c10::DeviceType device, const CatBoostNNConfig& opts, DataSet& mds, CatBoostNN& nnTrainer)
+        : device_(device), opts_(opts), mds_(mds), nnTrainer_(nnTrainer) {
+
+    }
+
+    void operator()(uint32_t epoch, experiments::ModelPtr model) {
+        model->to(device_);
+        model->eval();
+
+        auto dloader = torch::data::make_data_loader(mds_, torch::data::DataLoaderOptions(256));
+        int rightAnswersCnt = 0;
+        int rightAnswersExactCnt = 0;
+        double total = 0;
+
+        for (auto& batch : *dloader) {
+            auto data = batch.data;
+            data = data.to(device_);
+            torch::Tensor target = batch.target;
+
+            torch::Tensor prediction = model->forward(data);
+            prediction = torch::argmax(prediction, 1);
+
+            nnTrainer_.setLambda(100000);
+            torch::Tensor predictionExact = model->forward(data);
+            predictionExact = torch::argmax(prediction, 1);
+            nnTrainer_.setLambda(opts_.lambda_);
+
+            prediction = prediction.to(torch::kCPU);
+            predictionExact = predictionExact.to(torch::kCPU);
+
+            auto targetAccessor = target.accessor<int64_t, 1>();
+            auto predictionsAccessor = prediction.accessor<int64_t, 1>();
+            auto predictionsExactAccessor = predictionExact.accessor<int64_t, 1>();
+            int size = target.size(0);
+
+            for (int i = 0; i < size; ++i) {
+                const int targetClass = targetAccessor[i];
+                const int predictionClass = predictionsAccessor[i];
+                const int predictionExactClass = predictionsExactAccessor[i];
+                if (targetClass == predictionClass) {
+                    rightAnswersCnt++;
+                }
+                if (targetClass == predictionExactClass) {
+                    rightAnswersExactCnt++;
+                }
+                ++total;
+            }
+        }
+
+        std::cout << "Test accuracy: " <<  rightAnswersCnt * 100.0f / total << std::endl;
+        std::cout << "Test accuracy (lambda = 100000): " <<  rightAnswersCnt * 100.0f / total << std::endl;
+    }
+private:
+    torch::DeviceType device_;
+    const CatBoostNNConfig& opts_;
+    DataSet& mds_;
+    CatBoostNN& nnTrainer_;
+};

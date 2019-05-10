@@ -129,7 +129,7 @@ namespace {
 
             const int samplesCount = data.size(0);
             auto yDim = TorchHelpers::totalSize(data) / samplesCount;
-            data = data.reshape({samplesCount, yDim}).to(torch::kCPU);
+            data = data.reshape({samplesCount, yDim}).to(torch::kCPU).contiguous();
             std::vector<float> baseline = maybeMakeBaseline(data, classifier);
             auto baselineDim = baseline.size() / samplesCount;
             auto labels = Vec(ds.targets().to(torch::kCPU, torch::kFloat32));
@@ -226,10 +226,10 @@ namespace {
             const int samplesCount = ds.data().size(0);
             const int testsamplesCount = testDs.data().size(0);
             auto yDim = TorchHelpers::totalSize(ds.data()) / samplesCount;
-            auto learnData = ds.data().reshape({samplesCount, yDim}).to(torch::kCPU);
-            auto testData = testDs.data().reshape({testsamplesCount, yDim}).to(torch::kCPU);
-            auto labels = Vec(ds.targets().to(torch::kCPU, torch::kFloat32));
-            auto testLabels = Vec(testDs.targets().to(torch::kCPU, torch::kFloat32));
+            auto learnData = ds.data().reshape({samplesCount, yDim}).to(torch::kCPU).contiguous();
+            auto testData = testDs.data().reshape({testsamplesCount, yDim}).to(torch::kCPU).contiguous();
+            auto labels = Vec(ds.targets().to(torch::kCPU, torch::kFloat32).contiguous());
+            auto testLabels = Vec(testDs.targets().to(torch::kCPU, torch::kFloat32).contiguous());
 
             auto learnBaseline = maybeMakeBaseline(learnData, classifier);
             auto testBaseline = maybeMakeBaseline(testData, classifier);
@@ -479,14 +479,14 @@ experiments::ModelPtr CatBoostNN::trainFinalDecision(const TensorPairDataset& le
 void CatBoostNN::setLambda(double lambda) {
     auto model = dynamic_cast<PolynomModel*>(model_->classifier()->classifier().get());
     VERIFY(model != nullptr, "model is not polynom");
-    model->setLambda(lambda);
+    model->setLambda(lambda * lambdaMult_);
 
 }
 
 using namespace experiments;
 
 void CatBoostNN::initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss) {
-    iter_ = 10;
+    iter_ = 2;
 
     if (initClassifier_) {
         auto model = std::make_shared<CompositionalModel>(model_->conv(), initClassifier_);
@@ -496,7 +496,7 @@ void CatBoostNN::initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss) {
         auto representationOptimizer = getReprOptimizer(model_->conv());
         representationOptimizer->train(ds, representationLoss, model_->conv());
     }
-    iter_ = 2;
+    iter_ = 1;
 
     trainRepr(ds, loss);
 
