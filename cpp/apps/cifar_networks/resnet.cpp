@@ -43,6 +43,7 @@ int main(int argc, char* argv[]) {
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
     experiments::Optimizer::emplaceEpochListener<experiments::EpochEndCallback>(optimizer.get(), [&](int epoch, experiments::Model& model) {
         model.eval();
+        model.to(device);
 
         auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(128));
         int rightAnswersCnt = 0;

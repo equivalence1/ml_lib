@@ -35,9 +35,10 @@ int main(int argc, char* argv[]) {
 
     CatBoostNNConfig catBoostNnConfig;
     catBoostNnConfig.batchSize = 128;
-    catBoostNnConfig.lambda_ = 1;
+    catBoostNnConfig.lambda_ = 1.0;
+
     catBoostNnConfig.sgdStep_ = 0.1;
-    catBoostNnConfig.representationsIterations = 10;
+    catBoostNnConfig.representationsIterations = 20;
     catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_gpu.json";
     catBoostNnConfig.catboostInitParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_init.json";
     catBoostNnConfig.catboostFinalParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_final.json";
@@ -53,12 +54,29 @@ int main(int argc, char* argv[]) {
         polynom->Ensemble_.push_back(emptyMonom);
     }
 
-    auto resnet = std::make_shared<ResNet>(ResNetConfiguration::ResNet18, std::make_shared<PolynomModel>(polynom));
+//    auto classifier = makeClassifierWithBaseline<PolynomModel>(
+//        makeCifarLinearClassifier(512),
+//        polynom);
+
+
+    auto classifier = makeClassifierWithBaseline<PolynomModel>(
+        makeCifarBias(),
+        polynom);
+
+    auto resnet = std::make_shared<ResNet>(
+        ResNetConfiguration::ResNet18,
+        classifier);
+
     resnet->to(device);
 
-    CatBoostNN nnTrainer(catBoostNnConfig, resnet, device);
+    CatBoostNN nnTrainer(catBoostNnConfig,
+        resnet,
+        device,
+        makeClassifier<experiments::LinearCifarClassifier>(512));
 
-
+//    CatBoostNN nnTrainer(catBoostNnConfig,
+//                         resnet,
+//                         device);
     // Attach Listeners
 
 
@@ -73,6 +91,7 @@ int main(int argc, char* argv[]) {
 
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
     nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
+        model->to(device);
         nnTrainer.setLambda(10000);
         model->eval();
 

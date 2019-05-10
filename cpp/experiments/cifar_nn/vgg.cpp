@@ -37,7 +37,7 @@ Vgg16Conv::Vgg16Conv() {
             auto batchNorm = register_module(bnName, torch::nn::BatchNorm(outChannels));
 
             std::function<torch::Tensor(torch::Tensor)> layer = [conv, batchNorm](torch::Tensor x){
-                return torch::tanh(batchNorm->forward(conv->forward(x)));
+                return torch::relu(batchNorm->forward(conv->forward(x)));
             };
             layers_.push_back(layer);
 

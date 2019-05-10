@@ -77,11 +77,11 @@ experiments::OptimizerPtr CatBoostNN::getReprOptimizer(const experiments::ModelP
     auto transform = getDefaultCifar10TrainTransform();
     using TransT = decltype(transform);
 
-    experiments::OptimizerArgs<TransT> args(transform, opts_.representationsIterations, device_);
-
+    experiments::OptimizerArgs<TransT> args(transform, iter_, device_);
+//
     torch::optim::SGDOptions opt(lr_);
     opt.momentum_ = 0.9;
-//    torch::optim::AdamOptions opt(opts_.adamStep);
+//    torch::optim::AdamOptions opt(lr);
     opt.weight_decay_ = 5e-4;
 //    auto optim = std::make_shared<torch::optim::Adam>(reprModel->parameters(), opt);
     auto optim = std::make_shared<torch::optim::SGD>(model->parameters(), opt);
@@ -95,7 +95,7 @@ experiments::OptimizerPtr CatBoostNN::getReprOptimizer(const experiments::ModelP
     args.dloaderOptions_ = std::move(dloaderOptions);
 
     auto optimizer = std::make_shared<experiments::DefaultOptimizer<TransT>>(args);
-    attachReprListeners(optimizer, 50000 / batchSize / 10, opts_.representationsIterations, lr_, lr_ / 1000);
+    attachReprListeners(optimizer, 50000 / batchSize / 10, opts_.representationsIterations, lr_, lr_ / 100);
 //    attachDefaultListeners(optimizer, 50000 / batchSize / 10, "lenet_em_conv_checkpoint.pt");
     return optimizer;
 }
@@ -193,23 +193,26 @@ namespace {
             polynom.Lambda_ = lambda_;
             std::cout << "Model size: " << catboost.Trees.size() << std::endl;
             std::cout << "Polynom size: " << polynom.Ensemble_.size() << std::endl;
-            std::set<int> featureIds;
+            std::map<int, int> featureIds;
             int fCount = 0;
+            double total = 0;
             for (const auto& monom : polynom.Ensemble_) {
                 for (const auto& split : monom.Structure_.Splits) {
-                    featureIds.insert(split.Feature);
+                    featureIds[split.Feature]++;
                     fCount = std::max<int>(fCount, split.Feature);
+                    ++total;
                 }
             }
             std::cout << "Polynom used features: " << fCount << std::endl;
             for (int k = 0; k < fCount; ++k) {
-                if (featureIds.count(k)) {
-                    std::cout <<"1";
-                } else {
-                    std::cout<<"0";
-                }
+                std::cout << featureIds[k] / total << " ";
             }
             std::cout << std::endl << "===============" << std::endl;
+            std::cout << std::endl << "Polynom values hist" << std::endl;
+            polynom.PrintHistogram();
+            std::cout << std::endl << "===============" << std::endl;
+
+
             polynomModel->reset(std::make_shared<Polynom>(polynom));
         }
 
@@ -343,7 +346,7 @@ experiments::OptimizerPtr CatBoostNN::getDecisionOptimizer(const experiments::Mo
     return std::make_shared<CatBoostOptimizer>(
         readFile(params),
         seed_,
-        opts_.lambda_,
+        opts_.lambda_ * lambdaMult_,
         opts_.dropOut_
         );
 }
@@ -351,22 +354,50 @@ experiments::OptimizerPtr CatBoostNN::getDecisionOptimizer(const experiments::Mo
 void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
     lr_ = opts_.sgdStep_;
 
+    initialTrainRepr(ds, loss);
+
+    trainDecision(ds, loss);
+
+
     std::set<uint32_t> decayIters = {100 / opts_.representationsIterations,
                                      200 / opts_.representationsIterations,
-                                     300 / opts_.representationsIterations};
+                                     300 / opts_.representationsIterations
+                                     };
+//                                     50 / opts_.representationsIterations,
+//                                     75 / opts_.representationsIterations,
+//                                     100 / opts_.representationsIterations,
+//                                     125 / opts_.representationsIterations,
+//                                     150 / opts_.representationsIterations,
+//                                     175 / opts_.representationsIterations,
+//                                     200 / opts_.representationsIterations,
+//                                     225 / opts_.representationsIterations,
+//                                     250 / opts_.representationsIterations,
+//                                     300 / opts_.representationsIterations
+//    };
 
     for (uint32_t i = 0; i < iterations_; ++i) {
         std::cout << "EM iteration: " << i << std::endl;
         if (decayIters.count(i)) {
           lr_ /= 10;
+//          lambdaMult_ /= 2;
         }
 
         trainRepr(ds, loss);
 
+        std::cout << "Repr was trained, calling listeners " << i << std::endl;
+
+        fireListeners(2 * i);
+        std::cout << "========== " << i << std::endl;
+
         trainDecision(ds, loss);
 
+        std::cout << "Decision was trained " << i << std::endl;
+
         model_->to(device_);
-        fireListeners(i);
+
+        fireListeners(2 * i + 1);
+        std::cout << "========== " << i << std::endl;
+
     }
 }
 
@@ -449,6 +480,27 @@ void CatBoostNN::setLambda(double lambda) {
     auto model = dynamic_cast<PolynomModel*>(model_->classifier()->classifier().get());
     VERIFY(model != nullptr, "model is not polynom");
     model->setLambda(lambda);
+
+}
+
+using namespace experiments;
+
+void CatBoostNN::initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss) {
+    iter_ = 10;
+
+    if (initClassifier_) {
+        auto model = std::make_shared<CompositionalModel>(model_->conv(), initClassifier_);
+        model->train(true);
+        model->to(device_);
+        LossPtr representationLoss = makeRepresentationLoss(initClassifier_, loss);
+        auto representationOptimizer = getReprOptimizer(model_->conv());
+        representationOptimizer->train(ds, representationLoss, model_->conv());
+    }
+    iter_ = 2;
+
+    trainRepr(ds, loss);
+
+    iter_ =  opts_.representationsIterations;
 
 }
 
