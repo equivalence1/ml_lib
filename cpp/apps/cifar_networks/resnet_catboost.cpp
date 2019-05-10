@@ -81,11 +81,15 @@ int main(int argc, char* argv[]) {
 
 
     nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, experiments::ModelPtr model) {
-        std::cout << "--------===============CATBOOST learn + test start ====================---------------  "  << std::endl;
-        auto learn = nnTrainer.applyConvLayers(dataset.first.map(getCifar10TrainFinalCatboostTransform()));
-        auto test =  nnTrainer.applyConvLayers(dataset.second.map(getDefaultCifar10TestTransform()));
-        nnTrainer.trainFinalDecision(learn, test);
-        std::cout << "--------===============CATBOOST learn + test finish ====================---------------  "  << std::endl;
+        if (epoch % 2 != 0) {
+            std::cout << "--------===============CATBOOST learn + test start ====================---------------  "
+                      << std::endl;
+            auto learn = nnTrainer.applyConvLayers(dataset.first.map(getCifar10TrainFinalCatboostTransform()));
+            auto test = nnTrainer.applyConvLayers(dataset.second.map(getDefaultCifar10TestTransform()));
+            nnTrainer.trainFinalDecision(learn, test);
+            std::cout << "--------===============CATBOOST learn + test finish ====================---------------  "
+                      << std::endl;
+        }
 
     });
 
