@@ -146,7 +146,7 @@ public:
         }
 
         std::cout << "Test accuracy: " <<  rightAnswersCnt * 100.0f / total << std::endl;
-        std::cout << "Test accuracy (lambda = 100000): " <<  rightAnswersCnt * 100.0f / total << std::endl;
+        std::cout << "Test accuracy (lambda = 100000): " <<  rightAnswersExactCnt * 100.0f / total << std::endl;
     }
 private:
     torch::DeviceType device_;
