@@ -27,3 +27,16 @@ torch::Tensor experiments::Classifier::forward(torch::Tensor x) {
     }
     return result;
 }
+
+Bias::Bias(int dim) {
+    bias_ = register_parameter("bias_", torch::zeros({dim}, torch::kFloat32));
+
+}
+torch::Tensor Bias::forward(torch::Tensor x) {
+    torch::TensorOptions options;
+    options = options.device(x.device());
+    options = options.dtype(torch::kFloat32);
+    torch::Tensor result = torch::zeros({x.size(0), bias_.size(0)}, options);
+    result += bias_;
+    return result;
+}

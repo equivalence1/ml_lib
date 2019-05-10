@@ -109,10 +109,27 @@ namespace experiments {
   private:
     torch::nn::Linear fc1_{nullptr};
   };
+
+
+    class Bias : public experiments::Model {
+    public:
+        Bias(int dim);
+
+        torch::Tensor forward(torch::Tensor x) override;
+
+        ~Bias() override = default;
+
+    private:
+        torch::Tensor bias_;
+    };
 }
 
 inline experiments::ModelPtr makeCifarLinearClassifier(int inputDim) {
     return std::make_shared<experiments::LinearCifarClassifier>(inputDim);
+}
+
+inline experiments::ModelPtr makeCifarBias() {
+    return std::make_shared<experiments::Bias>(10);
 }
 
 template <class Impl, class... Args>
