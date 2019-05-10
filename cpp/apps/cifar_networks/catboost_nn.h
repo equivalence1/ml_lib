@@ -120,7 +120,7 @@ public:
 
             nnTrainer_.setLambda(100000);
             torch::Tensor predictionExact = model->forward(data);
-            predictionExact = torch::argmax(prediction, 1);
+            predictionExact = torch::argmax(predictionExact, 1);
             nnTrainer_.setLambda(opts_.lambda_);
 
             prediction = prediction.to(torch::kCPU);
