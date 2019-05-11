@@ -97,7 +97,7 @@ OptimizerType<TransformType> getDefaultCifar10Optimizer(int epochs, const experi
 }
 
 void attachDefaultListeners(const experiments::OptimizerPtr& optimizer,
-                            int nBatchesReport, std::string savePath) {
+                            int nBatchesReport, std::string savePath,int reduction, std::vector<int> threshold ) {
     // report 10 times per epoch
     auto brListener = std::make_shared<experiments::BatchReportOptimizerListener>(nBatchesReport);
     optimizer->registerListener(brListener);
@@ -106,8 +106,8 @@ void attachDefaultListeners(const experiments::OptimizerPtr& optimizer,
     optimizer->registerListener(epochReportOptimizerListener);
 
     // see https://github.com/kuangliu/pytorch-cifar/blob/master/README.md#learning-rate-adjustment
-    auto lrDecayListener = std::make_shared<experiments::LrDecayOptimizerListener>(10,
-                                                                                   std::vector<int>({150, 250, 350}));
+    auto lrDecayListener = std::make_shared<experiments::LrDecayOptimizerListener>(reduction, threshold
+                                                                                   );
 //    auto lrDecayListener = std::make_shared<experiments::LrDecayOptimizerListener>(10,
 //                                                                                   std::vector<int>({50, 100, 150, 200}));
     optimizer->registerListener(lrDecayListener);

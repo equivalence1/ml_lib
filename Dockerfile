@@ -16,10 +16,11 @@ RUN unzip 3.3.7.zip
 RUN mv /eigen* /eigen
 RUN mkdir /eigen/build
 RUN cd /eigen/build/ && cmake .. && make install
+ADD libcatboost.so /usr/local/lib
 
 COPY . /app
 WORKDIR /app/build
-RUN cmake .. -DCMAKE_PREFIX_PATH=/libtorch -DCMAKE_BUILD_TYPE=Release
-RUN make resnet
-WORKDIR /app/build/cpp/apps/cifar_networks 
-ENTRYPOINT ./resnet CUDA
+#RUN cmake .. -DCMAKE_PREFIX_PATH=/libtorch -DCMAKE_BUILD_TYPE=Release
+#RUN make -j 4 resnet
+#WORKDIR /app/build/cpp/apps/cifar_networks 
+#ENTRYPOINT ./resnet CUDA

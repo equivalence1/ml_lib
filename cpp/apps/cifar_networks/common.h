@@ -25,7 +25,7 @@ OptimizerType<TransformType> getDefaultCifar10Optimizer(int epochs, const experi
         torch::DeviceType device, double step=0.1);
 
 void attachDefaultListeners(const experiments::OptimizerPtr& optimizer,
-        int nBatchesReport, std::string savePath);
+        int nBatchesReport, std::string savePath, int reduction=20, std::vector<int> threshold = std::vector<int>({30, 50, 100}));
 
 template <typename T>
 float evalModelTestAccEval(TensorPairDataset& ds,
