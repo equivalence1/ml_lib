@@ -40,9 +40,9 @@ int main(int argc, char* argv[]) {
     catBoostNnConfig.representationsIterations = 10;
     catBoostNnConfig.globalIterationsCount = 1000;
 
-    catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_gpu.json";
-    catBoostNnConfig.catboostInitParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_init.json";
-    catBoostNnConfig.catboostFinalParamsFile = "../../../../cpp/apps/cifar_networks/catboost_params_final.json";
+    catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/lenet_params/catboost_params_gpu.json";
+    catBoostNnConfig.catboostInitParamsFile = "../../../../cpp/apps/cifar_networks/lenet_params/catboost_params_init.json";
+    catBoostNnConfig.catboostFinalParamsFile = "../../../../cpp/apps/cifar_networks/lenet_params/catboost_params_final.json";
 
     PolynomPtr polynom = std::make_shared<Polynom>();
     polynom->Lambda_ = catBoostNnConfig.lambda_;
