@@ -3,7 +3,7 @@
 #include <utility>
 
 #include <catboost_wrapper.h>
-#include <cifar_nn/polynom_model.h>
+#include <experiments/core/polynom_model.h>
 #include <core/vec.h>
 #include <models/model.h>
 #include <models/polynom/polynom.h>

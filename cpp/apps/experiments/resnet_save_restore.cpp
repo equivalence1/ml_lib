@@ -1,5 +1,5 @@
-#include <cifar_nn/resnet.h>
-#include <cifar_nn/model.h>
+#include <experiments/core/networks/resnet.h>
+#include <experiments/core/model.h>
 
 #include <torch/torch.h>
 
