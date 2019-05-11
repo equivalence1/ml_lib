@@ -54,7 +54,7 @@ add_library(experiments_core
         networks/mobile_net_v2.h
         networks/mobile_net_v2.cpp
         )
-target_link_libraries(experiments_core "${TORCH_LIBRARIES}"  Eigen3::Eigen methods core models targets)
+target_link_libraries(experiments_core "${TORCH_LIBRARIES}"  Eigen3::Eigen methods core models polynom targets)
 enable_cxx14(experiments_core)
 
 # TODO move py module from here
