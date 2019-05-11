@@ -21,6 +21,6 @@ ADD libcatboost.so /usr/local/lib
 COPY . /app
 WORKDIR /app/build
 #RUN cmake .. -DCMAKE_PREFIX_PATH=/libtorch -DCMAKE_BUILD_TYPE=Release
-#RUN make -j 4 resnet
-#WORKDIR /app/build/cpp/apps/cifar_networks 
+#RUN make resnet
+#WORKDIR /app/build/cpp/apps/experiments
 #ENTRYPOINT ./resnet CUDA
