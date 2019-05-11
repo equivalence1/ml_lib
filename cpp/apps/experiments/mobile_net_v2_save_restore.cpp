@@ -1,5 +1,5 @@
-#include <cifar_nn/mobile_net_v2.h>
-#include <cifar_nn/model.h>
+#include <experiments/core/mobile_net_v2.h>
+#include <experiments/core/model.h>
 
 #include <torch/torch.h>
 

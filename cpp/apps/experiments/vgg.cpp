@@ -1,8 +1,8 @@
 #include "common.h"
-#include <cifar_nn/vgg.h>
-#include <cifar_nn/cifar10_reader.h>
-#include <cifar_nn/optimizer.h>
-#include <cifar_nn/cross_entropy_loss.h>
+#include <experiments/core/vgg.h>
+#include <experiments//datasets/cifar10/cifar10_reader.h>
+#include <experiments/core/optimizer.h>
+#include <experiments/core/cross_entropy_loss.h>
 
 #include <torch/torch.h>
 
@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
     // Load data
 
     const std::string& path = "../../../../resources/cifar10/cifar-10-batches-bin";
-    auto dataset = cifar::read_dataset(path);
+    auto dataset = experiments::cifar10::read_dataset(path);
 
     // Create optimizer
 

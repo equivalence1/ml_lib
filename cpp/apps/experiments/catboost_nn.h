@@ -1,8 +1,8 @@
 #include "common.h"
-#include <cifar_nn/cifar10_reader.h>
-#include <cifar_nn/optimizer.h>
-#include <cifar_nn/cross_entropy_loss.h>
-#include <cifar_nn/em_like_train.h>
+#include <experiments/datasets/cifar10/cifar10_reader.h>
+#include <experiments/core/optimizer.h>
+#include <experiments/core/cross_entropy_loss.h>
+#include <experiments/core/em_like_train.h>
 
 #include <torch/torch.h>
 

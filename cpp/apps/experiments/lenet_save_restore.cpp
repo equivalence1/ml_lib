@@ -1,5 +1,5 @@
-#include <cifar_nn/lenet.h>
-#include <cifar_nn/model.h>
+#include <experiments/core/networks/lenet.h>
+#include <experiments/core/model.h>
 
 #include <torch/torch.h>
 

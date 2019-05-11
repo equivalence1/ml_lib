@@ -1,5 +1,5 @@
-#include <cifar_nn/vgg.h>
-#include <cifar_nn/model.h>
+#include <experiments/core/vgg.h>
+#include <experiments/core/model.h>
 
 #include <torch/torch.h>
 

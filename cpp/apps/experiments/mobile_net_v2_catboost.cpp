@@ -2,13 +2,13 @@
 #include "common_em.h"
 #include "catboost_nn.h"
 
-#include <cifar_nn/mobile_net_v2.h>
-#include <cifar_nn/cifar10_reader.h>
-#include <cifar_nn/optimizer.h>
-#include <cifar_nn/cross_entropy_loss.h>
-#include <cifar_nn/em_like_train.h>
-#include <cifar_nn/transform.h>
-#include <cifar_nn/polynom_model.h>
+#include <experiments/core/mobile_net_v2.h>
+#include <experiments//datasets/cifar10/cifar10_reader.h>
+#include <experiments/core/optimizer.h>
+#include <experiments/core/cross_entropy_loss.h>
+#include <experiments/core/em_like_train.h>
+#include <experiments/core/transform.h>
+#include <experiments/core/polynom_model.h>
 
 #include <torch/torch.h>
 
@@ -29,7 +29,7 @@ int main(int argc, char* argv[]) {
     // Read dataset
 
     const std::string& path = "../../../../resources/cifar10/cifar-10-batches-bin";
-    auto dataset = cifar::read_dataset(path);
+    auto dataset = experiments::cifar10::read_dataset(path);
 
     // Init model
 
