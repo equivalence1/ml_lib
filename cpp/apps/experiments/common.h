@@ -1,8 +1,9 @@
 #pragma once
 
-#include "experiments/core/optimizer.h"
-#include "experiments/core/model.h"
-#include "experiments/core/tensor_pair_dataset.h"
+#include <experiments/core/optimizer.h>
+#include <experiments/core/model.h>
+#include <experiments/core/tensor_pair_dataset.h>
+#include <util/json.h>
 
 #include <torch/torch.h>
 
@@ -22,11 +23,11 @@ TransformType getCifar10TrainFinalCatboostTransform();
 template <typename T>
 using OptimizerType = std::shared_ptr<experiments::DefaultOptimizer<T>>;
 
-OptimizerType<TransformType> getDefaultCifar10Optimizer(int epochs, const experiments::ModelPtr& model,
-        torch::DeviceType device, double step=0.1);
+OptimizerType<TransformType> getDefaultOptimizer(const experiments::ModelPtr &model,
+                                                 const json& params);
 
 void attachDefaultListeners(const experiments::OptimizerPtr& optimizer,
-        int nBatchesReport, std::string savePath, int reduction=20, std::vector<int> threshold = std::vector<int>({30, 50, 100}));
+        const json& params, int reduction=20, std::vector<int> threshold = std::vector<int>({30, 50, 100}));
 
 template <typename T>
 float evalModelTestAccEval(TensorPairDataset& ds,
@@ -58,6 +59,6 @@ float evalModelTestAccEval(TensorPairDataset& ds,
     return rightAnswersCnt * 100.0f / ds.size().value();
 }
 
-torch::DeviceType getDevice(int argc, char* argv[]);
+torch::DeviceType getDevice(const std::string& deviceType);
 
-std::pair<TensorPairDataset, TensorPairDataset> readDataset(int argc, char* argv[]);
+std::pair<TensorPairDataset, TensorPairDataset> readDataset(const std::string& dataset);

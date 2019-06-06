@@ -26,6 +26,7 @@ include_directories(contrib/catboost/)
 #    ENDIF())
 #ENDIF()
 
+include_directories(contrib/json)
 
 add_subdirectory(contrib/googletest)
 add_subdirectory(contrib/pybind11)

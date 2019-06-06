@@ -2,7 +2,9 @@
 
 #include <torch/torch.h>
 
-namespace experiments {
+#include <memory>
+
+namespace experiments::mobile_net_v2 {
 
 // BasicBlock
 
@@ -117,32 +119,10 @@ torch::Tensor MobileNetV2Conv::forward(torch::Tensor x) {
     return x;
 }
 
-// MobileNetV2Classifier
+// Utils
 
-MobileNetV2Classifier::MobileNetV2Classifier() {
-    fc1_ = register_module("fc1_", torch::nn::Linear(1280, 10));
-}
-
-torch::Tensor MobileNetV2Classifier::forward(torch::Tensor x) {
-    x = x.view({x.size(0), -1});
-    x = fc1_->forward(x);
-    return x;
-}
-
-// MobileNetV2
-
-MobileNetV2::MobileNetV2(experiments::ClassifierPtr classifier) {
-    conv_ = register_module("conv_", std::make_shared<MobileNetV2Conv>());
-    classifier_ = register_module("classifier_", std::move(classifier));
-}
-
-
-experiments::ModelPtr MobileNetV2::conv() {
-    return conv_;
-}
-
-experiments::ClassifierPtr MobileNetV2::classifier() {
-    return classifier_;
+ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params) {
+    return std::make_shared<MobileNetV2Conv>();
 }
 
 }

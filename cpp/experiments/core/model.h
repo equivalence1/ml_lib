@@ -1,13 +1,17 @@
 #pragma once
 
 #include "tensor_pair_dataset.h"
+#include <util/json.h>
 
 #include <torch/torch.h>
 
 #include <memory>
 #include <utility>
+#include <unordered_map>
 
 namespace experiments {
+
+// Model
 
 class Model : public torch::nn::Module {
 public:
@@ -15,14 +19,23 @@ public:
 
     // WTF torch, this should be default behaviour
     void train(bool on = true) override {
+        if (train_) {
+            return;
+        }
         for (auto &param : parameters()) {
             param.set_requires_grad(on);
         }
         torch::nn::Module::train(on);
+        train_ = on;
     }
+
+private:
+    bool train_ = true;
 };
 
 using ModelPtr = std::shared_ptr<Model>;
+
+// Classifier
 
 class Classifier : public Model {
 public:
@@ -55,54 +68,70 @@ public:
     torch::Tensor forward(torch::Tensor x) override;
 
 private:
-      ModelPtr classifier_;
-      ModelPtr baseline_;
-      torch::Tensor classifierScale_;
+    ModelPtr classifier_;
+    ModelPtr baseline_;
+    torch::Tensor classifierScale_;
 
 };
 
 using ClassifierPtr = std::shared_ptr<Classifier>;
 
-class ConvModel : public Model {
+// ZeroClassifier
+
+class ZeroClassifier : public Model {
 public:
-    virtual ModelPtr conv() = 0;
+    ZeroClassifier(int numClasses);
 
-    virtual ClassifierPtr classifier() = 0;
+    torch::Tensor forward(torch::Tensor x) override;
 
-    virtual torch::Tensor forward(torch::Tensor x) override;
-
-    void train(bool on = true) override;
-};
-
-using ConvModelPtr =  std::shared_ptr<ConvModel>;
-
-class CompositionalModel : public experiments::ConvModel {
-public:
-    CompositionalModel(experiments::ModelPtr first,
-                       experiments::ClassifierPtr second) {
-        first_ = register_module("first_", std::move(first));
-        second_ = register_module("second_", std::move(second));
-    }
-
-    virtual ModelPtr conv() override  {
-        return first_;
-    }
-
-    ClassifierPtr classifier() override {
-        return second_;
-    }
-
-    virtual void train(bool on = true) override {
-        first_->train(on);
-        second_->train(on);
-    }
+    ~ZeroClassifier() override = default;
 
 private:
-    experiments::ModelPtr first_;
-    experiments::ClassifierPtr second_;
+    int numClasses_;
 };
 
-class LinearCifarClassifier : public experiments::Model {
+// ConvModel
+
+class ConvModel : public Model {
+public:
+    ConvModel(ModelPtr conv,
+              ClassifierPtr classifier) {
+        conv_ = register_module("conv_", std::move(conv));
+        classifier_ = register_module("classifier_", std::move(classifier));
+    }
+
+    virtual ModelPtr conv() {
+        return conv_;
+    };
+
+    virtual ClassifierPtr classifier() {
+        return classifier_;
+    };
+
+    torch::Tensor forward(torch::Tensor x) override;
+
+    void train(bool on = true) override;
+
+private:
+    ModelPtr conv_;
+    ClassifierPtr classifier_;
+};
+
+using ConvModelPtr = std::shared_ptr<ConvModel>;
+
+class MLP : public Model {
+public:
+    MLP(const std::vector<int>& sizes);
+
+    torch::Tensor forward(torch::Tensor x) override;
+
+    ~MLP() override = default;
+
+private:
+    std::vector<torch::nn::Linear> layers_;
+};
+
+class LinearCifarClassifier : public Model {
 public:
     LinearCifarClassifier(int dim);
 
@@ -114,7 +143,7 @@ private:
     torch::nn::Linear fc1_{nullptr};
 };
 
-class SigmoidLinearCifarClassifier : public experiments::Model {
+class SigmoidLinearCifarClassifier : public Model {
 public:
     SigmoidLinearCifarClassifier(int dim);
 
@@ -127,7 +156,7 @@ private:
 };
 
 
-class Bias : public experiments::Model {
+class Bias : public Model {
 public:
     Bias(int dim);
 
@@ -138,6 +167,8 @@ public:
 private:
     torch::Tensor bias_;
 };
+
+// Utils
 
 inline ModelPtr makeCifarLinearClassifier(int inputDim) {
     return std::make_shared<LinearCifarClassifier>(inputDim);
@@ -156,5 +187,28 @@ template <class Impl, class... Args>
 inline ClassifierPtr makeClassifierWithBaseline(ModelPtr baseline, Args&&... args) {
     return std::make_shared<Classifier>(std::make_shared<Impl>(std::forward<Args>(args)...), baseline);
 }
+
+struct ParamKeys {
+    static constexpr const char* ModelKey = "model";
+    static constexpr const char* ConvKey = "conv";
+    static constexpr const char* ClassifierKey = "classifier";
+
+    static constexpr const char* ModelArchKey = "model_arch";
+    static constexpr const char* ModelArchVersionKey = "arch_version";
+    static constexpr const char* ModelCheckpointFileKey = "checkpoint_file";
+    static constexpr const char* ClassifierMainKey = "main";
+    static constexpr const char* ClassifierBaselineKey = "baseline";
+
+    static constexpr const char* DeviceKey = "device";
+    static constexpr const char* DatasetKey = "dataset";
+    static constexpr const char* BatchSizeKey = "batch_size";
+    static constexpr const char* DimsKey = "dims";
+    static constexpr const char* ReportsPerEpochKey = "reports_per_epoch";
+    static constexpr const char* NIterationsKey = "n_iterations";
+    static constexpr const char* StepSizeKey = "step";
+};
+
+ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params);
+ClassifierPtr createClassifier(int numClasses, const json& params);
 
 }

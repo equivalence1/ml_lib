@@ -18,8 +18,8 @@ target_link_libraries(lenet_em_exact_classifier "${TORCH_LIBRARIES}" experiments
 add_executable(lenet_save_restore lenet_save_restore.cpp)
 target_link_libraries(lenet_save_restore "${TORCH_LIBRARIES}" experiments)
 
-add_executable(vgg vgg.cpp common.h common.cpp)
-target_link_libraries(vgg "${TORCH_LIBRARIES}" experiments)
+add_executable(default_train default_train.cpp common.h common.cpp)
+target_link_libraries(default_train "${TORCH_LIBRARIES}" experiments)
 
 add_executable(vgg_em vgg_em.cpp common.h common.cpp common_em.h)
 target_link_libraries(vgg_em "${TORCH_LIBRARIES}" experiments)
@@ -27,17 +27,11 @@ target_link_libraries(vgg_em "${TORCH_LIBRARIES}" experiments)
 add_executable(vgg_save_restore vgg_save_restore.cpp)
 target_link_libraries(vgg_save_restore "${TORCH_LIBRARIES}" experiments)
 
-add_executable(resnet resnet.cpp common.h common.cpp)
-target_link_libraries(resnet "${TORCH_LIBRARIES}" experiments)
-
 add_executable(resnet_em resnet_em.cpp common.h common.cpp common_em.h)
 target_link_libraries(resnet_em "${TORCH_LIBRARIES}" experiments)
 
 add_executable(resnet_save_restore resnet_save_restore.cpp)
 target_link_libraries(resnet_save_restore "${TORCH_LIBRARIES}" experiments)
-
-add_executable(mobile_net_v2 mobile_net_v2.cpp common.h common.cpp)
-target_link_libraries(mobile_net_v2 "${TORCH_LIBRARIES}" experiments)
 
 add_executable(mobile_net_v2_em mobile_net_v2_em.cpp common.h common.cpp common_em.h)
 target_link_libraries(mobile_net_v2_em "${TORCH_LIBRARIES}" experiments)

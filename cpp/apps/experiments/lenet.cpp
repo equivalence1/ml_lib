@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
 
 			// Create opimizer
 
-			auto optimizer = getDefaultCifar10Optimizer(iter, lenet, device, init_step);
+			auto optimizer = getDefaultOptimizer(iter, lenet, device, init_step);
 			auto loss = std::make_shared<CrossEntropyLoss>();
 
 
