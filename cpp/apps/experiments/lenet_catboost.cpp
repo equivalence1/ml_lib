@@ -2,39 +2,22 @@
 #include "common_em.h"
 #include "catboost_nn.h"
 
-#include <experiments/core/networks/lenet.h>
-#include <experiments//datasets/cifar10/cifar10_reader.h>
 #include <experiments/core/optimizer.h>
 #include <experiments/core/cross_entropy_loss.h>
 #include <experiments/core/em_like_train.h>
+#include <experiments/core/polynom_model.h>
 
 #include <torch/torch.h>
 
 #include <string>
 #include <memory>
 #include <iostream>
-#include <experiments/core/polynom_model.h>
 
-using namespace  experiments;
 int main(int argc, char* argv[]) {
-    auto device = torch::kCPU;
-    if (argc > 1 && std::string(argv[1]) == std::string("CUDA")
-        && torch::cuda::is_available()) {
-        device = torch::kCUDA;
-        std::cout << "Using CUDA device for training" << std::endl;
-    } else {
-        std::cout << "Using CPU device for training" << std::endl;
-    }
-
     using namespace experiments;
 
-    // Read dataset
-
-    const std::string& path = "../../../../resources/cifar10/cifar-10-batches-bin";
-    const std::string& params = "../../../../resources/cifar10/cifar-10-batches-bin";
-    auto dataset = cifar10::read_dataset(path);
-
     // Init model
+
     CatBoostNNConfig catBoostNnConfig;
     catBoostNnConfig.batchSize = 128;
     catBoostNnConfig.lambda_ = 1;
@@ -46,34 +29,59 @@ int main(int argc, char* argv[]) {
     catBoostNnConfig.catboostInitParamsFile = "../../../../cpp/apps/cifar_networks/lenet_params/catboost_params_init.json";
     catBoostNnConfig.catboostFinalParamsFile = "../../../../cpp/apps/cifar_networks/lenet_params/catboost_params_final.json";
 
-    PolynomPtr polynom = std::make_shared<Polynom>();
-    polynom->Lambda_ = catBoostNnConfig.lambda_;
-    {
-        Monom emptyMonom;
-        emptyMonom.Structure_.Splits.push_back({0, 0});
-        const auto outDim = 10;
-        emptyMonom.Values_.resize(outDim);
-        polynom->Ensemble_.push_back(emptyMonom);
-    }
+    json params = {
+            {ParamKeys::ModelKey, {
+                    {ParamKeys::ConvKey, {
+                            {ParamKeys::ModelArchKey, "LeNet"},
+//                          {ParamKeys::ModelArchVersionKey, 16},
+                    }},
+                    {ParamKeys::ClassifierKey, {
+                            {ParamKeys::ClassifierMainKey, {
+                                    {ParamKeys::ModelArchKey, "Polynom"},
+                                    {ParamKeys::LambdaKey, catBoostNnConfig.lambda_},
+                            }},
+                            {ParamKeys::ClassifierBaselineKey, {
+                                    {ParamKeys::ModelArchKey, "MLP"},
+                                    {ParamKeys::DimsKey, {16 * 5 * 5, 10}},
+                            }},
+                    }},
+            }},
+            {ParamKeys::DeviceKey, "GPU"},
+            {ParamKeys::DatasetKey, "cifar-10"},
+            {ParamKeys::ModelCheckpointFileKey, "lenet_catboost_checkpoint.pt"},
+            {ParamKeys::BatchSizeKey, catBoostNnConfig.batchSize},
+            {ParamKeys::ReportsPerEpochKey, 10},
+            {ParamKeys::NIterationsKey,
+                    {catBoostNnConfig.globalIterationsCount,
+                     catBoostNnConfig.representationsIterations,
+                     1}
+            },
+            {ParamKeys::StepSizeKey, catBoostNnConfig.sgdStep_},
+    };
 
-    auto lenet = std::make_shared<LeNet>(makeClassifierWithBaseline<PolynomModel>(
-        makeCifarLinearClassifier(16 * 5 * 5),
-//        makeCifarBias(),
-        polynom));
-//    auto lenet = std::make_shared<LeNet>(makeClassifier<PolynomModel>(
-//        polynom));
-    lenet->to(device);
+    auto device = getDevice(params[ParamKeys::DeviceKey]);
+
+    const json& convParams = params[ParamKeys::ModelKey][ParamKeys::ConvKey];
+    const json& classParams = params[ParamKeys::ModelKey][ParamKeys::ClassifierKey];
+
+    auto conv = createConvLayers({}, convParams);
+    auto classifier = createClassifier(10, classParams);
+
+    auto model = std::make_shared<ConvModel>(conv, classifier);
+    model->to(device);
 
     torch::setNumThreads(16);
 
     CatBoostNN nnTrainer(catBoostNnConfig,
-                         lenet,
+                         model,
                          device,
-                         makeClassifier<LinearCifarClassifier>(16 *5 *5));
+                         makeClassifier<LinearCifarClassifier>(16 * 5 * 5));
+
+    // Read dataset
+
+    auto dataset = readDataset(params[ParamKeys::DatasetKey]);
 
     // Attach Listener
-
-
 
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
     nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, ModelPtr model) {
@@ -100,10 +108,10 @@ int main(int argc, char* argv[]) {
     // Eval model
 
     auto acc = evalModelTestAccEval(dataset.second,
-                                    lenet,
+                                    model,
                                     device,
                                     getDefaultCifar10TestTransform());
 
-    std::cout << "LeNet EM test accuracy: " << std::setprecision(2)
+    std::cout << "Test accuracy: " << std::setprecision(2)
               << acc << "%" << std::endl;
 }

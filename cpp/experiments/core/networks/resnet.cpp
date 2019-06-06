@@ -4,8 +4,9 @@
 #include <functional>
 #include <cassert>
 #include <memory>
+#include <stdexcept>
 
-namespace experiments {
+namespace experiments::resnet {
 
 static torch::nn::ConvOptions<2> buildConvOptions(int inChannels,
                                                   int outChannels, int kernelSize, int stride = 1, bool bias = false) {
@@ -86,54 +87,29 @@ torch::Tensor ResNetConv::forward(torch::Tensor x) {
     return x;
 }
 
-// ResNetClassifier
+// Utils
 
-ResNetClassifier::ResNetClassifier(int expansion) {
-    fc1_ = register_module("fc1_", torch::nn::Linear(512 * expansion, 10));
-}
-
-torch::Tensor ResNetClassifier::forward(torch::Tensor x) {
-    x = fc1_->forward(x.view({x.size(0), -1}));
-    return x;
-}
-
-// ResNet
-
-ResNet::ResNet(ResNetConfiguration cfg, ClassifierPtr classifier) {
-    if (cfg == ResNetConfiguration::ResNet34) {
-        init(std::move(std::vector<int>({3, 4, 6, 3})), std::move(classifier));
-    } else if (cfg == ResNetConfiguration::ResNet18) {
-        init(std::move(std::vector<int>({2, 2, 2, 2})), std::move(classifier));
-    } else {
-        throw "Unsupported configuration";
-    }
-}
-
-void ResNet::init(std::vector<int> nBlocks, ClassifierPtr classifier) {
+static ModelPtr createConvLayersHelper(std::vector<int> nBlocks) {
     std::function<ModelPtr(int, int, int)> blocksBuilder = [](int inChannels, int outChannels,
                                                                            int stride) {
         return std::make_shared<BasicBlock>(inChannels, outChannels, stride);
     };
-    conv_ = std::make_shared<ResNetConv>(
-            nBlocks,
+    auto conv = std::make_shared<ResNetConv>(nBlocks,
             blocksBuilder);
-    classifier_ = std::move(classifier);
-    conv_ = register_module("conv_", conv_);
-    classifier_ = register_module("classifier", classifier_);
+    return conv;
 }
 
-torch::Tensor ResNet::forward(torch::Tensor x) {
-    x = conv_->forward(x);
-    x = classifier_->forward(x);
-    return x;
-}
+ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params) {
+    std::string archVersion = params[ParamKeys::ModelArchVersionKey];
 
-ModelPtr ResNet::conv() {
-    return conv_;
-}
+    if (archVersion == "18") {
+        return createConvLayersHelper(std::vector<int>({2, 2, 2, 2}));
+    } else if (archVersion == "34") {
+        return createConvLayersHelper(std::vector<int>({3, 4, 6, 3}));
+    }
 
-ClassifierPtr ResNet::classifier() {
-    return classifier_;
+    std::string errMsg("Unsupported ResNet Architecture version ResNet-");
+    throw std::runtime_error(errMsg + " " + archVersion);
 }
 
 }

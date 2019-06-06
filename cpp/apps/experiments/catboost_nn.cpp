@@ -475,9 +475,9 @@ experiments::ModelPtr CatBoostNN::trainFinalDecision(const TensorPairDataset& le
     experiments::ClassifierPtr classifier;
     auto baseline = model_->classifier()->baseline();
     if (baseline) {
-        classifier = makeClassifierWithBaseline<PolynomModel>(model_->classifier()->baseline(), std::make_shared<Polynom>());
+        classifier = experiments::makeClassifierWithBaseline<PolynomModel>(model_->classifier()->baseline(), std::make_shared<Polynom>());
     } else {
-        classifier = makeClassifier<PolynomModel>(std::make_shared<Polynom>());
+        classifier = experiments::makeClassifier<PolynomModel>(std::make_shared<Polynom>());
     }
     optimizer->train(learn, test, classifier);
     return classifier;
@@ -495,7 +495,7 @@ void CatBoostNN::initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss) {
     iter_ = 3;
 
     if (initClassifier_) {
-        auto model = std::make_shared<CompositionalModel>(model_->conv(), initClassifier_);
+        auto model = std::make_shared<ConvModel>(model_->conv(), initClassifier_);
         model->train(true);
         model->to(device_);
         LossPtr representationLoss = makeRepresentationLoss(initClassifier_, loss);
@@ -527,4 +527,3 @@ void CatBoostNN::initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss) {
 //    auto repr = torch::cat(reprList, 0);
 //    auto targets = torch::cat(targetsList, 0);
 //}
-

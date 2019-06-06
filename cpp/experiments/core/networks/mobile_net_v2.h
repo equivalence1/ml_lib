@@ -1,6 +1,7 @@
 #pragma once
 
-#include "experiments/core/model.h"
+#include <experiments/core/model.h>
+#include <util/json.h>
 
 #include <torch/torch.h>
 
@@ -8,7 +9,7 @@
 
 // reference implementation: https://github.com/kuangliu/pytorch-cifar/blob/master/models/mobilenetv2.py
 
-namespace experiments {
+namespace experiments::mobile_net_v2 {
 
 // BasicBlock
 
@@ -51,39 +52,8 @@ private:
     std::vector<experiments::ModelPtr> blocks_;
 };
 
-// MobileNetV2Classifier
+// Utils
 
-class MobileNetV2Classifier : public experiments::Model {
-public:
-    explicit MobileNetV2Classifier();
-
-    torch::Tensor forward(torch::Tensor x) override;
-
-    ~MobileNetV2Classifier() override = default;
-
-private:
-    torch::nn::Linear fc1_{nullptr};
-};
-
-// MobileNetV2
-
-class MobileNetV2 : public experiments::ConvModel {
-public:
-    explicit MobileNetV2(experiments::ClassifierPtr classifier = makeClassifier<MobileNetV2Classifier>());
-
-
-    experiments::ModelPtr conv() override;
-
-    experiments::ClassifierPtr classifier() override;
-
-    ~MobileNetV2() override = default;
-
-private:
-    void init(std::vector<int> nBlocks, experiments::ClassifierPtr classifier);
-
-private:
-    std::shared_ptr<MobileNetV2Conv> conv_{nullptr};
-    experiments::ClassifierPtr classifier_{nullptr};
-};
+ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params);
 
 }

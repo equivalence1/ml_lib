@@ -2,8 +2,10 @@
 
 #include <memory>
 #include <string>
+#include <vector>
+#include <stdexcept>
 
-namespace experiments {
+namespace experiments::vgg {
 
 static torch::nn::ConvOptions<2> buildConvOptions(int inChannels, int outChannels, int kernelSize) {
     auto convOptions = torch::nn::ConvOptions<2>(inChannels, outChannels, kernelSize);
@@ -51,51 +53,27 @@ Vgg16Conv::Vgg16Conv() {
     layers_.emplace_back([](torch::Tensor x) {
         return torch::avg_pool2d(x, 1, 1);
     });
-//    layerNorm_ = register_module("layerNorm_", std::make_shared<LayerNorm>(512));
-
 }
 
 torch::Tensor Vgg16Conv::forward(torch::Tensor x) {
     for (const auto &l : layers_) {
         x = l(x);
     }
-//    layerNorm_->forward(x);
     return x;
 }
 
-// VggClassifier
+// Utils
 
-VggClassifier::VggClassifier() {
-    fc1_ = register_module("fc1_", torch::nn::Linear(512, 10));
-}
+ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params) {
+std::cout << "here 3" << std::endl;
+    int archVersion = params[ParamKeys::ModelArchVersionKey];
 
-torch::Tensor VggClassifier::forward(torch::Tensor x) {
-    return fc1_->forward(x.view({x.size(0), -1}));
-}
-
-// Vgg
-
-Vgg::Vgg(VggConfiguration cfg, experiments::ClassifierPtr classifier) {
-    if (cfg == VggConfiguration::Vgg16) {
-        conv_ = register_module("conv_", std::make_shared<Vgg16Conv>());
-        classifier_ = register_module("classifier_", classifier);
-    } else {
-        throw "Unsupported configuration";
+    if (archVersion == 16) {
+        return std::make_shared<Vgg16Conv>();
     }
-}
 
-torch::Tensor Vgg::forward(torch::Tensor x) {
-    x = conv_->forward(x);
-    x = classifier_->forward(x);
-    return x;
-}
-
-experiments::ModelPtr Vgg::conv() {
-    return conv_;
-}
-
-experiments::ClassifierPtr Vgg::classifier() {
-    return classifier_;
+    std::string errMsg("Unsupported VGG Architecture version VGG-");
+    throw std::runtime_error(errMsg + " " + std::to_string(archVersion));
 }
 
 }

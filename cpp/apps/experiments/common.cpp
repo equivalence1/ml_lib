@@ -1,18 +1,19 @@
 #include "common.h"
 
-#include "experiments/core/transform.h"
-#include "experiments/core/model.h"
-#include "experiments/core/tensor_pair_dataset.h"
+#include <experiments/core/transform.h>
+#include <experiments/core/model.h>
+#include <experiments/core/tensor_pair_dataset.h>
 
-#include "experiments/datasets/cifar10/cifar10_reader.h"
-#include "experiments/datasets/mnist/mnist_reader.h"
-#include "experiments/datasets/svhn/svhn_reader.h"
+#include <experiments/datasets/cifar10/cifar10_reader.h>
+#include <experiments/datasets/mnist/mnist_reader.h>
+#include <experiments/datasets/svhn/svhn_reader.h>
 
 #include <torch/torch.h>
 
 #include <vector>
 #include <memory>
 #include <string>
+#include <stdexcept>
 
 TransformType getDefaultCifar10TrainTransform() {
     // transforms are similar to https://github.com/kuangliu/pytorch-cifar/blob/master/main.py#L31
@@ -79,13 +80,20 @@ TransformType getCifar10TrainFinalCatboostTransform() {
 }
 
 
-OptimizerType<TransformType> getDefaultCifar10Optimizer(int epochs, const experiments::ModelPtr& model,
-        torch::DeviceType device, double step) {
+OptimizerType<TransformType> getDefaultOptimizer(const experiments::ModelPtr& model,
+        const json& params) {
+    using namespace experiments;
+
+    double step = params[ParamKeys::StepSizeKey];
+    int epochs = params[ParamKeys::NIterationsKey];
+    int batchSize = params[ParamKeys::BatchSizeKey];
+    auto device = getDevice(params[ParamKeys::DeviceKey]);
+
     experiments::OptimizerArgs<TransformType> args(getDefaultCifar10TrainTransform(),
             epochs, device);
 
     args.epochs_ = epochs;
-    args.dloaderOptions_ = torch::data::DataLoaderOptions(128);
+    args.dloaderOptions_ = torch::data::DataLoaderOptions(batchSize);
 
 //    torch::optim::AdamOptions opt(0.1);
     torch::optim::SGDOptions opt(step);
@@ -102,8 +110,12 @@ OptimizerType<TransformType> getDefaultCifar10Optimizer(int epochs, const experi
 }
 
 void attachDefaultListeners(const experiments::OptimizerPtr& optimizer,
-                            int nBatchesReport, std::string savePath,int reduction, std::vector<int> threshold ) {
-    // report 10 times per epoch
+                            const json& params,int reduction, std::vector<int> threshold ) {
+    using namespace experiments;
+
+    // TODO for now just hardcoded Cifar-10 ds size
+    int nBatchesReport = 50000 / (int)params[ParamKeys::BatchSizeKey] / (int)params[ParamKeys::ReportsPerEpochKey];
+
     auto brListener = std::make_shared<experiments::BatchReportOptimizerListener>(nBatchesReport);
     optimizer->registerListener(brListener);
 
@@ -121,64 +133,25 @@ void attachDefaultListeners(const experiments::OptimizerPtr& optimizer,
 //    optimizer->registerListener(msListener);
 }
 
-torch::DeviceType getDevice(int argc, char* argv[]) {
-    auto device = torch::kCPU;
-
-    for (int i = 0; i < argc; ++i) {
-        if (std::string(argv[i]) == std::string("CUDA")
-            && torch::cuda::is_available()) {
-            device = torch::kCUDA;
-
-            std::cout << "Using CUDA device for training" << std::endl;
-            return device;
-        }
+torch::DeviceType getDevice(const std::string& deviceType) {
+    if (deviceType == "GPU") {
+        return torch::kCUDA;
+    } else {
+        return torch::kCPU;
     }
-
-    std::cout << "Using CPU device for training" << std::endl;
-    return device;
 }
 
-enum class DatasetType {
-    cifar10,
-    mnist,
-    svhn,
-};
-
-static DatasetType getDataset(int argc, char* argv[]) {
-    auto dataset = DatasetType::cifar10;
-
-    for (int i = 0; i < argc; ++i) {
-        if (std::string(argv[i]) == std::string("mnist")) {
-            dataset = DatasetType::mnist;
-
-            std::cout << "Using MNIST dataset" << std::endl;
-            return dataset;
-        }
-
-        if (std::string(argv[i]) == std::string("svhn")) {
-            dataset = DatasetType::svhn;
-
-            std::cout << "Using SVHN dataset" << std::endl;
-            return dataset;
-        }
-    }
-
-    std::cout << "Using CIFAR-10 dataset" << std::endl;
-    return dataset;
-}
-
-std::pair<TensorPairDataset, TensorPairDataset> readDataset(int argc, char* argv[]) {
-    auto dataset = getDataset(argc, argv);
-    if (dataset == DatasetType::cifar10) {
+std::pair<TensorPairDataset, TensorPairDataset> readDataset(const std::string& dataset) {
+    if (dataset == "cifar-10") {
         const std::string& path = "../../../../resources/cifar10/cifar-10-batches-bin";
         return experiments::cifar10::read_dataset(path);
-    } else if (dataset == DatasetType::mnist) {
+    } else if (dataset == "mnist") {
         const std::string& path = "../../../../resources/mnist";
         return experiments::mnist::read_dataset(path);
-    } else if (dataset == DatasetType::svhn) {
+    } else if (dataset == "svhn") {
         const std::string& path = "../../../../resources/svhn";
         return experiments::svhn::read_dataset(path);
     } else {
-        throw "Unsupported dataset";
+        throw std::runtime_error("Unsupported dataset");
     }
 }

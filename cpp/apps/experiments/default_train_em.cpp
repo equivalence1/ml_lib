@@ -1,41 +1,61 @@
 #include "common.h"
 #include "common_em.h"
 
-#include <experiments/core/networks/mobile_net_v2.h>
-#include <experiments//datasets/cifar10/cifar10_reader.h>
 #include <experiments/core/optimizer.h>
 #include <experiments/core/cross_entropy_loss.h>
 #include <experiments/core/em_like_train.h>
 #include <experiments/core/transform.h>
 
 #include <torch/torch.h>
+
 #include <string>
 #include <memory>
 #include <iostream>
 
 int main(int argc, char* argv[]) {
-    auto device = torch::kCPU;
-    if (argc > 1 && std::string(argv[1]) == std::string("CUDA")
-        && torch::cuda::is_available()) {
-        device = torch::kCUDA;
-        std::cout << "Using CUDA device for training" << std::endl;
-    } else {
-        std::cout << "Using CPU device for training" << std::endl;
-    }
-
     using namespace experiments;
 
+    json params = {
+            {ParamKeys::ModelKey, {
+                    {ParamKeys::ConvKey, {
+                            {ParamKeys::ModelArchKey, "LeNet"},
+//                          {ParamKeys::ModelArchVersionKey, 16},
+                    }},
+                    {ParamKeys::ClassifierKey, {
+                            {ParamKeys::ClassifierMainKey, {
+                                    {ParamKeys::ModelArchKey, "MLP"},
+                                    {ParamKeys::DimsKey, {16 * 5 * 5, 120, 84, 10}},
+                            }},
+                    }},
+            }},
+            {ParamKeys::DeviceKey, "GPU"},
+            {ParamKeys::DatasetKey, "cifar-10"},
+            {ParamKeys::ModelCheckpointFileKey, "lenet_em_checkpoint.pt"},
+            {ParamKeys::BatchSizeKey, 128},
+            {ParamKeys::ReportsPerEpochKey, 10},
+            {ParamKeys::NIterationsKey, {500, 1, 1}},
+            {ParamKeys::StepSizeKey, 0.001},
+    };
+
+    auto device = getDevice(params[ParamKeys::DeviceKey]);
+    int batchSize = params[ParamKeys::BatchSizeKey];
+
+    const json& convParams = params[ParamKeys::ModelKey][ParamKeys::ConvKey];
+    const json& classParams = params[ParamKeys::ModelKey][ParamKeys::ClassifierKey];
+
+    auto conv = createConvLayers({}, convParams);
+    auto classifier = createClassifier(10, classParams);
+
+    auto model = std::make_shared<ConvModel>(conv, classifier);
+    model->to(device);
+
     // Read dataset
+    auto dataset = readDataset(params[ParamKeys::DatasetKey]);
 
-    const std::string& path = "../../../../resources/cifar10/cifar-10-batches-bin";
-    auto dataset = cifar10::read_dataset(path);
+    // Init trainer
 
-    // Init model
-
-    auto mobileNetV2 = std::make_shared<MobileNetV2>();
-    mobileNetV2->to(device);
-
-    CommonEm emTrainer({500, 1, 1}, mobileNetV2, device);
+    std::vector<int> iterations(params[ParamKeys::NIterationsKey]);
+    CommonEm emTrainer(model, params);
 
     // Attach Listeners
 
@@ -43,7 +63,7 @@ int main(int argc, char* argv[]) {
     emTrainer.registerGlobalIterationListener([&](uint32_t epoch, ModelPtr model) {
         model->eval();
 
-        auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(128));
+        auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(batchSize));
         int rightAnswersCnt = 0;
 
         for (auto& batch : *dloader) {
@@ -80,10 +100,10 @@ int main(int argc, char* argv[]) {
     // Eval model
 
     auto acc = evalModelTestAccEval(dataset.second,
-                                    mobileNetV2,
+                                    model,
                                     device,
                                     getDefaultCifar10TestTransform());
 
-    std::cout << "MobileNetV2 EM test accuracy: " << std::setprecision(4)
+    std::cout << "Test accuracy: " << std::setprecision(2)
               << acc << "%" << std::endl;
 }

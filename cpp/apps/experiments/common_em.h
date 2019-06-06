@@ -14,6 +14,12 @@
 // CommonEm
 
 struct CommonEmOptions {
+    CommonEmOptions(const std::vector<int>& counts) {
+        globalIterationsCount = counts[0];
+        representationsIterations = counts[1];
+        decisionIterations = counts[2];
+    }
+
     uint32_t globalIterationsCount = 0;
     uint32_t representationsIterations;
     uint32_t decisionIterations;
@@ -21,14 +27,26 @@ struct CommonEmOptions {
 
 class CommonEm : public EMLikeTrainer<decltype(getDefaultCifar10TrainTransform())> {
 public:
+    // TODO a lot of bad code here. Left it here for compatibility reasons, need to revisit
+    // (or maybe even remove and just use catboost_em)
+    CommonEm(experiments::ConvModelPtr model,
+            const json& params)
+            : EMLikeTrainer(getDefaultCifar10TrainTransform(),
+                    CommonEmOptions(params[experiments::ParamKeys::NIterationsKey]).globalIterationsCount,
+                    std::move(model))
+            , opts_(params[experiments::ParamKeys::NIterationsKey])
+            , device_(getDevice(params[experiments::ParamKeys::DeviceKey])) {
+        convParams_[experiments::ParamKeys::DeviceKey] = params[experiments::ParamKeys::DeviceKey];
+        convParams_[experiments::ParamKeys::ModelCheckpointFileKey] =
+                "conv_" + (std::string)params[experiments::ParamKeys::ModelCheckpointFileKey];
+        convParams_[experiments::ParamKeys::BatchSizeKey] = params[experiments::ParamKeys::BatchSizeKey];
+        convParams_[experiments::ParamKeys::ReportsPerEpochKey] = params[experiments::ParamKeys::ReportsPerEpochKey];
 
-    CommonEm(CommonEmOptions opts,
-        experiments::ConvModelPtr model,
-        torch::DeviceType device)
-        : EMLikeTrainer(getDefaultCifar10TrainTransform(), opts.globalIterationsCount, model)
-        , opts_(opts)
-        , device_(device) {
-
+        decisionParams_[experiments::ParamKeys::DeviceKey] = params[experiments::ParamKeys::DeviceKey];
+        decisionParams_[experiments::ParamKeys::ModelCheckpointFileKey] =
+                "decision_" + (std::string)params[experiments::ParamKeys::ModelCheckpointFileKey];
+        decisionParams_[experiments::ParamKeys::BatchSizeKey] = params[experiments::ParamKeys::BatchSizeKey];
+        decisionParams_[experiments::ParamKeys::ReportsPerEpochKey] = params[experiments::ParamKeys::ReportsPerEpochKey];
     }
 
 protected:
@@ -51,7 +69,7 @@ protected:
         args.dloaderOptions_ = std::move(dloaderOptions);
 
         auto optimizer = std::make_shared<experiments::DefaultOptimizer<TransT>>(args);
-        attachDefaultListeners(optimizer, 50000 / batchSize / 10, "lenet_em_conv_checkpoint.pt");
+        attachDefaultListeners(optimizer, convParams_);
         return optimizer;
     }
 
@@ -74,13 +92,15 @@ protected:
         args.dloaderOptions_ = std::move(dloaderOptions);
 
         auto optimizer = std::make_shared<experiments::DefaultOptimizer<TransT>>(args);
-        attachDefaultListeners(optimizer, 50000 / batchSize / 10, "lenet_em_classifier_checkpoint.pt");
+        attachDefaultListeners(optimizer, decisionParams_);
         return optimizer;
     }
 
 private:
     CommonEmOptions opts_;
     torch::DeviceType device_;
+    json convParams_;
+    json decisionParams_;
 
 };
 
@@ -147,11 +167,10 @@ private:
 
 class ExactLinearEm : public CommonEm {
 public:
-    ExactLinearEm(CommonEmOptions opts,
-                  experiments::ModelPtr reprModel,
+    ExactLinearEm(experiments::ModelPtr reprModel,
                   experiments::ClassifierPtr decisionModel,
-                  torch::DeviceType device)
-            : CommonEm(opts, experiments::ConvModelPtr(new experiments::CompositionalModel(reprModel, decisionModel)), device) {
+                  const json& params)
+            : CommonEm(std::make_shared<experiments::ConvModel>(reprModel, decisionModel), params) {
 
     }
 

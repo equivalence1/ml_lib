@@ -3,6 +3,7 @@ project(experiments_core)
 
 find_package(Eigen3 REQUIRED NO_MODULE)
 include_directories(${EIGEN_INCLUDE_DIR})
+include_directories(/contrib/json)
 
 add_library(experiments_core
         em_like_train.h
@@ -54,7 +55,7 @@ add_library(experiments_core
         networks/mobile_net_v2.h
         networks/mobile_net_v2.cpp
         )
-target_link_libraries(experiments_core "${TORCH_LIBRARIES}"  Eigen3::Eigen methods core models polynom targets)
+target_link_libraries(experiments_core "${TORCH_LIBRARIES}"  Eigen3::Eigen methods core models polynom targets util)
 enable_cxx14(experiments_core)
 
 # TODO move py module from here

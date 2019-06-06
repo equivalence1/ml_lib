@@ -218,7 +218,6 @@ public:
         for (int epoch = 0; epoch < args_.epochs_; epoch++) {
             this->fireEpochResetListeners();
             this->fireBatchResetListeners();
-            model->train(true);
             int batchId = 0;
             for (auto& batch : *dloader) {
                 auto data = batch.data;
@@ -226,6 +225,7 @@ public:
                 auto target = batch.target;
                 target = target.to(args_.device_);
 
+                model->train(true);
                 args_.torchOptim_->zero_grad();
                 auto prediction = model->forward(data);
                 torch::Tensor lossVal = loss->value(prediction, target);

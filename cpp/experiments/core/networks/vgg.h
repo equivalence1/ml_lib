@@ -1,14 +1,14 @@
 #pragma once
 
-#include "experiments/core/layer_norm.h"
-#include "experiments/core/model.h"
+#include <experiments/core/model.h>
+#include <util/json.h>
 
 #include <torch/torch.h>
 
 #include <functional>
 #include <vector>
 
-namespace experiments {
+namespace experiments::vgg {
 
 enum class VggConfiguration {
     Vgg16,
@@ -30,7 +30,6 @@ public:
 
 protected:
     std::vector<std::function<torch::Tensor(torch::Tensor)>> layers_;
-    LayerNormPtr layerNorm_{nullptr};
 };
 
 // Vgg16Conv
@@ -44,38 +43,8 @@ public:
     ~Vgg16Conv() override = default;
 };
 
-// VggClassifier
+// Utils
 
-class VggClassifier : public experiments::Model {
-public:
-    VggClassifier();
-
-    torch::Tensor forward(torch::Tensor x) override;
-
-    ~VggClassifier() override = default;
-
-private:
-    torch::nn::Linear fc1_{nullptr};
-};
-
-// Vgg
-
-class Vgg : public experiments::ConvModel {
-public:
-    explicit Vgg(VggConfiguration cfg,
-                 experiments::ClassifierPtr classifier = makeClassifier<VggClassifier>());
-
-    torch::Tensor forward(torch::Tensor x) override;
-
-    experiments::ModelPtr conv() override;
-
-    experiments::ClassifierPtr classifier() override;
-
-    ~Vgg() override = default;
-
-private:
-    std::shared_ptr<VggConv> conv_;
-    experiments::ClassifierPtr classifier_;
-};
+ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params);
 
 }

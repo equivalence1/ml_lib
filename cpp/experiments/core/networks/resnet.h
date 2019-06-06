@@ -1,12 +1,13 @@
 #pragma once
 
-#include "experiments/core/model.h"
+#include <experiments/core/model.h>
+#include <util/json.h>
 
 #include <torch/torch.h>
 
 #include <vector>
 
-namespace experiments {
+namespace experiments::resnet {
 
 enum class ResNetConfiguration {
     ResNet18,
@@ -52,41 +53,8 @@ private:
     std::vector<ModelPtr> blocks_;
 };
 
-// ResNetClassifier
+// Utils
 
-class ResNetClassifier : public Model {
-public:
-    explicit ResNetClassifier(int expansion);
-
-    torch::Tensor forward(torch::Tensor x) override;
-
-    ~ResNetClassifier() override = default;
-
-private:
-    torch::nn::Linear fc1_{nullptr};
-};
-
-// ResNet
-
-class ResNet : public ConvModel {
-public:
-    explicit ResNet(ResNetConfiguration cfg,
-                    ClassifierPtr classifier = makeClassifier<ResNetClassifier>(1));
-
-    torch::Tensor forward(torch::Tensor x) override;
-
-    ModelPtr conv() override;
-
-    ClassifierPtr classifier() override;
-
-    ~ResNet() override = default;
-
-private:
-    void init(std::vector<int> nBlocks, ClassifierPtr classifier);
-
-private:
-    std::shared_ptr<ResNetConv> conv_{nullptr};
-    ClassifierPtr classifier_{nullptr};
-};
+ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params);
 
 }

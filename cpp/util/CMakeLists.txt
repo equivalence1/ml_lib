@@ -16,6 +16,7 @@ add_library(util
         parallel_executor.cpp
         city.cpp
         city.h
+        json.h
         )
 
 enable_cxx14(util)
