@@ -8,6 +8,8 @@
 #include <experiments/datasets/mnist/mnist_reader.h>
 #include <experiments/datasets/svhn/svhn_reader.h>
 
+#include <util/json.h>
+
 #include <torch/torch.h>
 
 #include <vector>
@@ -154,4 +156,18 @@ std::pair<TensorPairDataset, TensorPairDataset> readDataset(const std::string& d
     } else {
         throw std::runtime_error("Unsupported dataset");
     }
+}
+
+std::string getParamsFolder(int argc, const char* argv[]) {
+    for (int i = 0; i < argc; ++i) {
+        auto str = std::string(argv[i]);
+        if (str == "lenet") {
+            return "../../../../cpp/apps/cifar_networks/lenet_params/";
+        } else if (str == "vgg") {
+            return "../../../../cpp/apps/cifar_networks/vgg_params/";
+        } else if (str == "resnet") {
+            return "../../../../cpp/apps/cifar_networks/resnet_params/";
+        }
+    }
+    throw std::runtime_error("model is not specified");
 }

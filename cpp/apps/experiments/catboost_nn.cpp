@@ -1,12 +1,14 @@
 #include "catboost_nn.h"
 
-#include <utility>
-
-#include <catboost_wrapper.h>
 #include <experiments/core/polynom_model.h>
-#include <core/vec.h>
 #include <models/model.h>
 #include <models/polynom/polynom.h>
+#include <core/vec.h>
+#include <util/io.h>
+
+#include <catboost_wrapper.h>
+
+#include <utility>
 #include <random>
 
 experiments::ModelPtr CatBoostNN::getTrainedModel(TensorPairDataset& ds, const LossPtr& loss) {
@@ -326,15 +328,6 @@ namespace {
         double lambda_ = 1.0;
         double drouput_ = 0.0;
     };
-}
-
-
-inline std::string readFile(const std::string& path) {
-    std::ifstream in(path);
-    std::stringstream strStream;
-    strStream << in.rdbuf(); //read the file
-    std::string params = strStream.str();
-    return params;
 }
 
 experiments::OptimizerPtr CatBoostNN::getDecisionOptimizer(const experiments::ModelPtr& decisionModel) {

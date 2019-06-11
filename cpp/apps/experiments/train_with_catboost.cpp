@@ -13,10 +13,13 @@
 #include <memory>
 #include <iostream>
 
-int main(int argc, char* argv[]) {
+int main(int argc, const char* argv[]) {
     using namespace experiments;
 
     // Init model
+
+    auto paramsFolder = getParamsFolder(argc, argv);
+    auto params = readJson(paramsFolder + "train_with_caboost_params.json");
 
     CatBoostNNConfig catBoostNnConfig;
     catBoostNnConfig.batchSize = 128;
@@ -25,39 +28,9 @@ int main(int argc, char* argv[]) {
     catBoostNnConfig.representationsIterations = 10;
     catBoostNnConfig.globalIterationsCount = 1000;
 
-    catBoostNnConfig.catboostParamsFile = "../../../../cpp/apps/cifar_networks/lenet_params/catboost_params_gpu.json";
-    catBoostNnConfig.catboostInitParamsFile = "../../../../cpp/apps/cifar_networks/lenet_params/catboost_params_init.json";
-    catBoostNnConfig.catboostFinalParamsFile = "../../../../cpp/apps/cifar_networks/lenet_params/catboost_params_final.json";
-
-    json params = {
-            {ParamKeys::ModelKey, {
-                    {ParamKeys::ConvKey, {
-                            {ParamKeys::ModelArchKey, "LeNet"},
-//                          {ParamKeys::ModelArchVersionKey, 16},
-                    }},
-                    {ParamKeys::ClassifierKey, {
-                            {ParamKeys::ClassifierMainKey, {
-                                    {ParamKeys::ModelArchKey, "Polynom"},
-                                    {ParamKeys::LambdaKey, catBoostNnConfig.lambda_},
-                            }},
-                            {ParamKeys::ClassifierBaselineKey, {
-                                    {ParamKeys::ModelArchKey, "MLP"},
-                                    {ParamKeys::DimsKey, {16 * 5 * 5, 10}},
-                            }},
-                    }},
-            }},
-            {ParamKeys::DeviceKey, "GPU"},
-            {ParamKeys::DatasetKey, "cifar-10"},
-            {ParamKeys::ModelCheckpointFileKey, "lenet_catboost_checkpoint.pt"},
-            {ParamKeys::BatchSizeKey, catBoostNnConfig.batchSize},
-            {ParamKeys::ReportsPerEpochKey, 10},
-            {ParamKeys::NIterationsKey,
-                    {catBoostNnConfig.globalIterationsCount,
-                     catBoostNnConfig.representationsIterations,
-                     1}
-            },
-            {ParamKeys::StepSizeKey, catBoostNnConfig.sgdStep_},
-    };
+    catBoostNnConfig.catboostParamsFile = paramsFolder + "catboost_params_gpu.json";
+    catBoostNnConfig.catboostInitParamsFile = paramsFolder + "catboost_params_init.json";
+    catBoostNnConfig.catboostFinalParamsFile = paramsFolder + "catboost_params_final.json";
 
     auto device = getDevice(params[ParamKeys::DeviceKey]);
 

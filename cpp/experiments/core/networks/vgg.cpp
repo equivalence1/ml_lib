@@ -65,15 +65,14 @@ torch::Tensor Vgg16Conv::forward(torch::Tensor x) {
 // Utils
 
 ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params) {
-std::cout << "here 3" << std::endl;
-    int archVersion = params[ParamKeys::ModelArchVersionKey];
+    std::string archVersion = params[ParamKeys::ModelArchVersionKey];
 
-    if (archVersion == 16) {
+    if (archVersion == "16") {
         return std::make_shared<Vgg16Conv>();
     }
 
     std::string errMsg("Unsupported VGG Architecture version VGG-");
-    throw std::runtime_error(errMsg + " " + std::to_string(archVersion));
+    throw std::runtime_error(errMsg + " " + archVersion);
 }
 
 }

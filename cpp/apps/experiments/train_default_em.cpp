@@ -12,30 +12,13 @@
 #include <memory>
 #include <iostream>
 
-int main(int argc, char* argv[]) {
+int main(int argc, const char* argv[]) {
     using namespace experiments;
 
-    json params = {
-            {ParamKeys::ModelKey, {
-                    {ParamKeys::ConvKey, {
-                            {ParamKeys::ModelArchKey, "LeNet"},
-//                          {ParamKeys::ModelArchVersionKey, 16},
-                    }},
-                    {ParamKeys::ClassifierKey, {
-                            {ParamKeys::ClassifierMainKey, {
-                                    {ParamKeys::ModelArchKey, "MLP"},
-                                    {ParamKeys::DimsKey, {16 * 5 * 5, 120, 84, 10}},
-                            }},
-                    }},
-            }},
-            {ParamKeys::DeviceKey, "GPU"},
-            {ParamKeys::DatasetKey, "cifar-10"},
-            {ParamKeys::ModelCheckpointFileKey, "lenet_em_checkpoint.pt"},
-            {ParamKeys::BatchSizeKey, 128},
-            {ParamKeys::ReportsPerEpochKey, 10},
-            {ParamKeys::NIterationsKey, {500, 1, 1}},
-            {ParamKeys::StepSizeKey, 0.001},
-    };
+    // Init model
+
+    auto paramsFolder = getParamsFolder(argc, argv);
+    auto params = readJson(paramsFolder + "train_default_em_params.json");
 
     auto device = getDevice(params[ParamKeys::DeviceKey]);
     int batchSize = params[ParamKeys::BatchSizeKey];
