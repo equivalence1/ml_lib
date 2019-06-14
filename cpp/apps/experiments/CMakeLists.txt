@@ -18,7 +18,7 @@ add_executable(default_train_em train_default_em.cpp common.h common.cpp common_
 target_link_libraries(default_train_em "${TORCH_LIBRARIES}" experiments)
 
 add_executable(train_with_catboost train_with_catboost.cpp common.h common.cpp catboost_nn.h catboost_nn.cpp)
-target_link_libraries(lenet_catboost "${TORCH_LIBRARIES}" experiments polynom ${CATBOOST})
+target_link_libraries(train_with_catboost "${TORCH_LIBRARIES}" experiments polynom ${CATBOOST})
 
 # misc
 
