@@ -24,8 +24,11 @@ MLP::MLP(const std::vector<int>& sizes) {
 }
 
 torch::Tensor MLP::forward(torch::Tensor x) {
-    for (auto& l : layers_) {
-        x = l->forward(x);
+    for (int i = 0; i < (int)layers_.size(); ++i) {
+        x = layers_[i]->forward(x);
+        if (i != (int)layers_.size() - 1) {
+            x = torch::relu(x);
+        }
     }
     return x;
 }

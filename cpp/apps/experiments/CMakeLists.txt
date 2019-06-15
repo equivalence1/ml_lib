@@ -11,11 +11,11 @@ target_link_libraries(lenet "${TORCH_LIBRARIES}" experiments)
 add_executable(lenet_em_exact_classifier lenet_em_exact_classifier.cpp common.h common.cpp common_em.h)
 target_link_libraries(lenet_em_exact_classifier "${TORCH_LIBRARIES}" experiments)
 
-add_executable(default_train train_default.cpp common.h common.cpp)
-target_link_libraries(default_train "${TORCH_LIBRARIES}" experiments)
+add_executable(train_default train_default.cpp common.h common.cpp)
+target_link_libraries(train_default "${TORCH_LIBRARIES}" experiments)
 
-add_executable(default_train_em train_default_em.cpp common.h common.cpp common_em.h)
-target_link_libraries(default_train_em "${TORCH_LIBRARIES}" experiments)
+add_executable(train_default_em train_default_em.cpp common.h common.cpp common_em.h)
+target_link_libraries(train_default_em "${TORCH_LIBRARIES}" experiments)
 
 add_executable(train_with_catboost train_with_catboost.cpp common.h common.cpp catboost_nn.h catboost_nn.cpp)
 target_link_libraries(train_with_catboost "${TORCH_LIBRARIES}" experiments polynom ${CATBOOST})
