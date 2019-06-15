@@ -12,7 +12,8 @@
  */
 
 
-#include "experiments/core/tensor_pair_dataset.h"
+#include <experiments/core/tensor_pair_dataset.h>
+#include <util/json.h>
 
 #include <torch/torch.h>
 
@@ -54,9 +55,8 @@ namespace experiments::cifar10 {
     void read_training(const std::string& folder, int limit, float* images, long* labels);
 
     std::pair<TensorPairDataset, TensorPairDataset> read_dataset(
-        const std::string& folder,
-        int training_limit = -1,
-        int test_limit = -1);
+        int trainLimit = -1,
+        int testLimit = -1);
 
 } //end of namespace cifar
 

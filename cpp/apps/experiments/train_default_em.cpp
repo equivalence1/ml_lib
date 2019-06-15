@@ -5,6 +5,7 @@
 #include <experiments/core/cross_entropy_loss.h>
 #include <experiments/core/em_like_train.h>
 #include <experiments/core/transform.h>
+#include <experiments/core/params.h>
 
 #include <torch/torch.h>
 
@@ -20,11 +21,11 @@ int main(int argc, const char* argv[]) {
     auto paramsFolder = getParamsFolder(argc, argv);
     auto params = readJson(paramsFolder + "train_default_em_params.json");
 
-    auto device = getDevice(params[ParamKeys::DeviceKey]);
-    int batchSize = params[ParamKeys::BatchSizeKey];
+    auto device = getDevice(params[DeviceKey]);
+    int batchSize = params[BatchSizeKey];
 
-    const json& convParams = params[ParamKeys::ModelKey][ParamKeys::ConvKey];
-    const json& classParams = params[ParamKeys::ModelKey][ParamKeys::ClassifierKey];
+    const json& convParams = params[ModelKey][ConvKey];
+    const json& classParams = params[ModelKey][ClassifierKey];
 
     auto conv = createConvLayers({}, convParams);
     auto classifier = createClassifier(10, classParams);
@@ -33,11 +34,11 @@ int main(int argc, const char* argv[]) {
     model->to(device);
 
     // Read dataset
-    auto dataset = readDataset(params[ParamKeys::DatasetKey]);
+    auto dataset = readDataset(params[DatasetKey]);
 
     // Init trainer
 
-    std::vector<int> iterations(params[ParamKeys::NIterationsKey]);
+    std::vector<int> iterations(params[NIterationsKey]);
     CommonEm emTrainer(model, params);
 
     // Attach Listeners

@@ -28,20 +28,21 @@ TensorPairDataset toCifarFormat(TensorPairDataset ds) {
 }
 
 std::pair<TensorPairDataset, TensorPairDataset> read_dataset(
-        const std::string &folder,
-        int training_limit,
-        int test_limit) {
+        int trainLimit,
+        int testLimit) {
+    static const std::string folder = "../../../../resources/mnist";
+
     auto trainDataset = torch::data::datasets::MNIST(folder);
     auto testDataset = torch::data::datasets::MNIST(folder,
                                                     torch::data::datasets::MNIST::Mode::kTest);
 
-    auto trainData = trainDataset.images().slice(0, 0, training_limit, 1);
-    auto trainTargets = trainDataset.targets().slice(0, 0, training_limit, 1);
+    auto trainData = trainDataset.images().slice(0, 0, trainLimit, 1);
+    auto trainTargets = trainDataset.targets().slice(0, 0, trainLimit, 1);
     auto trainTensorDataset = TensorPairDataset(std::move(trainData), std::move(trainTargets));
     trainTensorDataset = toCifarFormat(trainTensorDataset);
 
-    auto testData = testDataset.images().slice(0, 0, test_limit, 1);
-    auto testTargets = testDataset.targets().slice(0, 0, test_limit, 1);
+    auto testData = testDataset.images().slice(0, 0, testLimit, 1);
+    auto testTargets = testDataset.targets().slice(0, 0, testLimit, 1);
     auto testTensorDataset = TensorPairDataset(std::move(testData), std::move(testTargets));
     testTensorDataset = toCifarFormat(testTensorDataset);
 

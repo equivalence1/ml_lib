@@ -9,8 +9,7 @@
 namespace experiments::mnist {
 
 std::pair<TensorPairDataset, TensorPairDataset> read_dataset(
-        const std::string &folder,
-        int training_limit = -1,
-        int test_limit = -1);
+        int trainLimit = -1,
+        int testLimit = -1);
 
 }

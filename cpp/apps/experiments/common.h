@@ -61,6 +61,6 @@ float evalModelTestAccEval(TensorPairDataset& ds,
 
 torch::DeviceType getDevice(const std::string& deviceType);
 
-std::pair<TensorPairDataset, TensorPairDataset> readDataset(const std::string& dataset);
+std::pair<TensorPairDataset, TensorPairDataset> readDataset(const json& params);
 
 std::string getParamsFolder(int argc, const char* argv[]);

@@ -6,6 +6,7 @@
 #include <experiments/core/cross_entropy_loss.h>
 #include <experiments/core/em_like_train.h>
 #include <experiments/core/polynom_model.h>
+#include <experiments/core/params.h>
 
 #include <torch/torch.h>
 
@@ -32,10 +33,10 @@ int main(int argc, const char* argv[]) {
     catBoostNnConfig.catboostInitParamsFile = paramsFolder + "catboost_params_init.json";
     catBoostNnConfig.catboostFinalParamsFile = paramsFolder + "catboost_params_final.json";
 
-    auto device = getDevice(params[ParamKeys::DeviceKey]);
+    auto device = getDevice(params[DeviceKey]);
 
-    const json& convParams = params[ParamKeys::ModelKey][ParamKeys::ConvKey];
-    const json& classParams = params[ParamKeys::ModelKey][ParamKeys::ClassifierKey];
+    const json& convParams = params[ModelKey][ConvKey];
+    const json& classParams = params[ModelKey][ClassifierKey];
 
     auto conv = createConvLayers({}, convParams);
     auto classifier = createClassifier(10, classParams);
@@ -52,7 +53,7 @@ int main(int argc, const char* argv[]) {
 
     // Read dataset
 
-    auto dataset = readDataset(params[ParamKeys::DatasetKey]);
+    auto dataset = readDataset(params[DatasetKey]);
 
     // Attach Listener
 

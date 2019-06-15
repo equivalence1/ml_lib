@@ -13,7 +13,9 @@
 #ifndef CIFAR10_READER_HPP
 #define CIFAR10_READER_HPP
 
-#include "experiments/core/tensor_pair_dataset.h"
+#include <experiments/core/tensor_pair_dataset.h>
+#include <experiments/core/params.h>
+#include <util/json.h>
 
 #include <torch/torch.h>
 
@@ -124,7 +126,9 @@ TensorPairDataset normalize(TensorPairDataset ds) {
     return {examples.data, examples.target};
 }
 
-std::pair<TensorPairDataset, TensorPairDataset> read_dataset(const std::string& folder, int training_limit, int test_limit) {
+std::pair<TensorPairDataset, TensorPairDataset> read_dataset(int trainLimit, int testLimit) {
+    static const std::string folder = "../../../../resources/cifar10/cifar-10-batches-bin";
+
     torch::Tensor trainX = torch::zeros({50000, 3, 32, 32}, torch::kFloat32);
     torch::Tensor trainY = torch::zeros({50000}, torch::kLong);
 
@@ -133,8 +137,8 @@ std::pair<TensorPairDataset, TensorPairDataset> read_dataset(const std::string& 
 
     auto startTime = std::chrono::high_resolution_clock::now();
 
-    read_training(folder, training_limit, (float*)trainX.data_ptr(), (long*)trainY.data_ptr());
-    read_test(folder, test_limit, (float*)testX.data_ptr(), (long*)testY.data_ptr());
+    read_training(folder, trainLimit, (float*)trainX.data_ptr(), (long*)trainY.data_ptr());
+    read_test(folder, testLimit, (float*)testX.data_ptr(), (long*)testY.data_ptr());
 
     auto elapsedTime = std::chrono::high_resolution_clock::now() - startTime;
     auto elapsedTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(elapsedTime);

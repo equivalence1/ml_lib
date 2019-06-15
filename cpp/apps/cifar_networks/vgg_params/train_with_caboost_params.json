@@ -16,7 +16,11 @@
     }
   },
   "device": "CPU",
-  "dataset": "cifar-10",
+  "dataset": {
+    "name": "cifar-10",
+    "training_limit": -1,
+    "test_limit": -1
+  },
   "checkpoint_file": "lenet_catboost_checkpoint.pt",
   "batch_size": 128,
   "reports_per_epoch": 10,

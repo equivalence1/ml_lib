@@ -188,27 +188,6 @@ inline ClassifierPtr makeClassifierWithBaseline(ModelPtr baseline, Args&&... arg
     return std::make_shared<Classifier>(std::make_shared<Impl>(std::forward<Args>(args)...), baseline);
 }
 
-struct ParamKeys {
-    static constexpr const char* ModelKey = "model";
-    static constexpr const char* ConvKey = "conv";
-    static constexpr const char* ClassifierKey = "classifier";
-
-    static constexpr const char* ModelArchKey = "model_arch";
-    static constexpr const char* ModelArchVersionKey = "arch_version";
-    static constexpr const char* ModelCheckpointFileKey = "checkpoint_file";
-    static constexpr const char* ClassifierMainKey = "main";
-    static constexpr const char* ClassifierBaselineKey = "baseline";
-
-    static constexpr const char* DeviceKey = "device";
-    static constexpr const char* DatasetKey = "dataset";
-    static constexpr const char* BatchSizeKey = "batch_size";
-    static constexpr const char* DimsKey = "dims";
-    static constexpr const char* ReportsPerEpochKey = "reports_per_epoch";
-    static constexpr const char* NIterationsKey = "n_iterations";
-    static constexpr const char* StepSizeKey = "step";
-    static constexpr const char* LambdaKey = "lambda";
-};
-
 ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params);
 ClassifierPtr createClassifier(int numClasses, const json& params);
 

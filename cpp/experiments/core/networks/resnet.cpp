@@ -1,5 +1,7 @@
 #include "resnet.h"
 
+#include <experiments/core/params.h>
+
 #include <string>
 #include <functional>
 #include <cassert>
@@ -100,7 +102,7 @@ static ModelPtr createConvLayersHelper(std::vector<int> nBlocks) {
 }
 
 ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params) {
-    std::string archVersion = params[ParamKeys::ModelArchVersionKey];
+    std::string archVersion = params[ModelArchVersionKey];
 
     if (archVersion == "18") {
         return createConvLayersHelper(std::vector<int>({2, 2, 2, 2}));

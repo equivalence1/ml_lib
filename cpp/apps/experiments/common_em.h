@@ -1,9 +1,9 @@
 #include "common.h"
 
-#include "experiments/datasets/cifar10/cifar10_reader.h"
-#include "experiments/core/optimizer.h"
-#include "experiments/core/cross_entropy_loss.h"
-#include "experiments/core/em_like_train.h"
+#include <experiments/core/optimizer.h>
+#include <experiments/core/cross_entropy_loss.h>
+#include <experiments/core/em_like_train.h>
+#include <experiments/core/params.h>
 
 #include <torch/torch.h>
 
@@ -32,21 +32,21 @@ public:
     CommonEm(experiments::ConvModelPtr model,
             const json& params)
             : EMLikeTrainer(getDefaultCifar10TrainTransform(),
-                    CommonEmOptions(params[experiments::ParamKeys::NIterationsKey]).globalIterationsCount,
+                    CommonEmOptions(params[NIterationsKey]).globalIterationsCount,
                     std::move(model))
-            , opts_(params[experiments::ParamKeys::NIterationsKey])
-            , device_(getDevice(params[experiments::ParamKeys::DeviceKey])) {
-        convParams_[experiments::ParamKeys::DeviceKey] = params[experiments::ParamKeys::DeviceKey];
-        convParams_[experiments::ParamKeys::ModelCheckpointFileKey] =
-                "conv_" + (std::string)params[experiments::ParamKeys::ModelCheckpointFileKey];
-        convParams_[experiments::ParamKeys::BatchSizeKey] = params[experiments::ParamKeys::BatchSizeKey];
-        convParams_[experiments::ParamKeys::ReportsPerEpochKey] = params[experiments::ParamKeys::ReportsPerEpochKey];
+            , opts_(params[NIterationsKey])
+            , device_(getDevice(params[DeviceKey])) {
+        convParams_[DeviceKey] = params[DeviceKey];
+        convParams_[ModelCheckpointFileKey] =
+                "conv_" + (std::string)params[ModelCheckpointFileKey];
+        convParams_[BatchSizeKey] = params[BatchSizeKey];
+        convParams_[ReportsPerEpochKey] = params[ReportsPerEpochKey];
 
-        decisionParams_[experiments::ParamKeys::DeviceKey] = params[experiments::ParamKeys::DeviceKey];
-        decisionParams_[experiments::ParamKeys::ModelCheckpointFileKey] =
-                "decision_" + (std::string)params[experiments::ParamKeys::ModelCheckpointFileKey];
-        decisionParams_[experiments::ParamKeys::BatchSizeKey] = params[experiments::ParamKeys::BatchSizeKey];
-        decisionParams_[experiments::ParamKeys::ReportsPerEpochKey] = params[experiments::ParamKeys::ReportsPerEpochKey];
+        decisionParams_[DeviceKey] = params[DeviceKey];
+        decisionParams_[ModelCheckpointFileKey] =
+                "decision_" + (std::string)params[ModelCheckpointFileKey];
+        decisionParams_[BatchSizeKey] = params[BatchSizeKey];
+        decisionParams_[ReportsPerEpochKey] = params[ReportsPerEpochKey];
     }
 
 protected:

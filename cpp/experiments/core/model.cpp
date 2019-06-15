@@ -6,6 +6,7 @@
 #include "networks/mobile_net_v2.h"
 #include "networks/small_net.h"
 #include "polynom_model.h"
+#include "params.h"
 
 #include <models/polynom/polynom.h>
 
@@ -95,7 +96,7 @@ torch::Tensor Bias::forward(torch::Tensor x) {
 // Utils
 
 ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params) {
-    std::string modelName = params[ParamKeys::ModelArchKey];
+    std::string modelName = params[ModelArchKey];
 
     if (modelName == "LeNet") {
         return lenet::createConvLayers(inputShape, params);
@@ -114,14 +115,14 @@ ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params
 }
 
 static ModelPtr _createClassifier(int numClasses, const json& params) {
-    std::string archType = params[ParamKeys::ModelArchKey];
+    std::string archType = params[ModelArchKey];
 
     if (archType == "MLP") {
-        std::vector<int> sizes = params[ParamKeys::DimsKey];
+        std::vector<int> sizes = params[DimsKey];
         return std::make_shared<MLP>(sizes);
     } else if (archType == "Polynom") {
         PolynomPtr polynom = std::make_shared<Polynom>();
-        polynom->Lambda_ = params[ParamKeys::LambdaKey];
+        polynom->Lambda_ = params[LambdaKey];
         {
             Monom emptyMonom;
             emptyMonom.Structure_.Splits.push_back({0, 0});
@@ -139,14 +140,14 @@ ClassifierPtr createClassifier(int numClasses, const json& params) {
     ModelPtr mainClassifier{nullptr};
     ModelPtr baselineClassifier{nullptr};
 
-    if (params.count(ParamKeys::ClassifierMainKey)) {
-        mainClassifier = _createClassifier(numClasses, params[ParamKeys::ClassifierMainKey]);
+    if (params.count(ClassifierMainKey)) {
+        mainClassifier = _createClassifier(numClasses, params[ClassifierMainKey]);
     } else {
         mainClassifier = std::make_shared<ZeroClassifier>(numClasses);
     }
 
-    if (params.count(ParamKeys::ClassifierBaselineKey)) {
-        baselineClassifier = _createClassifier(numClasses, params[ParamKeys::ClassifierBaselineKey]);
+    if (params.count(ClassifierBaselineKey)) {
+        baselineClassifier = _createClassifier(numClasses, params[ClassifierBaselineKey]);
     }
 
     if (baselineClassifier.get() != nullptr) {

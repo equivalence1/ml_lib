@@ -6,12 +6,17 @@
     "classifier": {
       "main": {
         "model_arch": "MLP",
-        "dims": [512, 10]
+        "dims": [512, 2]
       }
     }
   },
   "device": "GPU",
-  "dataset": "cifar-10",
+  "dataset": {
+    "name": "cifar-10",
+    "one_vs_all": 0,
+    "training_limit": -1,
+    "test_limit": -1
+  },
   "checkpoint_file": "small_net_checkpoint.pt",
   "batch_size": 128,
   "reports_per_epoch": 10,

@@ -1,5 +1,7 @@
 #include "vgg.h"
 
+#include <experiments/core/params.h>
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -65,7 +67,7 @@ torch::Tensor Vgg16Conv::forward(torch::Tensor x) {
 // Utils
 
 ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params) {
-    std::string archVersion = params[ParamKeys::ModelArchVersionKey];
+    std::string archVersion = params[ModelArchVersionKey];
 
     if (archVersion == "16") {
         return std::make_shared<Vgg16Conv>();

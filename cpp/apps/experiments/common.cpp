@@ -3,6 +3,7 @@
 #include <experiments/core/transform.h>
 #include <experiments/core/model.h>
 #include <experiments/core/tensor_pair_dataset.h>
+#include <experiments/core/params.h>
 
 #include <experiments/datasets/cifar10/cifar10_reader.h>
 #include <experiments/datasets/mnist/mnist_reader.h>
@@ -86,10 +87,10 @@ OptimizerType<TransformType> getDefaultOptimizer(const experiments::ModelPtr& mo
         const json& params) {
     using namespace experiments;
 
-    double step = params[ParamKeys::StepSizeKey];
-    int epochs = params[ParamKeys::NIterationsKey];
-    int batchSize = params[ParamKeys::BatchSizeKey];
-    auto device = getDevice(params[ParamKeys::DeviceKey]);
+    double step = params[StepSizeKey];
+    int epochs = params[NIterationsKey];
+    int batchSize = params[BatchSizeKey];
+    auto device = getDevice(params[DeviceKey]);
 
     experiments::OptimizerArgs<TransformType> args(getDefaultCifar10TrainTransform(),
             epochs, device);
@@ -116,7 +117,7 @@ void attachDefaultListeners(const experiments::OptimizerPtr& optimizer,
     using namespace experiments;
 
     // TODO for now just hardcoded Cifar-10 ds size
-    int nBatchesReport = 50000 / (int)params[ParamKeys::BatchSizeKey] / (int)params[ParamKeys::ReportsPerEpochKey];
+    int nBatchesReport = 50000 / (int)params[BatchSizeKey] / (int)params[ReportsPerEpochKey];
 
     auto brListener = std::make_shared<experiments::BatchReportOptimizerListener>(nBatchesReport);
     optimizer->registerListener(brListener);
@@ -143,19 +144,52 @@ torch::DeviceType getDevice(const std::string& deviceType) {
     }
 }
 
-std::pair<TensorPairDataset, TensorPairDataset> readDataset(const std::string& dataset) {
-    if (dataset == "cifar-10") {
-        const std::string& path = "../../../../resources/cifar10/cifar-10-batches-bin";
-        return experiments::cifar10::read_dataset(path);
-    } else if (dataset == "mnist") {
-        const std::string& path = "../../../../resources/mnist";
-        return experiments::mnist::read_dataset(path);
-    } else if (dataset == "svhn") {
-        const std::string& path = "../../../../resources/svhn";
-        return experiments::svhn::read_dataset(path);
+static std::pair<TensorPairDataset, TensorPairDataset> _readDataset(const json& params) {
+    std::string name = params[NameKey];
+
+    int trainLimit = -1;
+    int testLimit = -1;
+
+    if (params.count(TrainingLimitKey) != 0) {
+        trainLimit = params[TrainingLimitKey];
+    }
+
+    if (params.count(TestLimitKey) != 0) {
+        testLimit = params[TestLimitKey];
+    }
+
+    if (name == "cifar-10") {
+        return experiments::cifar10::read_dataset(trainLimit, testLimit);
+    } else if (name == "mnist") {
+        return experiments::mnist::read_dataset(trainLimit, testLimit);
+    } else if (name == "svhn") {
+        return experiments::svhn::read_dataset(trainLimit, testLimit);
     } else {
         throw std::runtime_error("Unsupported dataset");
     }
+}
+
+static void _transformOneVsAll(const torch::Tensor& y, int baseClass) {
+    auto yAccessor = y.accessor<int64_t, 1>();
+    auto size = y.size(0);
+
+    for (int i = 0; i < (int)size; i++) {
+        yAccessor[i] = yAccessor[i] == baseClass ? 0 : 1;
+    }
+}
+
+static void _transformDs(const std::pair<TensorPairDataset, TensorPairDataset>& ds, const json& params) {
+    if (params.count(OneVsAllKey) != 0) {
+        const int baseClass = params[OneVsAllKey];
+        _transformOneVsAll(ds.first.targets(), baseClass);
+        _transformOneVsAll(ds.second.targets(), baseClass);
+    }
+}
+
+std::pair<TensorPairDataset, TensorPairDataset> readDataset(const json& params) {
+    auto ds = _readDataset(params);
+    _transformDs(ds, params);
+    return ds;
 }
 
 std::string getParamsFolder(int argc, const char* argv[]) {

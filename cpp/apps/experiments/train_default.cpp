@@ -1,8 +1,8 @@
 #include "common.h"
 
-#include <experiments//datasets/cifar10/cifar10_reader.h>
 #include <experiments/core/optimizer.h>
 #include <experiments/core/cross_entropy_loss.h>
+#include <experiments/core/params.h>
 
 #include <util/json.h>
 
@@ -20,11 +20,11 @@ int main(int argc, const char* argv[]) {
     auto paramsFolder = getParamsFolder(argc, argv);
     auto params = readJson(paramsFolder + "train_default_params.json");
 
-    auto device = getDevice(params[ParamKeys::DeviceKey]);
-    int batchSize = params[ParamKeys::BatchSizeKey];
+    auto device = getDevice(params[DeviceKey]);
+    int batchSize = params[BatchSizeKey];
 
-    const json& convParams = params[ParamKeys::ModelKey][ParamKeys::ConvKey];
-    const json& classParams = params[ParamKeys::ModelKey][ParamKeys::ClassifierKey];
+    const json& convParams = params[ModelKey][ConvKey];
+    const json& classParams = params[ModelKey][ClassifierKey];
 
     auto conv = createConvLayers({}, convParams);
     auto classifier = createClassifier(10, classParams);
@@ -33,7 +33,7 @@ int main(int argc, const char* argv[]) {
     model->to(device);
 
     // Load data
-    auto dataset = readDataset(params[ParamKeys::DatasetKey]);
+    auto dataset = readDataset(params[DatasetKey]);
 
     // Create optimizer
     auto optimizer = getDefaultOptimizer(model, params);
@@ -41,7 +41,7 @@ int main(int argc, const char* argv[]) {
 
     // AttachListeners
 
-    std::string modelCheckpoint = params[ParamKeys::ModelCheckpointFileKey];
+    std::string modelCheckpoint = params[ModelCheckpointFileKey];
     attachDefaultListeners(optimizer, params);
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
 

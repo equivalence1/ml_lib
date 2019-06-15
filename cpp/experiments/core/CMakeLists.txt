@@ -42,6 +42,7 @@ add_library(experiments_core
         polynom_model.cpp
         layer_norm.h
         layer_norm.cpp
+        params.h
 
         networks/lenet.h
         networks/lenet.cpp

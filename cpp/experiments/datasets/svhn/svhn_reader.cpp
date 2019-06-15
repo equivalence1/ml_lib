@@ -53,19 +53,20 @@ static TensorPairDataset readDs(const std::string& folder,
 // Note that we store svhn dataset already normalized
 
 std::pair<TensorPairDataset, TensorPairDataset> read_dataset(
-        const std::string &folder,
-        int training_limit,
-        int test_limit) {
-    if (training_limit == -1) {
-        training_limit = 73257;
+        int trainLimit,
+        int testLimit) {
+    static const std::string folder = "../../../../resources/svhn";
+
+    if (trainLimit == -1) {
+        trainLimit = 73257;
     }
 
-    if (test_limit == -1) {
-        test_limit = 26032;
+    if (testLimit == -1) {
+        testLimit = 26032;
     }
 
-    auto trainDs = readDs(folder, "train_ds", training_limit);
-    auto testDs = readDs(folder, "test_ds", test_limit);
+    auto trainDs = readDs(folder, "train_ds", trainLimit);
+    auto testDs = readDs(folder, "test_ds", testLimit);
 
     return std::make_pair(trainDs, testDs);
 }
