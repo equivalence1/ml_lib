@@ -45,16 +45,14 @@ add_library(experiments_core
 
         networks/lenet.h
         networks/lenet.cpp
-
         networks/vgg.h
         networks/vgg.cpp
-
         networks/resnet.h
         networks/resnet.cpp
-
         networks/mobile_net_v2.h
         networks/mobile_net_v2.cpp
-        )
+        networks/small_net.cpp
+        networks/small_net.h)
 target_link_libraries(experiments_core "${TORCH_LIBRARIES}"  Eigen3::Eigen methods core models polynom targets util)
 enable_cxx14(experiments_core)
 

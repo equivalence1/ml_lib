@@ -1,0 +1,20 @@
+{
+  "model": {
+    "conv": {
+      "model_arch": "SmallNet"
+    },
+    "classifier": {
+      "main": {
+        "model_arch": "MLP",
+        "dims": [512, 10]
+      }
+    }
+  },
+  "device": "GPU",
+  "dataset": "cifar-10",
+  "checkpoint_file": "small_net_checkpoint.pt",
+  "batch_size": 128,
+  "reports_per_epoch": 10,
+  "n_iterations": 1000,
+  "step": 0.001
+}

@@ -167,6 +167,8 @@ std::string getParamsFolder(int argc, const char* argv[]) {
             return "../../../../cpp/apps/cifar_networks/vgg_params/";
         } else if (str == "resnet") {
             return "../../../../cpp/apps/cifar_networks/resnet_params/";
+        } else if (str == "small_net") {
+            return "../../../../cpp/apps/cifar_networks/small_net_params/";
         }
     }
     throw std::runtime_error("model is not specified");

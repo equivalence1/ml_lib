@@ -4,6 +4,7 @@
 #include "networks/lenet.h"
 #include "networks/resnet.h"
 #include "networks/mobile_net_v2.h"
+#include "networks/small_net.h"
 #include "polynom_model.h"
 
 #include <models/polynom/polynom.h>
@@ -104,6 +105,8 @@ ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params
         return resnet::createConvLayers(inputShape, params);
     } else if (modelName == "MobileNetV2") {
         return mobile_net_v2::createConvLayers(inputShape, params);
+    } else if (modelName == "SmallNet") {
+        return small_net::createConvLayers(inputShape, params);
     }
 
     std::string errMsg("Unsupported model architecture");
