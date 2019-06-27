@@ -19,18 +19,11 @@ public:
 
     // WTF torch, this should be default behaviour
     void train(bool on = true) override {
-        if (train_) {
-            return;
-        }
         for (auto &param : parameters()) {
             param.set_requires_grad(on);
         }
         torch::nn::Module::train(on);
-        train_ = on;
     }
-
-private:
-    bool train_ = true;
 };
 
 using ModelPtr = std::shared_ptr<Model>;
