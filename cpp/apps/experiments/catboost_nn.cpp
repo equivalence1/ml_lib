@@ -355,11 +355,15 @@ void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
 
     trainDecision(ds, loss);
 
+    std::set<uint32_t> decayIters = {3,
+                                     7,
+                                     10
+    };
 
-    std::set<uint32_t> decayIters = {100 / opts_.representationsIterations,
-                                     200 / opts_.representationsIterations,
-                                     300 / opts_.representationsIterations
-                                     };
+//    std::set<uint32_t> decayIters = {100 / opts_.representationsIterations,
+//                                     200 / opts_.representationsIterations,
+//                                     300 / opts_.representationsIterations
+//                                     };
 //                                     50 / opts_.representationsIterations,
 //                                     75 / opts_.representationsIterations,
 //                                     100 / opts_.representationsIterations,

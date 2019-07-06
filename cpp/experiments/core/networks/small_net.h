@@ -18,6 +18,7 @@ private:
     torch::nn::Conv2d conv1_{nullptr};
     torch::nn::Conv2d conv2_{nullptr};
     torch::nn::Conv2d conv3_{nullptr};
+    torch::nn::Conv2d conv4_{nullptr};
 };
 
 ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params);

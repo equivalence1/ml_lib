@@ -27,7 +27,7 @@ int main(int argc, const char* argv[]) {
     const json& classParams = params[ModelKey][ClassifierKey];
 
     auto conv = createConvLayers({}, convParams);
-    auto classifier = createClassifier(10, classParams);
+    auto classifier = createClassifier(2, classParams);
 
     auto model = std::make_shared<ConvModel>(conv, classifier);
     model->to(device);

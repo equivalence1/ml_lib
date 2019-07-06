@@ -23,11 +23,11 @@ int main(int argc, const char* argv[]) {
     auto params = readJson(paramsFolder + "train_with_caboost_params.json");
 
     CatBoostNNConfig catBoostNnConfig;
-    catBoostNnConfig.batchSize = 128;
-    catBoostNnConfig.lambda_ = 1;
-    catBoostNnConfig.sgdStep_ = 0.1;
-    catBoostNnConfig.representationsIterations = 10;
-    catBoostNnConfig.globalIterationsCount = 1000;
+    catBoostNnConfig.batchSize = params[BatchSizeKey];
+    catBoostNnConfig.lambda_ = params[ModelKey][ClassifierKey][ClassifierMainKey][LambdaKey];
+    catBoostNnConfig.sgdStep_ = params[StepSizeKey];
+    catBoostNnConfig.globalIterationsCount = params[NIterationsKey][0];
+    catBoostNnConfig.representationsIterations = params[NIterationsKey][1];
 
     catBoostNnConfig.catboostParamsFile = paramsFolder + "catboost_params_gpu.json";
     catBoostNnConfig.catboostInitParamsFile = paramsFolder + "catboost_params_init.json";
@@ -39,7 +39,7 @@ int main(int argc, const char* argv[]) {
     const json& classParams = params[ModelKey][ClassifierKey];
 
     auto conv = createConvLayers({}, convParams);
-    auto classifier = createClassifier(10, classParams);
+    auto classifier = createClassifier(2, classParams);
 
     auto model = std::make_shared<ConvModel>(conv, classifier);
     model->to(device);
@@ -48,8 +48,8 @@ int main(int argc, const char* argv[]) {
 
     CatBoostNN nnTrainer(catBoostNnConfig,
                          model,
-                         device,
-                         makeClassifier<LinearCifarClassifier>(16 * 5 * 5));
+                         device);
+//                         createClassifier(2, classParams));
 
     // Read dataset
 
@@ -67,9 +67,10 @@ int main(int argc, const char* argv[]) {
         if (epoch % 2 != 0) {
             std::cout << "--------===============CATBOOST learn + test start ====================---------------  "
                       << std::endl;
-            auto learn = nnTrainer.applyConvLayers(dataset.first.map(getCifar10TrainFinalCatboostTransform()));
-            auto test = nnTrainer.applyConvLayers(dataset.second.map(getDefaultCifar10TestTransform()));
-            nnTrainer.trainFinalDecision(learn, test);
+            std::cout << "skipping trainFinalDecision" << std::endl;
+//            auto learn = nnTrainer.applyConvLayers(dataset.first.map(getCifar10TrainFinalCatboostTransform()));
+//            auto test = nnTrainer.applyConvLayers(dataset.second.map(getDefaultCifar10TestTransform()));
+//            nnTrainer.trainFinalDecision(learn, test);
             std::cout << "--------===============CATBOOST learn + test finish ====================---------------  "
                       << std::endl;
         }

@@ -12,6 +12,7 @@ SmallNetConv::SmallNetConv() {
     conv1_ = register_module("conv1_", torch::nn::Conv2d(buildConvOptions( 3,  8, 3)));
     conv2_ = register_module("conv2_", torch::nn::Conv2d(buildConvOptions( 8, 16, 3)));
     conv3_ = register_module("conv3_", torch::nn::Conv2d(buildConvOptions(16, 32, 3)));
+    conv4_ = register_module("conv4_", torch::nn::Conv2d(buildConvOptions(32, 32, 3)));
 }
 
 torch::Tensor SmallNetConv::forward(torch::Tensor x) {
@@ -28,6 +29,7 @@ torch::Tensor SmallNetConv::forward(torch::Tensor x) {
     // 32 * 8 * 8
     x = torch::max_pool2d(x, 2, 2);
     // 32 * 4 * 4
+    x = conv4_->forward(x);
     return x;
 }
 

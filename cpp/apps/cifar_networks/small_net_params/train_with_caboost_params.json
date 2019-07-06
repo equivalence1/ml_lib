@@ -5,8 +5,8 @@
     },
     "classifier": {
       "main": {
-        "model_arch": "MLP",
-        "dims": [512, 2]
+        "model_arch": "Polynom",
+        "lambda": 1.0
       }
     }
   },
@@ -17,9 +17,9 @@
     "training_limit": -1,
     "test_limit": -1
   },
-  "checkpoint_file": "small_net_checkpoint.pt",
+  "checkpoint_file": "small_net_catboost_checkpoint.pt",
   "batch_size": 128,
   "reports_per_epoch": 10,
-  "n_iterations": 1000,
+  "n_iterations": [15, 5, 1],
   "step": 0.1
 }
