@@ -22,7 +22,8 @@ struct CatBoostNNConfig {
     std::string catboostFinalParamsFile = "catboost_final_params.json";
 
     double sgdStep_ = 0.001;
-
+    std::set<uint32_t> stepDecayIters = {100, 200, 300};
+    double stepDecay = 10;
 };
 
 class CatBoostNN : public EMLikeTrainer<decltype(getDefaultCifar10TrainTransform())> {

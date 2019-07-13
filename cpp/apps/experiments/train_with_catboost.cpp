@@ -13,6 +13,7 @@
 #include <string>
 #include <memory>
 #include <iostream>
+#include <set>
 
 int main(int argc, const char* argv[]) {
     using namespace experiments;
@@ -32,6 +33,10 @@ int main(int argc, const char* argv[]) {
     catBoostNnConfig.catboostParamsFile = paramsFolder + "catboost_params_gpu.json";
     catBoostNnConfig.catboostInitParamsFile = paramsFolder + "catboost_params_init.json";
     catBoostNnConfig.catboostFinalParamsFile = paramsFolder + "catboost_params_final.json";
+
+    catBoostNnConfig.stepDecay = params[StepDecayKey];
+    std::vector<int> decayIters(params[StepDecayItersKey]);
+    catBoostNnConfig.stepDecayIters = std::set<uint32_t>(decayIters.begin(), decayIters.end());
 
     auto device = getDevice(params[DeviceKey]);
 

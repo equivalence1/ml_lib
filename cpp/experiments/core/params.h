@@ -23,4 +23,6 @@ namespace {
     constexpr const char *NameKey = "name";
     constexpr const char *TrainingLimitKey = "training_limit";
     constexpr const char *TestLimitKey = "test_limit";
+    constexpr const char *StepDecayItersKey = "step_decay_iters";
+    constexpr const char *StepDecayKey = "step_decay";
 }
