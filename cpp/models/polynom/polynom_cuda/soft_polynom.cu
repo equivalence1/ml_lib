@@ -39,21 +39,48 @@ __global__ void PolynomProbsImpl(
 
 //            bool isTrue = true;
             float logProb = 0;
+            bool zeroProb = false;
             for (int i = 0; i < depth; ++i) {
+                if (zeroProb) {
+                    continue;
+                }
                 const int f = __ldg(splits + offset + i);
                 const float c = __ldg(conditions + offset + i);
                 const float x = __ldg(features + f * batchSize);
-                const float val = -lambda * (x - c);
+// sigmoid {{{
+//                const float val = -lambda * (x - c);
+//                const float expVal = 1.0f + expf(val);
+// }}}
+
 //                isTrue = x <= c? false : isTrue;
-                const float expVal = 1.0f + expf(val);
+
+// 1 - e^{-x} {{{
+                const float val = -lambda * x;
+                const float expVal = 1.0f - expf(val);
+// }}}
 
 //            p( split = 1) = 1.0 / (1.0 + exp(-(x - c)))
 //            c = 0, x= inf, p = 1.0 / (1.0 + exp(-inf) = 0
 //            log(p) = -log(1.0 + exp(-(x - c))
-                const float isTrueLogProb = isfinite(expVal) ? log(expVal) : val;
-                logProb -= isTrueLogProb;
+
+// sigmoid {{{
+//                const float isTrueLogProb = isfinite(expVal) ? log(expVal) : val;
+//                logProb -= isTrueLogProb;
+// }}}
+
+// 1 - e^{-x} {{{
+                if (isfinite(log(expVal))) {
+                    logProb += log(expVal);
+                } else {
+                    zeroProb = true;
+                }
+// }}}
             }
-            const float prob = expf(logProb);
+
+            float prob = 0.0f;
+            if (!zeroProb) {
+                prob = expf(logProb);
+            }
 //            const float prob = isTrue ? 1 : 0;//exp(logProb);
             probs[polynomId * batchSize] = prob;
             polynomId += gridDim.x;
@@ -180,8 +207,11 @@ __global__ void PolynomBackwardImpl(float lambda,
         if (depth != 0) {
 
             float logProbs[MaxDepth];
+            float vals[MaxDepth];
             short fids[MaxDepth];
             float totalLogProb = 0;
+
+            bool zeroProb = false;
 
             #pragma unroll
             for (int i = 0; i < MaxDepth; ++i) {
@@ -190,14 +220,25 @@ __global__ void PolynomBackwardImpl(float lambda,
                     fids[i] = f;
                     const float c = __ldg(conditions + i + offset);
                     const float x = __ldg(features + f);
-                    const float val = -lambda * (x - c);
-                    const float expVal = 1.0f + exp(val);
-                    logProbs[i] = -(isfinite(expVal) ? log(expVal) : val);
-                    totalLogProb += logProbs[i];
+// sigmoid {{{
+//                    const float val = -lambda * (x - c);
+//                    const float expVal = 1.0f + exp(val);
+//                    logProbs[i] = -(isfinite(expVal) ? log(expVal) : val);
+//                    totalLogProb += logProbs[i];
+// }}}
+
+// 1 - e^{-x} {{{
+                    vals[i] = -lambda * x;
+                    const float expVal = 1.0f - exp(vals[i]);
+                    logProbs[i] = log(expVal);
+                    if (isfinite(logProbs[i])) {
+                        totalLogProb += logProbs[i];
+                    } else {
+                        zeroProb = true;
+                    }
+// }}}
                 }
             }
-
-            const float p = exp(totalLogProb);
 
             //featureDerivative is outputDer * total value before monom * monom derivative
             float derMultiplier = 0;
@@ -210,9 +251,24 @@ __global__ void PolynomBackwardImpl(float lambda,
             for (int i = 0; i < MaxDepth; ++i) {
                 if (i < depth) {
                     const int f = fids[i];
-                    const float featureProb = exp(logProbs[i]);
-                    const float monomDer = p * (1.0 - featureProb);
-                    const float featureDer = monomDer * derMultiplier;
+// sigmoid {{{
+//                    const float featureProb = exp(logProbs[i]);
+//                    const float monomDer = p * (1.0 - featureProb);
+//                    const float featureDer = monomDer * derMultiplier;
+// }}}
+
+// 1 - e^{-x} {{{
+                    // XXX for zero feature it actually shouldn't be zero, but it's not propagated through relu anyways.
+                    float featureDer = 0.0f;
+                    if (!zeroProb) {
+                        // (1 - e^{-lambda * x})' = lambda * e^{-lambda * x}
+                        //
+                        // dp / dx_i = p / (1 - e^{-l * x_i}) * (l * e^{-l * x_i})
+                        // ln (p / (1 - e^{-l * x}) * (l * e^{-l * x})) = ln(p) - ln(1 - e^{-x}) + ln(l) + (-l * x))
+                        const float monomDer = exp(totalLogProb - logProbs[i] + log(lambda) + vals[i]);
+                        featureDer = monomDer * derMultiplier;
+                    }
+// }}}
                     //atomics in shared memory, pretty fast on pascal+ hardware
                     atomicAdd(localFeaturesDer + memoryBlocks * f + memoryBlockId, featureDer);
                 }

@@ -6,7 +6,7 @@
     "classifier": {
       "main": {
         "model_arch": "MLP",
-        "dims": [400, 120, 84, 10]
+        "dims": [400, 10]
       }
     }
   },

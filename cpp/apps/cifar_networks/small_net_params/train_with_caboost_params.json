@@ -27,5 +27,5 @@
   "n_iterations": [20, 5, 1],
   "step": 0.1,
   "step_decay": 10,
-  "step_decay_iters": [9, 18]
+  "step_decay_iters": [1, 6, 10]
 }

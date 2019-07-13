@@ -6,7 +6,7 @@
     "classifier": {
       "baseline": {
         "model_arch": "MLP",
-        "dims": [400, 10]
+        "dims": [400, 2]
       },
       "main": {
         "model_arch": "Polynom",
@@ -14,9 +14,10 @@
       }
     }
   },
-  "device": "CPU",
+  "device": "GPU",
   "dataset": {
     "name": "cifar-10",
+    "one_vs_all": 0,
     "training_limit": -1,
     "test_limit": -1
   },
