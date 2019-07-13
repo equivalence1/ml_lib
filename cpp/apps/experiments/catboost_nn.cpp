@@ -478,12 +478,13 @@ void CatBoostNN::initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss) {
         auto representationOptimizer = getReprOptimizer(model_->conv());
         representationOptimizer->train(ds, representationLoss, model_->conv());
     }
-    iter_ = 1;
 
-    trainRepr(ds, loss);
+    if (model_->classifier()->baseline()) {
+        iter_ = 1;
+        trainRepr(ds, loss);
+    }
 
     iter_ =  opts_.representationsIterations;
-
 }
 
 //
