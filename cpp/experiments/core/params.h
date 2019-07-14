@@ -19,7 +19,7 @@ namespace {
     constexpr const char *NIterationsKey = "n_iterations";
     constexpr const char *StepSizeKey = "step";
     constexpr const char *LambdaKey = "lambda";
-    constexpr const char *OneVsAllKey = "one_vs_all";
+    constexpr const char *BaseClassesKey = "base_classes";
     constexpr const char *NameKey = "name";
     constexpr const char *TrainingLimitKey = "training_limit";
     constexpr const char *TestLimitKey = "test_limit";

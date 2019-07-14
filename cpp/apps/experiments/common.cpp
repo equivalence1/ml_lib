@@ -17,6 +17,7 @@
 #include <memory>
 #include <string>
 #include <stdexcept>
+#include <set>
 
 TransformType getDefaultCifar10TrainTransform() {
     // transforms are similar to https://github.com/kuangliu/pytorch-cifar/blob/master/main.py#L31
@@ -169,20 +170,20 @@ static std::pair<TensorPairDataset, TensorPairDataset> _readDataset(const json& 
     }
 }
 
-static void _transformOneVsAll(const torch::Tensor& y, int baseClass) {
+static void _transformOneVsAll(const torch::Tensor& y, std::set<int>& baseClasses) {
     auto yAccessor = y.accessor<int64_t, 1>();
     auto size = y.size(0);
 
     for (int i = 0; i < (int)size; i++) {
-        yAccessor[i] = yAccessor[i] == baseClass ? 0 : 1;
+        yAccessor[i] = (baseClasses.count(yAccessor[i]) != 0) ? 0 : 1;
     }
 }
 
 static void _transformDs(const std::pair<TensorPairDataset, TensorPairDataset>& ds, const json& params) {
-    if (params.count(OneVsAllKey) != 0) {
-        const int baseClass = params[OneVsAllKey];
-        _transformOneVsAll(ds.first.targets(), baseClass);
-        _transformOneVsAll(ds.second.targets(), baseClass);
+    if (params.count(BaseClassesKey) != 0) {
+        std::set<int> baseClasses = params[BaseClassesKey];
+        _transformOneVsAll(ds.first.targets(), baseClasses);
+        _transformOneVsAll(ds.second.targets(), baseClasses);
     }
 }
 

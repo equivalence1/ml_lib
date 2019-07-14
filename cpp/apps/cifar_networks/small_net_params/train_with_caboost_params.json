@@ -17,7 +17,7 @@
   "device": "GPU",
   "dataset": {
     "name": "cifar-10",
-    "one_vs_all": 0,
+    "base_classes": [0, 1, 2, 3, 4],
     "training_limit": -1,
     "test_limit": -1
   },
