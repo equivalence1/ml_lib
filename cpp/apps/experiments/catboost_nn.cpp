@@ -5,6 +5,7 @@
 #include <models/polynom/polynom.h>
 #include <core/vec.h>
 #include <util/io.h>
+#include <util/string.h>
 
 #include <catboost_wrapper.h>
 
@@ -497,12 +498,13 @@ void CatBoostNN::fireScheduledParamModifiers(int iter) {
         std::vector<int> iters = modifier[ItersKey];
         std::string type = modifier["type"];
 
-//        std::cout << field << std:: endl;
+        std::cout << field << std::endl;
         if (type == "double") {
             std::vector<double> values = modifier[ValuesKey];
             for (int i = 0; i < iters.size(); ++i) {
                 if (iters[i] == iter) {
-                    opts_[field] = values[i];
+                    std::cout << "changing " << field << " on iter " << iter << " to " << values[i] << std::endl;
+                    setField(opts_, field, values[i]);
                     break;
                 }
             }
@@ -510,7 +512,8 @@ void CatBoostNN::fireScheduledParamModifiers(int iter) {
             std::vector<int> values = modifier[ValuesKey];
             for (int i = 0; i < iters.size(); ++i) {
                 if (iters[i] == iter) {
-                    opts_[field] = values[i];
+                    std::cout << "changing " << field << " on iter " << iter << " to " << values[i] << std::endl;
+                    setField(opts_, field, values[i]);
                     break;
                 }
             }

@@ -89,13 +89,13 @@
       "field": "catboost_params.intermediate_params.learning_rate",
       "type": "double",
       "values": [0.0001, 0.001, 0.01],
-      "iters": [0, 5, 12]
+      "iters": [0, 1, 7]
     },
     {
-      "field": "catboost_parmas.intermediate_params.iterations",
+      "field": "catboost_params.intermediate_params.iterations",
       "type": "int",
       "values": [1000, 600, 300],
-      "iters": [0, 5, 12]
+      "iters": [0, 1, 7]
     }
   ]
 }
