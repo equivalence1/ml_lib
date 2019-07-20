@@ -88,7 +88,7 @@ OptimizerType<TransformType> getDefaultOptimizer(const experiments::ModelPtr& mo
         const json& params) {
     using namespace experiments;
 
-    double step = params[StepSizeKey];
+    double step = params[SgdStepSizeKey];
     int epochs = params[NIterationsKey];
     int batchSize = params[BatchSizeKey];
     auto device = getDevice(params[DeviceKey]);

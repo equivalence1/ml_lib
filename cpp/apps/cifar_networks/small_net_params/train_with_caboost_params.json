@@ -14,18 +14,88 @@
       }
     }
   },
+
   "device": "GPU",
-  "dataset": {
-    "name": "cifar-10",
-    "base_classes": [0, 1, 2, 3, 4],
-    "training_limit": -1,
-    "test_limit": -1
-  },
   "checkpoint_file": "small_net_catboost_checkpoint.pt",
   "batch_size": 128,
   "reports_per_epoch": 10,
   "n_iterations": [20, 5, 1],
-  "step": 0.1,
-  "step_decay": 10,
-  "step_decay_iters": [1, 6, 10]
+  "sgd_step": 0.1,
+  "dropout": 0.0,
+
+  "dataset": {
+    "name": "cifar-10",
+    "base_classes": [0, 1, 2, 8, 9],
+    "training_limit": -1,
+    "test_limit": -1
+  },
+
+  "catboost_params": {
+    "init_params": {
+      "boosting_type": "Plain",
+      "iterations" : 1000,
+      "depth" : 6,
+      "devices": "0",
+      "task_type": "GPU",
+      "gpu_ram_part": 0.5,
+      "eval_metric": "Accuracy",
+      "od_type": "IncToDec",
+      "loss_function": "MultiClass",
+      "learning_rate" : 0.0001,
+      "use_best_model": false,
+      "rsm": 0.25,
+      "logging_level" : "Debug",
+      "random_strength": 1
+    },
+    "intermediate_params": {
+      "boosting_type": "Plain",
+      "iterations" : 300,
+      "task_type": "GPU",
+      "devices": "0",
+      "depth" : 6,
+      "gpu_ram_part": 0.75,
+      "od_type": "IncToDec",
+      "logging_level" : "Verbose",
+      "loss_function": "MultiClass",
+      "learning_rate" : 0.07,
+      "rsm": 0.1,
+      "use_best_model": false,
+      "random_strength": 1
+    },
+    "final_params": {
+      "boosting_type": "Plain",
+      "iterations" : 600,
+      "depth" : 6,
+      "gpu_ram_part": 0.5,
+      "task_type": "GPU",
+      "devices": "0",
+      "eval_metric": "Accuracy",
+      "od_type": "IncToDec",
+      "loss_function": "MultiClass",
+      "learning_rate" : 0.005,
+      "logging_level" : "Verbose",
+      "rsm" : 0.5
+    }
+  },
+
+  "scheduled_param_modifiers": [
+    {
+      "field": "sgd_step",
+      "type": "double",
+      "values": [0.1, 0.01, 0.001],
+      "iters": [0, 2, 10]
+    },
+    {
+      "field": "catboost_params.intermediate_params.learning_rate",
+      "type": "double",
+      "values": [0.0001, 0.001, 0.01],
+      "iters": [0, 5, 12]
+    },
+    {
+      "field": "catboost_parmas.intermediate_params.iterations",
+      "type": "int",
+      "values": [1000, 600, 300],
+      "iters": [0, 5, 12]
+    }
+  ]
 }

@@ -1,41 +1,28 @@
 #include "common.h"
+
 #include <experiments/datasets/cifar10/cifar10_reader.h>
 #include <experiments/core/optimizer.h>
 #include <experiments/core/cross_entropy_loss.h>
 #include <experiments/core/em_like_train.h>
+#include <util/json.h>
 
 #include <torch/torch.h>
 
 #include <string>
 #include <memory>
 #include <iostream>
-
-struct CatBoostNNConfig {
-    uint32_t globalIterationsCount = 500;
-    uint32_t representationsIterations = 3;
-    double dropOut_ = 0;
-
-    int batchSize = 256;
-    double lambda_ = 1.0;
-    std::string catboostParamsFile = "catboost_params.json";
-    std::string catboostInitParamsFile = "catboost_params.json";
-    std::string catboostFinalParamsFile = "catboost_final_params.json";
-
-    double sgdStep_ = 0.001;
-    std::set<uint32_t> stepDecayIters = {100, 200, 300};
-    double stepDecay = 10;
-};
+#include <core/params.h>
 
 class CatBoostNN : public EMLikeTrainer<decltype(getDefaultCifar10TrainTransform())> {
 public:
     using ConvModelPtr = std::shared_ptr<experiments::ConvModel>;
 
-    CatBoostNN(const CatBoostNNConfig& opts,
+    CatBoostNN(json opts,
         ConvModelPtr model,
         torch::DeviceType device,
         experiments::ClassifierPtr init = nullptr)
-            : EMLikeTrainer(getDefaultCifar10TrainTransform(), opts.globalIterationsCount, model)
-            , opts_(opts)
+            : EMLikeTrainer(getDefaultCifar10TrainTransform(), opts[NIterationsKey][0], model)
+            , opts_(std::move(opts))
             , device_(device)
             , initClassifier_(init) {
 
@@ -75,13 +62,17 @@ protected:
     void trainDecision(TensorPairDataset& ds, const LossPtr& loss);
     void trainRepr(TensorPairDataset& ds, const LossPtr& loss);
     void initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss);
+
 protected:
     experiments::OptimizerPtr getReprOptimizer(const experiments::ModelPtr& reprModel) override;
 
     experiments::OptimizerPtr getDecisionOptimizer(const experiments::ModelPtr& decisionModel) override;
 
 private:
-    const CatBoostNNConfig& opts_;
+    void fireScheduledParamModifiers(int iter);
+
+private:
+    json opts_;
     torch::DeviceType device_;
     experiments::ClassifierPtr initClassifier_;
     int64_t seed_ = 0;
@@ -97,7 +88,7 @@ private:
 template <class DataSet>
 class AccuracyCalcer {
 public:
-    AccuracyCalcer(c10::DeviceType device, const CatBoostNNConfig& opts, DataSet& mds, CatBoostNN& nnTrainer)
+    AccuracyCalcer(c10::DeviceType device, const json& opts, DataSet& mds, CatBoostNN& nnTrainer)
         : device_(device), opts_(opts), mds_(mds), nnTrainer_(nnTrainer) {
 
     }
@@ -122,7 +113,7 @@ public:
             nnTrainer_.setLambda(100000);
             torch::Tensor predictionExact = model->forward(data);
             predictionExact = torch::argmax(predictionExact, 1);
-            nnTrainer_.setLambda(opts_.lambda_);
+            nnTrainer_.setLambda(opts_[ModelKey][ClassifierKey][ClassifierMainKey][LambdaKey]);
 
             prediction = prediction.to(torch::kCPU);
             predictionExact = predictionExact.to(torch::kCPU);
@@ -151,7 +142,7 @@ public:
     }
 private:
     torch::DeviceType device_;
-    const CatBoostNNConfig& opts_;
+    const json& opts_;
     DataSet& mds_;
     CatBoostNN& nnTrainer_;
 };

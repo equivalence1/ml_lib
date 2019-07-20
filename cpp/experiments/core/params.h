@@ -17,12 +17,20 @@ namespace {
     constexpr const char *DimsKey = "dims";
     constexpr const char *ReportsPerEpochKey = "reports_per_epoch";
     constexpr const char *NIterationsKey = "n_iterations";
-    constexpr const char *StepSizeKey = "step";
+    constexpr const char *SgdStepSizeKey = "sgd_step";
     constexpr const char *LambdaKey = "lambda";
     constexpr const char *BaseClassesKey = "base_classes";
     constexpr const char *NameKey = "name";
     constexpr const char *TrainingLimitKey = "training_limit";
     constexpr const char *TestLimitKey = "test_limit";
-    constexpr const char *StepDecayItersKey = "step_decay_iters";
-    constexpr const char *StepDecayKey = "step_decay";
+    constexpr const char *ScheduledParamModifiersKey = "scheduled_param_modifiers";
+    constexpr const char *FieldKey = "field";
+    constexpr const char *ValuesKey = "values";
+    constexpr const char *ItersKey = "iters";
+    constexpr const char *DropoutKey = "dropout";
+
+    constexpr const char *CatboostParamsKey = "catboost_params";
+    constexpr const char *InitParamsKey = "init_params";
+    constexpr const char *IntermediateParamsKey = "intermediate_params";
+    constexpr const char *FinalParamsKey = "final_params";
 }

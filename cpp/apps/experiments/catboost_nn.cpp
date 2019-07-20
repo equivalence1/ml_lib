@@ -10,6 +10,7 @@
 
 #include <utility>
 #include <random>
+#include <stdexcept>
 
 experiments::ModelPtr CatBoostNN::getTrainedModel(TensorPairDataset& ds, const LossPtr& loss) {
     train(ds, loss);
@@ -75,7 +76,6 @@ static void attachReprListeners(const experiments::OptimizerPtr& optimizer,
 
 
 experiments::OptimizerPtr CatBoostNN::getReprOptimizer(const experiments::ModelPtr& model) {
-
     auto transform = getDefaultCifar10TrainTransform();
     using TransT = decltype(transform);
 
@@ -92,12 +92,14 @@ experiments::OptimizerPtr CatBoostNN::getReprOptimizer(const experiments::ModelP
     auto lr = &(optim->options.learning_rate_);
     args.lrPtrGetter_ = [=]() { return lr; };
 
-    const auto batchSize = opts_.batchSize;
+    int batchSize = opts_[BatchSizeKey];
     auto dloaderOptions = torch::data::DataLoaderOptions(batchSize);
     args.dloaderOptions_ = std::move(dloaderOptions);
 
     auto optimizer = std::make_shared<experiments::DefaultOptimizer<TransT>>(args);
-    attachReprListeners(optimizer, 50000 / batchSize / 10, opts_.representationsIterations, lr_, lr_ / 100);
+    int representationsIterations = opts_[NIterationsKey][1];
+    int reportsPerEpoch = opts_[ReportsPerEpochKey];
+    attachReprListeners(optimizer, 50000 / batchSize / reportsPerEpoch, representationsIterations, lr_, lr_);
 //    attachDefaultListeners(optimizer, 50000 / batchSize / 10, "lenet_em_conv_checkpoint.pt");
     return optimizer;
 }
@@ -334,22 +336,22 @@ experiments::OptimizerPtr CatBoostNN::getDecisionOptimizer(const experiments::Mo
     seed_ += 10000;
     std::string params;
     if (Init_) {
-        params = opts_.catboostInitParamsFile;
+        params = opts_[CatboostParamsKey][InitParamsKey].dump();
         Init_ = false;
     } else {
-        params = opts_.catboostParamsFile;
+        params = opts_[CatboostParamsKey][IntermediateParamsKey].dump();
     }
 
     return std::make_shared<CatBoostOptimizer>(
-        readFile(params),
+        params,
         seed_,
-        opts_.lambda_ * lambdaMult_,
-        opts_.dropOut_
+        ((double)opts_[ModelKey][ClassifierKey][ClassifierMainKey][LambdaKey]) * lambdaMult_,
+        opts_[DropoutKey]
         );
 }
 
 void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
-    lr_ = opts_.sgdStep_;
+    lr_ = opts_[SgdStepSizeKey];
 
     initialTrainRepr(ds, loss);
 
@@ -357,10 +359,10 @@ void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
 
     for (uint32_t i = 0; i < iterations_; ++i) {
         std::cout << "EM iteration: " << i << std::endl;
-        if (opts_.stepDecayIters.count(i)) {
-          lr_ /= opts_.stepDecay;
-//          lambdaMult_ /= 2;
-        }
+
+        fireScheduledParamModifiers(i);
+
+        lr_ = opts_[SgdStepSizeKey];
 
         trainRepr(ds, loss);
 
@@ -443,7 +445,7 @@ void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
 }
 experiments::ModelPtr CatBoostNN::trainFinalDecision(const TensorPairDataset& learn, const TensorPairDataset& test) {
     auto optimizer = std::make_shared<CatBoostOptimizer>(
-        readFile(opts_.catboostFinalParamsFile),
+        opts_[CatboostParamsKey][FinalParamsKey].dump(),
         seed_,
         1e10,
         0.0
@@ -484,7 +486,36 @@ void CatBoostNN::initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss) {
         trainRepr(ds, loss);
     }
 
-    iter_ =  opts_.representationsIterations;
+    iter_ =  opts_[NIterationsKey][1];
+}
+
+void CatBoostNN::fireScheduledParamModifiers(int iter) {
+    const std::vector<json> paramModifiers = opts_[ScheduledParamModifiersKey];
+
+    for (const json& modifier : paramModifiers) {
+        std::string field = modifier[FieldKey];
+        std::vector<int> iters = modifier[ItersKey];
+        std::string type = modifier["type"];
+
+//        std::cout << field << std:: endl;
+        if (type == "double") {
+            std::vector<double> values = modifier[ValuesKey];
+            for (int i = 0; i < iters.size(); ++i) {
+                if (iters[i] == iter) {
+                    opts_[field] = values[i];
+                    break;
+                }
+            }
+        } else {
+            std::vector<int> values = modifier[ValuesKey];
+            for (int i = 0; i < iters.size(); ++i) {
+                if (iters[i] == iter) {
+                    opts_[field] = values[i];
+                    break;
+                }
+            }
+        }
+    }
 }
 
 //

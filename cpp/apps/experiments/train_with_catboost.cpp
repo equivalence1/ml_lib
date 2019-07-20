@@ -23,21 +23,6 @@ int main(int argc, const char* argv[]) {
     auto paramsFolder = getParamsFolder(argc, argv);
     auto params = readJson(paramsFolder + "train_with_caboost_params.json");
 
-    CatBoostNNConfig catBoostNnConfig;
-    catBoostNnConfig.batchSize = params[BatchSizeKey];
-    catBoostNnConfig.lambda_ = params[ModelKey][ClassifierKey][ClassifierMainKey][LambdaKey];
-    catBoostNnConfig.sgdStep_ = params[StepSizeKey];
-    catBoostNnConfig.globalIterationsCount = params[NIterationsKey][0];
-    catBoostNnConfig.representationsIterations = params[NIterationsKey][1];
-
-    catBoostNnConfig.catboostParamsFile = paramsFolder + "catboost_params_gpu.json";
-    catBoostNnConfig.catboostInitParamsFile = paramsFolder + "catboost_params_init.json";
-    catBoostNnConfig.catboostFinalParamsFile = paramsFolder + "catboost_params_final.json";
-
-    catBoostNnConfig.stepDecay = params[StepDecayKey];
-    std::vector<int> decayIters(params[StepDecayItersKey]);
-    catBoostNnConfig.stepDecayIters = std::set<uint32_t>(decayIters.begin(), decayIters.end());
-
     auto device = getDevice(params[DeviceKey]);
 
     const json& convParams = params[ModelKey][ConvKey];
@@ -51,7 +36,7 @@ int main(int argc, const char* argv[]) {
 
     torch::setNumThreads(16);
 
-    CatBoostNN nnTrainer(catBoostNnConfig,
+    CatBoostNN nnTrainer(params,
                          model,
                          device);
 //                         createClassifier(2, classParams));
@@ -64,7 +49,8 @@ int main(int argc, const char* argv[]) {
 
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
     nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, ModelPtr model) {
-        AccuracyCalcer<decltype(mds)>(device, catBoostNnConfig, mds, nnTrainer)(epoch, model);
+        // TODO params might have changed
+        AccuracyCalcer<decltype(mds)>(device, params, mds, nnTrainer)(epoch, model);
     });
 
 
