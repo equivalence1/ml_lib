@@ -4,15 +4,11 @@
  CatBoost code is available under APACHE2 License, license text is available at https://github.com/catboost
  */
 
-#include <utility>
 #include <vector>
 #include <cstdint>
-#include <cstring>
 // NOTE: These functions provide CityHash 1.0 implementation whose results are *different* from
 // the mainline version of CityHash.
 
-#include <cstdint>
-#include <cstring>
 
 using uint128 = std::pair<uint64_t, uint64_t>;
 

@@ -31,18 +31,20 @@
 
 #include "city.h"
 
-template <class T>
-inline T ReadUnaligned(const void* from) noexcept {
-    T ret;
-    memcpy(&ret, from, sizeof(T));
-    return ret;
-}
+
 
 using uint8 = uint8_t;
 using uint32 = uint32_t;
 using uint64 = uint64_t;
 
 using namespace std;
+
+template <class T>
+inline T ReadUnaligned(const void* from) noexcept {
+    T ret;
+    ret = *reinterpret_cast<const T*>(from);
+    return ret;
+}
 
 //#define UNALIGNED_LOAD64(p) (*(const uint64*)(p))
 //#define UNALIGNED_LOAD32(p) (*(const uint32*)(p))
