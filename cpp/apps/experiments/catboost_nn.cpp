@@ -5,7 +5,7 @@
 #include <models/polynom/polynom.h>
 #include <core/vec.h>
 #include <util/io.h>
-#include <util/string.h>
+#include <util/string_utils.h>
 
 #include <catboost_wrapper.h>
 

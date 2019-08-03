@@ -18,7 +18,7 @@ add_library(util
         city.h
         json.h
         io.h
-        string.h)
+        string_utils.h)
 
 enable_cxx14(util)
 maybe_enable_cuda(util)
