@@ -43,8 +43,8 @@ namespace {
 PolynomCuda::PolynomCuda(PolynomPtr polynom)
 : Polynom_(polynom) {
 
-    std::sort(Polynom_->Ensemble_.begin(), Polynom_->Ensemble_.end(), [&](const Monom& left, const Monom& right) {
-        return left.Structure_.GetDepth() < right.Structure_.GetDepth();
+    std::sort(Polynom_->Ensemble_.begin(), Polynom_->Ensemble_.end(), [&](const MonomPtr& left, const MonomPtr& right) {
+        return left->Structure_.GetDepth() < right->Structure_.GetDepth();
     });
 
     std::vector<int> flatFeatureIds;
@@ -54,13 +54,13 @@ PolynomCuda::PolynomCuda(PolynomPtr polynom)
 
     int cursor = 0;
     for (const auto& monom : Polynom_->Ensemble_) {
-        for (const auto& split : monom.Structure_.Splits) {
+        for (const auto& split : monom->Structure_.Splits) {
             flatFeatureIds.push_back(split.Feature);
             conditions.push_back(split.Condition);
         }
-        values.insert(values.end(), monom.Values_.begin(), monom.Values_.end());
+        values.insert(values.end(), monom->Values_.begin(), monom->Values_.end());
         offsets.push_back(cursor);
-        cursor += monom.Structure_.Splits.size();
+        cursor += monom->Structure_.Splits.size();
     }
 
     offsets.push_back(cursor);

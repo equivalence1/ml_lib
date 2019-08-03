@@ -6,12 +6,13 @@
     "classifier": {
       "main": {
         "model_arch": "Polynom",
-        "lambda": 1.0
+        "lambda": 1.0,
+        "monom_type": "ExpProbMonom"
       }
     }
   },
 
-  "device": "GPU",
+  "device": "CPU",
   "checkpoint_file": "small_net_catboost_checkpoint.pt",
   "batch_size": 128,
   "reports_per_epoch": 10,

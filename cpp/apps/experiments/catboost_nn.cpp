@@ -114,12 +114,14 @@ namespace {
         explicit CatBoostOptimizer(std::string catboostOptions,
             uint64_t seed,
             double lambda,
-            double dropOut
+            double dropOut,
+            Monom::MonomType monomType
             )
         : catBoostOptions_(std::move(catboostOptions))
         , seed_(seed)
         , lambda_(lambda)
-        , drouput_(dropOut) {
+        , drouput_(dropOut)
+        , monomType_(monomType) {
 
         }
 
@@ -198,15 +200,15 @@ namespace {
             auto catboost = Train(trainPool, testPool, catBoostOptions_);
             std::cout << "CatBoost was trained " << std::endl;
 
-            Polynom polynom(PolynomBuilder().AddEnsemble(catboost).Build());
-            polynom.Lambda_ = lambda_;
+            auto polynom = std::make_shared<Polynom>(monomType_, PolynomBuilder().AddEnsemble(catboost).Build());
+            polynom->Lambda_ = lambda_;
             std::cout << "Model size: " << catboost.Trees.size() << std::endl;
-            std::cout << "Polynom size: " << polynom.Ensemble_.size() << std::endl;
+            std::cout << "Polynom size: " << polynom->Ensemble_.size() << std::endl;
             std::map<int, int> featureIds;
             int fCount = 0;
             double total = 0;
-            for (const auto& monom : polynom.Ensemble_) {
-                for (const auto& split : monom.Structure_.Splits) {
+            for (const auto& monom : polynom->Ensemble_) {
+                for (const auto& split : monom->Structure_.Splits) {
                     featureIds[split.Feature]++;
                     fCount = std::max<int>(fCount, split.Feature);
                     ++total;
@@ -218,11 +220,11 @@ namespace {
             }
             std::cout << std::endl << "===============" << std::endl;
             std::cout << std::endl << "Polynom values hist" << std::endl;
-            polynom.PrintHistogram();
+            polynom->PrintHistogram();
             std::cout << std::endl << "===============" << std::endl;
 
 
-            polynomModel->reset(std::make_shared<Polynom>(polynom));
+            polynomModel->reset(polynom);
         }
 
 
@@ -272,11 +274,11 @@ namespace {
                 baselineDim);
 
             auto catboost = Train(trainPool, testPool, catBoostOptions_);
-            Polynom polynom(PolynomBuilder().AddEnsemble(catboost).Build());
-            polynom.Lambda_ = lambda_;
+            auto polynom = std::make_shared<Polynom>(monomType_, PolynomBuilder().AddEnsemble(catboost).Build());
+            polynom->Lambda_ = lambda_;
             std::cout << "Model size: " << catboost.Trees.size() << std::endl;
-            std::cout << "Polynom size: " << polynom.Ensemble_.size() << std::endl;
-            polynomModel->reset(std::make_shared<Polynom>(polynom));
+            std::cout << "Polynom size: " << polynom->Ensemble_.size() << std::endl;
+            polynomModel->reset(polynom);
         }
 
     private:
@@ -330,6 +332,7 @@ namespace {
         uint64_t seed_ = 0;
         double lambda_ = 1.0;
         double drouput_ = 0.0;
+        Monom::MonomType monomType_;
     };
 }
 
@@ -347,7 +350,8 @@ experiments::OptimizerPtr CatBoostNN::getDecisionOptimizer(const experiments::Mo
         params,
         seed_,
         ((double)opts_[ModelKey][ClassifierKey][ClassifierMainKey][LambdaKey]) * lambdaMult_,
-        opts_[DropoutKey]
+        opts_[DropoutKey],
+        Monom::getMonomType(opts_[ModelKey][ClassifierKey][ClassifierMainKey][MonomTypeKey])
         );
 }
 
@@ -449,7 +453,8 @@ experiments::ModelPtr CatBoostNN::trainFinalDecision(const TensorPairDataset& le
         opts_[CatboostParamsKey][FinalParamsKey].dump(),
         seed_,
         1e10,
-        0.0
+        0.0,
+        Monom::getMonomType(opts_[ModelKey][ClassifierKey][ClassifierMainKey][MonomTypeKey])
     );
     experiments::ClassifierPtr classifier;
     auto baseline = model_->classifier()->baseline();

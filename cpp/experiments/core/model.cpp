@@ -124,10 +124,11 @@ static ModelPtr _createClassifier(int numClasses, const json& params) {
         PolynomPtr polynom = std::make_shared<Polynom>();
         polynom->Lambda_ = params[LambdaKey];
         {
-            Monom emptyMonom;
-            emptyMonom.Structure_.Splits.push_back({0, 0});
-            emptyMonom.Values_.resize(numClasses);
-            polynom->Ensemble_.push_back(emptyMonom);
+            auto monomType = Monom::getMonomType(params[MonomTypeKey]);
+            auto emptyMonom = Monom::createMonom(monomType);
+            emptyMonom->Structure_.Splits.push_back({0, 0});
+            emptyMonom->Values_.resize(numClasses);
+            polynom->Ensemble_.push_back(std::move(emptyMonom));
         }
         return std::make_shared<PolynomModel>(std::move(polynom));
     }

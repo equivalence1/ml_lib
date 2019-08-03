@@ -28,6 +28,7 @@ namespace {
     constexpr const char *ValuesKey = "values";
     constexpr const char *ItersKey = "iters";
     constexpr const char *DropoutKey = "dropout";
+    constexpr const char *MonomTypeKey = "monom_type";
 
     constexpr const char *CatboostParamsKey = "catboost_params";
     constexpr const char *InitParamsKey = "init_params";

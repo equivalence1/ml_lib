@@ -111,43 +111,91 @@ private:
     std::unordered_map<PolynomStructure, TStat> EnsemblePolynoms;
 };
 
-struct Monom {
-    PolynomStructure Structure_;
-    std::vector<double> Values_;
+// TBD: Not sure if we should make it unique or shared ptr
+class Monom;
+using MonomPtr = std::unique_ptr<Monom>;
 
-    int OutDim() const {
-        return Values_.size();
-    }
+template<class T, class... Args>
+inline static MonomPtr _makeMonomPtr(Args&&... args) {
+    return std::make_unique<T>(std::forward<Args>(args)...);
+}
+
+
+class Monom {
+public:
+    enum class MonomType {
+        SigmoidProbMonom,
+        ExpProbMonom,
+    };
+
+    friend struct Polynom;
+
+public:
+    Monom() = default;
 
     Monom(PolynomStructure structure, std::vector<double> values)
-    : Structure_(std::move(structure))
-    , Values_(std::move(values)) {
+            : Structure_(std::move(structure))
+            , Values_(std::move(values)) {
 
     }
 
-    Monom() {
-
+    int OutDim() const {
+        return (int)Values_.size();
     }
 
     //forward/backward will append to dst
-    void Forward(double lambda, ConstVecRef<float> features, VecRef<float> dst) const;
-    void Backward(double lambda, ConstVecRef<float> features, ConstVecRef<float> outputsDer, VecRef<float> featuresDer) const;
+    virtual void Forward(double lambda, ConstVecRef<float> features, VecRef<float> dst) const = 0;
+    virtual void Backward(double lambda, ConstVecRef<float> features, ConstVecRef<float> outputsDer, VecRef<float> featuresDer) const = 0;
+
+    static MonomType getMonomType(const std::string& strMonomType);
+
+    static MonomPtr createMonom(MonomType monomType);
+    static MonomPtr createMonom(MonomType monomType, PolynomStructure structure, std::vector<double> values);
+
+    virtual ~Monom() = default;
+
+public:
+    PolynomStructure Structure_;
+    std::vector<double> Values_;
+};
+
+class SigmoidProbMonom : public Monom {
+public:
+    SigmoidProbMonom() = default;
+
+    SigmoidProbMonom(PolynomStructure structure, std::vector<double> values)
+            : Monom(std::move(structure), std::move(values)) {
+
+    }
+
+    void Forward(double lambda, ConstVecRef<float> features, VecRef<float> dst) const override;
+    void Backward(double lambda, ConstVecRef<float> features, ConstVecRef<float> outputsDer, VecRef<float> featuresDer) const override;
+};
+
+class ExpProbMonom : public Monom {
+public:
+    ExpProbMonom() = default;
+
+    ExpProbMonom(PolynomStructure structure, std::vector<double> values)
+            : Monom(std::move(structure), std::move(values)) {
+
+    }
+
+    void Forward(double lambda, ConstVecRef<float> features, VecRef<float> dst) const override;
+    void Backward(double lambda, ConstVecRef<float> features, ConstVecRef<float> outputsDer, VecRef<float> featuresDer) const override;
 };
 
 struct Polynom {
-    std::vector<Monom> Ensemble_;
+    std::vector<MonomPtr> Ensemble_;
     double Lambda_  = 1.0;
 
-
-    Polynom(const std::unordered_map<PolynomStructure, TStat>& polynom) {
+    Polynom(Monom::MonomType monomType, const std::unordered_map<PolynomStructure, TStat>& polynom) {
         for (const auto& [structure, stat] : polynom) {
-            Ensemble_.emplace_back(structure, stat.Value);
+            Ensemble_.emplace_back(Monom::createMonom(monomType, structure, stat.Value));
         }
     }
 
-    Polynom() {
-
-    }
+    Polynom() = default;
 
     void PrintHistogram();
 
@@ -156,7 +204,7 @@ struct Polynom {
     void Backward(ConstVecRef<float> features, ConstVecRef<float> outputsDer, VecRef<float> featuresDer) const;
 
     int OutDim() const {
-        return Ensemble_.empty() ? 0 : Ensemble_.back().OutDim();
+        return Ensemble_.empty() ? 0 : Ensemble_.back()->OutDim();
     }
 };
 
