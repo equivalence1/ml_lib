@@ -56,9 +56,7 @@ torch::Tensor SigmoidLinearCifarClassifier::forward(torch::Tensor x) {
 
 torch::Tensor experiments::ConvModel::forward(torch::Tensor x) {
     x = conv()->forward(x);
-    std::cout << "ConvModel, conv device: " << x.device() << std::endl;
     x = classifier()->forward(x);
-    std::cout << "ConvModel, classifier device: " << x.device() << std::endl;
     return x;
 }
 
