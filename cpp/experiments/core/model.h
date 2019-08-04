@@ -15,7 +15,18 @@ namespace experiments {
 
 class Model : public torch::nn::Module {
 public:
+    Model() {
+        // only need this parameter in order to correctly track
+        // device of those models which don't have real parameters
+        dummy_ = torch::zeros({});
+        dummy_ = register_parameter("dummy", dummy_, false);
+    }
+
     virtual torch::Tensor  forward(torch::Tensor x) = 0;
+
+    torch::Device device() const {
+        return this->parameters().data()->device();
+    }
 
     // WTF torch, this should be default behaviour
     void train(bool on = true) override {
@@ -24,6 +35,9 @@ public:
         }
         torch::nn::Module::train(on);
     }
+
+private:
+    torch::Tensor dummy_;
 };
 
 using ModelPtr = std::shared_ptr<Model>;
@@ -183,5 +197,21 @@ inline ClassifierPtr makeClassifierWithBaseline(ModelPtr baseline, Args&&... arg
 
 ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params);
 ClassifierPtr createClassifier(int numClasses, const json& params);
+
+inline torch::Tensor correctDevice(torch::Tensor x, const torch::Device& to) {
+    if (x.device() != to) {
+        return x.to(to);
+    } else {
+        return std::move(x);
+    }
+}
+
+inline torch::Tensor correctDevice(torch::Tensor x, const ModelPtr& to) {
+    return correctDevice(std::move(x), to->device());
+}
+
+inline torch::Tensor correctDevice(torch::Tensor x, const Model& to) {
+    return correctDevice(std::move(x), to.device());
+}
 
 }

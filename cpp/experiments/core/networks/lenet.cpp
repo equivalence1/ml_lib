@@ -14,6 +14,7 @@ LeNetConv::LeNetConv() {
 }
 
 torch::Tensor LeNetConv::forward(torch::Tensor x) {
+    x = correctDevice(x, *this);
     x = conv1_->forward(x);
     x = torch::max_pool2d(torch::relu(x), 2, 2);
     x = conv2_->forward(x);

@@ -19,11 +19,9 @@ public:
 
     CatBoostNN(json opts,
         ConvModelPtr model,
-        torch::DeviceType device,
         experiments::ClassifierPtr init = nullptr)
             : EMLikeTrainer(getDefaultCifar10TrainTransform(), opts[NIterationsKey][0], model)
             , opts_(std::move(opts))
-            , device_(device)
             , initClassifier_(init) {
 
     }
@@ -34,13 +32,12 @@ public:
         representationsModel->eval();
 
         auto dloader = torch::data::make_data_loader(ds, torch::data::DataLoaderOptions(256));
-        auto device = representationsModel->parameters().data()->device();
         std::vector<torch::Tensor> reprList;
         std::vector<torch::Tensor> targetsList;
 
         for (auto& batch : *dloader) {
-            auto res = representationsModel->forward(batch.data.to(device));
-            auto target = batch.target.to(device);
+            auto res = representationsModel->forward(batch.data);
+            auto target = correctDevice(batch.target, representationsModel);
             reprList.push_back(res);
             targetsList.push_back(target);
         }
@@ -73,7 +70,6 @@ private:
 
 private:
     json opts_;
-    torch::DeviceType device_;
     experiments::ClassifierPtr initClassifier_;
     int64_t seed_ = 0;
     bool Init_ = true;
@@ -88,13 +84,12 @@ private:
 template <class DataSet>
 class AccuracyCalcer {
 public:
-    AccuracyCalcer(c10::DeviceType device, const json& opts, DataSet& mds, CatBoostNN& nnTrainer)
-        : device_(device), opts_(opts), mds_(mds), nnTrainer_(nnTrainer) {
+    AccuracyCalcer(const json& opts, DataSet& mds, CatBoostNN& nnTrainer)
+        : opts_(opts), mds_(mds), nnTrainer_(nnTrainer) {
 
     }
 
     void operator()(uint32_t epoch, experiments::ModelPtr model) {
-        model->to(device_);
         model->eval();
 
         auto dloader = torch::data::make_data_loader(mds_, torch::data::DataLoaderOptions(256));
@@ -104,7 +99,7 @@ public:
 
         for (auto& batch : *dloader) {
             auto data = batch.data;
-            data = data.to(device_);
+            data = experiments::correctDevice(data, model);
             torch::Tensor target = batch.target;
 
             torch::Tensor prediction = model->forward(data);
@@ -141,7 +136,6 @@ public:
         std::cout << "Test accuracy (lambda = 100000): " <<  rightAnswersExactCnt * 100.0f / total << std::endl;
     }
 private:
-    torch::DeviceType device_;
     const json& opts_;
     DataSet& mds_;
     CatBoostNN& nnTrainer_;

@@ -32,7 +32,6 @@ void attachDefaultListeners(const experiments::OptimizerPtr& optimizer,
 template <typename T>
 float evalModelTestAccEval(TensorPairDataset& ds,
         const experiments::ModelPtr& model,
-        torch::DeviceType device,
         const T& transform) {
     model->eval();
 
@@ -43,7 +42,6 @@ float evalModelTestAccEval(TensorPairDataset& ds,
 
     for (auto& batch : *dloader) {
         auto data = batch.data;
-        data = data.to(device);
         torch::Tensor target = batch.target;
 
         torch::Tensor prediction = model->forward(data);

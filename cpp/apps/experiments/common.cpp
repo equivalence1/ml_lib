@@ -91,10 +91,9 @@ OptimizerType<TransformType> getDefaultOptimizer(const experiments::ModelPtr& mo
     double step = params[SgdStepSizeKey];
     int epochs = params[NIterationsKey];
     int batchSize = params[BatchSizeKey];
-    auto device = getDevice(params[DeviceKey]);
 
     experiments::OptimizerArgs<TransformType> args(getDefaultCifar10TrainTransform(),
-            epochs, device);
+            epochs);
 
     args.epochs_ = epochs;
     args.dloaderOptions_ = torch::data::DataLoaderOptions(batchSize);
@@ -135,14 +134,6 @@ void attachDefaultListeners(const experiments::OptimizerPtr& optimizer,
 
 //    auto msListener = std::make_shared<experiments::ModelSaveOptimizerListener>(1, savePath);
 //    optimizer->registerListener(msListener);
-}
-
-torch::DeviceType getDevice(const std::string& deviceType) {
-    if (deviceType == "GPU") {
-        return torch::kCUDA;
-    } else {
-        return torch::kCPU;
-    }
 }
 
 static std::pair<TensorPairDataset, TensorPairDataset> _readDataset(const json& params) {

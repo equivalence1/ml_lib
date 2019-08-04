@@ -80,7 +80,7 @@ experiments::OptimizerPtr CatBoostNN::getReprOptimizer(const experiments::ModelP
     auto transform = getDefaultCifar10TrainTransform();
     using TransT = decltype(transform);
 
-    experiments::OptimizerArgs<TransT> args(transform, iter_, device_);
+    experiments::OptimizerArgs<TransT> args(transform, iter_);
 //
     torch::optim::SGDOptions opt(lr_);
     opt.momentum_ = 0.9;
@@ -309,22 +309,23 @@ namespace {
 
 
         std::vector<float> maybeMakeBaseline(torch::Tensor data, experiments::Classifier* classifier) const {
-            std::vector<float> baseline;
+            std::vector<float> baselineRes;
             if (classifier->baseline()) {
-                classifier->baseline()->to(data.device());
+                auto baseline = classifier->baseline();
+                data = experiments::correctDevice(data, baseline);
                 auto baselineTensor = classifier->baseline()->forward(data).to(torch::kCPU).contiguous();
                 const int baselineDim = baselineTensor.size(1);
                 const size_t samplesCount = baselineTensor.size(0);
                 size_t baselineSize = samplesCount * baselineDim;
-                baseline.resize(baselineSize);
+                baselineRes.resize(baselineSize);
                 auto srcData = baselineTensor.data<float>();
                 for (int  baselineIdx = 0;  baselineIdx<  baselineDim; ++ baselineIdx) {
                     for (int32_t i = 0; i < samplesCount; ++i) {
-                        baseline[baselineIdx * samplesCount + i] = srcData[i * baselineDim + baselineIdx];
+                        baselineRes[baselineIdx * samplesCount + i] = srcData[i * baselineDim + baselineIdx];
                     }
                 }
             }
-            return baseline;
+            return baselineRes;
         }
 
     private:
@@ -381,8 +382,6 @@ void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
 
         std::cout << "Decision was trained " << i << std::endl;
 
-        model_->to(device_);
-
         fireListeners(2 * i + 1);
         std::cout << "========== " << i << std::endl;
 
@@ -392,7 +391,6 @@ void CatBoostNN::train(TensorPairDataset& ds, const LossPtr& loss) {
 
 
 void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
-    model_->to(device_);
     auto representationsModel = model_->conv();
     auto decisionModel = model_->classifier();
     representationsModel->train(false);
@@ -407,12 +405,12 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
 
     auto mds = ds.map(reprTransform_);
     auto dloader = torch::data::make_data_loader(mds, torch::data::DataLoaderOptions(256));
-    auto device = representationsModel->parameters().data()->device();
     std::vector<torch::Tensor> reprList;
     std::vector<torch::Tensor> targetsList;
 
     for (auto& batch : *dloader) {
-        auto res = representationsModel->forward(batch.data.to(device)).to(torch::kCPU);
+        auto data = experiments::correctDevice(batch.data, representationsModel);
+        auto res = representationsModel->forward(data);
         auto target = batch.target;
         reprList.push_back(res);
         targetsList.push_back(target);
@@ -430,8 +428,6 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
 }
 
 void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
-    model_->to(device_);
-
     auto representationsModel = model_->conv();
     representationsModel->train(true);
     auto decisionModel = model_->classifier();
@@ -481,7 +477,6 @@ void CatBoostNN::initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss) {
     if (initClassifier_) {
         auto model = std::make_shared<ConvModel>(model_->conv(), initClassifier_);
         model->train(true);
-        model->to(device_);
         LossPtr representationLoss = makeRepresentationLoss(initClassifier_, loss);
         auto representationOptimizer = getReprOptimizer(model_->conv());
         representationOptimizer->train(ds, representationLoss, model_->conv());

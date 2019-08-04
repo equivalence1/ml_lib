@@ -243,7 +243,7 @@ void ExpProbMonom::Backward(double lambda, ConstVecRef<float> features, ConstVec
 
     double derMultiplier = 0;
     for (size_t dim = 0; dim < Values_.size(); ++dim) {
-        derMultiplier += Values_[dim] * outputsDer[dim];
+        derMultiplier += 1e5 * Values_[dim] * outputsDer[dim];
     }
 
     double totalLogProb = 0;

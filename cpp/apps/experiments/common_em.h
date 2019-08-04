@@ -34,8 +34,7 @@ public:
             : EMLikeTrainer(getDefaultCifar10TrainTransform(),
                     CommonEmOptions(params[NIterationsKey]).globalIterationsCount,
                     std::move(model))
-            , opts_(params[NIterationsKey])
-            , device_(getDevice(params[DeviceKey])) {
+            , opts_(params[NIterationsKey]) {
         convParams_[DeviceKey] = params[DeviceKey];
         convParams_[ModelCheckpointFileKey] =
                 "conv_" + (std::string)params[ModelCheckpointFileKey];
@@ -54,7 +53,7 @@ protected:
         auto transform = getDefaultCifar10TrainTransform();
         using TransT = decltype(transform);
 
-        experiments::OptimizerArgs<TransT> args(transform, opts_.representationsIterations, device_);
+        experiments::OptimizerArgs<TransT> args(transform, opts_.representationsIterations);
 
         torch::optim::AdamOptions opt(0.0005);
 //        opt.weight_decay_ = 5e-4;
@@ -77,7 +76,7 @@ protected:
         auto transform = torch::data::transforms::Stack<>();
         using TransT = decltype(transform);
 
-        experiments::OptimizerArgs<TransT> args(transform, opts_.decisionIterations, device_);
+        experiments::OptimizerArgs<TransT> args(transform, opts_.decisionIterations);
 
         torch::optim::AdamOptions opt(0.0005);
 //        opt.weight_decay_ = 5e-4;
@@ -98,7 +97,6 @@ protected:
 
 private:
     CommonEmOptions opts_;
-    torch::DeviceType device_;
     json convParams_;
     json decisionParams_;
 
@@ -115,6 +113,7 @@ public:
 
     torch::Tensor forward(torch::Tensor x) override {
         x = x.view({x.size(0), -1});
+        x = experiments::correctDevice(x, *this);
         return linear_->forward(x);
     }
 

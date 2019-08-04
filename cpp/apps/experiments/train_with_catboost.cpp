@@ -23,8 +23,6 @@ int main(int argc, const char* argv[]) {
     auto paramsFolder = getParamsFolder(argc, argv);
     auto params = readJson(paramsFolder + "train_with_caboost_params.json");
 
-    auto device = getDevice(params[DeviceKey]);
-
     const json& convParams = params[ModelKey][ConvKey];
     const json& classParams = params[ModelKey][ClassifierKey];
 
@@ -32,13 +30,11 @@ int main(int argc, const char* argv[]) {
     auto classifier = createClassifier(2, classParams);
 
     auto model = std::make_shared<ConvModel>(conv, classifier);
-    model->to(device);
 
     torch::setNumThreads(16);
 
     CatBoostNN nnTrainer(params,
-                         model,
-                         device);
+                         model);
 //                         createClassifier(2, classParams));
 
     // Read dataset
@@ -50,7 +46,7 @@ int main(int argc, const char* argv[]) {
     auto mds = dataset.second.map(getDefaultCifar10TestTransform());
     nnTrainer.registerGlobalIterationListener([&](uint32_t epoch, ModelPtr model) {
         // TODO params might have changed
-        AccuracyCalcer<decltype(mds)>(device, params, mds, nnTrainer)(epoch, model);
+        AccuracyCalcer<decltype(mds)>(params, mds, nnTrainer)(epoch, model);
     });
 
 
@@ -75,7 +71,6 @@ int main(int argc, const char* argv[]) {
 
     auto acc = evalModelTestAccEval(dataset.second,
                                     model,
-                                    device,
                                     getDefaultCifar10TestTransform());
 
     std::cout << "Test accuracy: " << std::setprecision(2)

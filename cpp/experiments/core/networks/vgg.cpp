@@ -58,6 +58,7 @@ Vgg16Conv::Vgg16Conv() {
 }
 
 torch::Tensor Vgg16Conv::forward(torch::Tensor x) {
+    x = correctDevice(x, *this);
     for (const auto &l : layers_) {
         x = l(x);
     }

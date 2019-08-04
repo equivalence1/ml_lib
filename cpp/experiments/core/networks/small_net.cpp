@@ -17,6 +17,7 @@ SmallNetConv::SmallNetConv() {
 }
 
 torch::Tensor SmallNetConv::forward(torch::Tensor x) {
+    x = correctDevice(x, *this);
     // 3 * 32 * 32
     x = torch::relu(conv1_->forward(x));
     // 8 * 32 * 32

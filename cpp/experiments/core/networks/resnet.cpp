@@ -40,6 +40,7 @@ BasicBlock::BasicBlock(int inChannels, int outChannels, int stride) {
 }
 
 torch::Tensor BasicBlock::forward(torch::Tensor x) {
+    x = correctDevice(x, *this);
     auto out = torch::relu(bn1_->forward(conv1_->forward(x)));
     out = bn2_->forward(conv2_->forward(out));
     if (!shortcut_.is_empty()) {
@@ -81,6 +82,7 @@ ResNetConv::ResNetConv(std::vector<int> numBlocks,
 }
 
 torch::Tensor ResNetConv::forward(torch::Tensor x) {
+    x = correctDevice(x, *this);
     x = torch::relu(bn1_->forward(conv1_->forward(x)));
     for (const auto &block : blocks_) {
         x = block->forward(x);

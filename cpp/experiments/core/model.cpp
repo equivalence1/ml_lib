@@ -26,6 +26,7 @@ MLP::MLP(const std::vector<int>& sizes) {
 }
 
 torch::Tensor MLP::forward(torch::Tensor x) {
+    x = correctDevice(x, *this);
     for (int i = 0; i < (int)layers_.size(); ++i) {
         x = layers_[i]->forward(x);
         if (i != (int)layers_.size() - 1) {
@@ -40,6 +41,7 @@ LinearCifarClassifier::LinearCifarClassifier(int dim) {
 }
 
 torch::Tensor LinearCifarClassifier::forward(torch::Tensor x) {
+    x = correctDevice(x, *this);
     return fc1_->forward(x.view({x.size(0), -1}));
 }
 
@@ -48,12 +50,16 @@ SigmoidLinearCifarClassifier::SigmoidLinearCifarClassifier(int dim) {
 }
 
 torch::Tensor SigmoidLinearCifarClassifier::forward(torch::Tensor x) {
+    x = correctDevice(x, *this);
     return fc1_->forward(torch::sigmoid(x.view({x.size(0), -1})));
 }
 
 torch::Tensor experiments::ConvModel::forward(torch::Tensor x) {
     x = conv()->forward(x);
-    return classifier()->forward(x);
+    std::cout << "ConvModel, conv device: " << x.device() << std::endl;
+    x = classifier()->forward(x);
+    std::cout << "ConvModel, classifier device: " << x.device() << std::endl;
+    return x;
 }
 
 void experiments::ConvModel::train(bool on) {
@@ -77,7 +83,7 @@ ZeroClassifier::ZeroClassifier(int numClasses)
 }
 
 torch::Tensor ZeroClassifier::forward(torch::Tensor x) {
-    return torch::zeros({x.size(0), numClasses_}, torch::kFloat32).to(x.device());
+    return torch::zeros({x.size(0), numClasses_}, torch::kFloat32).to(this->parameters().data()->device());
 }
 
 Bias::Bias(int dim) {
@@ -86,7 +92,7 @@ Bias::Bias(int dim) {
 
 torch::Tensor Bias::forward(torch::Tensor x) {
     torch::TensorOptions options;
-    options = options.device(x.device());
+    options = options.device(bias_.device());
     options = options.dtype(torch::kFloat32);
     torch::Tensor result = torch::zeros({x.size(0), bias_.size(0)}, options);
     result += bias_;
@@ -95,7 +101,7 @@ torch::Tensor Bias::forward(torch::Tensor x) {
 
 // Utils
 
-ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params) {
+static ModelPtr _createConvLayers(const std::vector<int>& inputShape, const json& params) {
     std::string modelName = params[ModelArchKey];
 
     if (modelName == "LeNet") {
@@ -112,6 +118,27 @@ ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params
 
     std::string errMsg("Unsupported model architecture");
     throw std::runtime_error(errMsg + " " + modelName);
+}
+
+// TODO move it somewhere
+static torch::Device getDevice(const std::string& device) {
+    auto ls = splitByDelim(device, ':');
+    if (ls[0] == "GPU") {
+        if (ls.size() > 1) {
+            return torch::Device(torch::kCUDA, std::stoi(ls[1]));
+        } else {
+            return torch::kCUDA;
+        }
+    } else {
+        return torch::kCPU;
+    }
+}
+
+ModelPtr createConvLayers(const std::vector<int>& inputShape, const json& params) {
+    auto model = _createConvLayers(inputShape, params);
+    auto device = getDevice(params[DeviceKey]);
+    model->to(device);
+    return model;
 }
 
 static ModelPtr _createClassifier(int numClasses, const json& params) {
@@ -143,12 +170,16 @@ ClassifierPtr createClassifier(int numClasses, const json& params) {
 
     if (params.count(ClassifierMainKey)) {
         mainClassifier = _createClassifier(numClasses, params[ClassifierMainKey]);
+        auto device = getDevice(params[ClassifierMainKey][DeviceKey]);
+        mainClassifier->to(device);
     } else {
         mainClassifier = std::make_shared<ZeroClassifier>(numClasses);
     }
 
     if (params.count(ClassifierBaselineKey)) {
         baselineClassifier = _createClassifier(numClasses, params[ClassifierBaselineKey]);
+        auto device = getDevice(params[ClassifierBaselineKey][DeviceKey]);
+        baselineClassifier->to(device);
     }
 
     if (baselineClassifier.get() != nullptr) {

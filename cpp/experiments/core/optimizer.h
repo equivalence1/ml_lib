@@ -181,11 +181,9 @@ using OptimizerPtr = std::shared_ptr<Optimizer>;
 template <typename TransformType>
 struct OptimizerArgs {
     explicit OptimizerArgs(TransformType transform,
-            int epochs = 10,
-            torch::DeviceType device = torch::kCPU)
+            int epochs = 10)
             : transform_(std::move(transform))
-            , epochs_(epochs)
-            , device_(device) {
+            , epochs_(epochs) {
 
     }
 
@@ -197,8 +195,6 @@ struct OptimizerArgs {
     std::function<double*(void)> lrPtrGetter_;
 
     int epochs_ = -1;
-
-    torch::DeviceType device_ = torch::kCPU;
 };
 
 // DefaultOptimizer
@@ -221,9 +217,7 @@ public:
             int batchId = 0;
             for (auto& batch : *dloader) {
                 auto data = batch.data;
-                data = data.to(args_.device_);
                 auto target = batch.target;
-                target = target.to(args_.device_);
 
                 model->train(true);
                 args_.torchOptim_->zero_grad();

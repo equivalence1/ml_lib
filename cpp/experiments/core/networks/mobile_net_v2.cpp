@@ -60,6 +60,7 @@ BasicBlock::BasicBlock(int inChannels, int outChannels, int expansion, int strid
 }
 
 torch::Tensor BasicBlock::forward(torch::Tensor x) {
+    x = correctDevice(x, *this);
     auto out = torch::relu(bn1_->forward(conv1_->forward(x)));
     out = torch::relu(bn2_->forward(conv2_->forward(out)));
     out = bn3_->forward(conv3_->forward(out));
@@ -110,6 +111,7 @@ MobileNetV2Conv::MobileNetV2Conv() {
 }
 
 torch::Tensor MobileNetV2Conv::forward(torch::Tensor x) {
+    x = correctDevice(x, *this);
     x = torch::relu(bn1_->forward(conv1_->forward(x)));
     for (auto &block : blocks_) {
         x = block->forward(x);
