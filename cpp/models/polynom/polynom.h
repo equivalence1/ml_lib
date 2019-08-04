@@ -147,6 +147,8 @@ public:
     virtual void Forward(double lambda, ConstVecRef<float> features, VecRef<float> dst) const = 0;
     virtual void Backward(double lambda, ConstVecRef<float> features, ConstVecRef<float> outputsDer, VecRef<float> featuresDer) const = 0;
 
+    virtual MonomType getMonomType() const = 0;
+
     static MonomType getMonomType(const std::string& strMonomType);
 
     static MonomPtr createMonom(MonomType monomType);
@@ -168,6 +170,8 @@ public:
 
     }
 
+    Monom::MonomType getMonomType() const override;
+
     void Forward(double lambda, ConstVecRef<float> features, VecRef<float> dst) const override;
     void Backward(double lambda, ConstVecRef<float> features, ConstVecRef<float> outputsDer, VecRef<float> featuresDer) const override;
 };
@@ -180,6 +184,8 @@ public:
             : Monom(std::move(structure), std::move(values)) {
 
     }
+
+    Monom::MonomType getMonomType() const override;
 
     void Forward(double lambda, ConstVecRef<float> features, VecRef<float> dst) const override;
     void Backward(double lambda, ConstVecRef<float> features, ConstVecRef<float> outputsDer, VecRef<float> featuresDer) const override;
@@ -198,6 +204,8 @@ struct Polynom {
     Polynom() = default;
 
     void PrintHistogram();
+
+    Monom::MonomType getMonomType() const;
 
     //forward/backward will append to dst
     void Forward(ConstVecRef<float> features, VecRef<float> dst) const;

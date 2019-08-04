@@ -3,6 +3,7 @@
 #include <core/buffer.h>
 #include <util/singleton.h>
 #include <ostream>
+#include <stdexcept>
 
 using namespace std;
 namespace {
@@ -88,20 +89,38 @@ torch::Tensor PolynomCuda::Forward(torch::Tensor batch) const {
 
     auto transposed = batch.transpose(0, 1).contiguous();
 
-
-    PolynomForward(Polynom_->Lambda_,
-            transposed.data<float>(),
-            fCount,
-            batchSize,
-            Features.data<int>(),
-            Conditions.data<float>(),
-            PolynomOffsets.data<int>(),
-            PolynomValues.data<float>(),
-            polynomCount,
-            outDim,
-            probs.data<float>(),
-            result.data<float>()
+    if (Polynom_->getMonomType() == Monom::MonomType::SigmoidProbMonom) {
+        SigmoidProbPolynomForward(Polynom_->Lambda_,
+                       transposed.data<float>(),
+                       fCount,
+                       batchSize,
+                       Features.data<int>(),
+                       Conditions.data<float>(),
+                       PolynomOffsets.data<int>(),
+                       PolynomValues.data<float>(),
+                       polynomCount,
+                       outDim,
+                       probs.data<float>(),
+                       result.data<float>()
         );
+    } else if (Polynom_->getMonomType() == Monom::MonomType::ExpProbMonom) {
+        ExpProbPolynomForward(Polynom_->Lambda_,
+                                  transposed.data<float>(),
+                                  fCount,
+                                  batchSize,
+                                  Features.data<int>(),
+                                  Conditions.data<float>(),
+                                  PolynomOffsets.data<int>(),
+                                  PolynomValues.data<float>(),
+                                  polynomCount,
+                                  outDim,
+                                  probs.data<float>(),
+                                  result.data<float>()
+        );
+    } else {
+        throw std::runtime_error("Unsupported monom type");
+    }
+
     return result.transpose(0, 1).contiguous();
 
 }
@@ -120,19 +139,38 @@ torch::Tensor PolynomCuda::Backward(torch::Tensor batch,
     VERIFY(outDim == outputDer.size(1), "error: out dim should be equal to polynom out dim");
     torch::Tensor result = torch::zeros({batchSize, fCount},
         TorchHelpers::tensorOptionsOnDevice(ComputeDeviceType::Gpu));
-    PolynomBackward(
-        batchSize,
-        Polynom_->Lambda_,
-        batch.data<float>(),
-        fCount,
-        outputDer.data<float>(),
-        outDim,
-        Features.data<int>(),
-        Conditions.data<float>(),
-        PolynomValues.data<float>(),
-        PolynomOffsets.data<int>(),
-        polynomCount,
-        result.data<float>());
+
+    if (Polynom_->getMonomType() == Monom::MonomType::SigmoidProbMonom) {
+        SigmoidProbPolynomBackward(
+                batchSize,
+                Polynom_->Lambda_,
+                batch.data<float>(),
+                fCount,
+                outputDer.data<float>(),
+                outDim,
+                Features.data<int>(),
+                Conditions.data<float>(),
+                PolynomValues.data<float>(),
+                PolynomOffsets.data<int>(),
+                polynomCount,
+                result.data<float>());
+    } else if (Polynom_->getMonomType() == Monom::MonomType::ExpProbMonom) {
+        ExpProbPolynomBackward(
+                batchSize,
+                Polynom_->Lambda_,
+                batch.data<float>(),
+                fCount,
+                outputDer.data<float>(),
+                outDim,
+                Features.data<int>(),
+                Conditions.data<float>(),
+                PolynomValues.data<float>(),
+                PolynomOffsets.data<int>(),
+                polynomCount,
+                result.data<float>());
+    } else {
+        throw std::runtime_error("Unsupported monom type");
+    }
 
     Singleton<PolynomForwardBackwardLog>().invokeBackward(batch, result);
 

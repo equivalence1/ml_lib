@@ -22,7 +22,7 @@ enable_cxx17(polynom)
 
 if (LINK_CUDA_POLYNOM)
     find_package(CUDA 10.0 REQUIRED)
-    find_library(soft_polynom soft_polynom)
+    find_library(soft_polynom soft_polynom PATHS /home/dskravchenko NO_DEFAULT_PATH)
     if (NOT soft_polynom)
         message(FATAL_ERROR "soft_polynom is not found")
     else()

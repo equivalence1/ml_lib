@@ -141,6 +141,10 @@ MonomPtr Monom::createMonom(Monom::MonomType monomType, PolynomStructure structu
     }
 }
 
+Monom::MonomType SigmoidProbMonom::getMonomType() const {
+    return Monom::MonomType::SigmoidProbMonom;
+}
+
 void SigmoidProbMonom::Forward(double lambda, ConstVecRef<float> features, VecRef<float> dst) const {
 //    bool allTrue = true;
 //    for (const auto& split : Structure_.Splits) {
@@ -210,6 +214,10 @@ void SigmoidProbMonom::Backward(double lambda,
   }
 }
 
+Monom::MonomType ExpProbMonom::getMonomType() const {
+    return Monom::MonomType::ExpProbMonom;
+}
+
 void ExpProbMonom::Forward(double lambda, ConstVecRef<float> features, VecRef<float> dst) const {
     double trueLogProb = 0;
     bool zeroProb = false;
@@ -269,6 +277,10 @@ void ExpProbMonom::Backward(double lambda, ConstVecRef<float> features, ConstVec
             featuresDer[split.Feature] += monomDer * derMultiplier;
         }
     }
+}
+
+Monom::MonomType Polynom::getMonomType() const {
+    return Ensemble_.front()->getMonomType();
 }
 
 void Polynom::Forward(ConstVecRef<float> features,

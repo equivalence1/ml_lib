@@ -8,7 +8,7 @@
       "main": {
         "model_arch": "Polynom",
         "lambda": 1.0,
-        "monom_type": "SigmoidProbMonom",
+        "monom_type": "ExpProbMonom",
         "device": "GPU"
       }
     }
@@ -31,7 +31,7 @@
   "catboost_params": {
     "init_params": {
       "boosting_type": "Plain",
-      "iterations" : 100,
+      "iterations" : 1000,
       "depth" : 10,
       "devices": "0",
       "task_type": "GPU",
