@@ -23,6 +23,10 @@ int main(int argc, const char* argv[]) {
     auto paramsFolder = getParamsFolder(argc, argv);
     auto params = readJson(paramsFolder + "train_with_caboost_params.json");
 
+    std::cout << "Running with parameters: {{{" << std::endl;
+    std::cout << params.dump(4) << std::endl;
+    std::cout << "}}}\n\n\n" << std::endl;
+
     const json& convParams = params[ModelKey][ConvKey];
     const json& classParams = params[ModelKey][ClassifierKey];
 
