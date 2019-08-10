@@ -69,6 +69,7 @@ torch::Tensor experiments::Classifier::forward(torch::Tensor x) {
     x = x.view({x.size(0), -1});
     auto result = classifier_->forward(x);
     if (baseline_) {
+        result = correctDevice(result, baseline_->device());
         result *= classifierScale_;
         result += baseline_->forward(x);
     }

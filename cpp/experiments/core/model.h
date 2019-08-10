@@ -54,7 +54,8 @@ public:
     explicit Classifier(ModelPtr classifier, ModelPtr baseline) {
         classifier_ = register_module("classifier_", std::move(classifier));
         baseline_ = register_module("baseline_", std::move(baseline));
-        classifierScale_ = register_parameter("scale_", torch::ones({1}, torch::kFloat32));
+        classifierScale_ = torch::ones({1}, torch::kFloat32).to(baseline_->device());
+        classifierScale_ = register_parameter("scale_", classifierScale_);
     }
 
     virtual ModelPtr classifier() {
