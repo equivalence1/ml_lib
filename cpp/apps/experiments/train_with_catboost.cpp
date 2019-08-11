@@ -18,7 +18,7 @@
 int main(int argc, const char* argv[]) {
     using namespace experiments;
 
-    // Init model
+    // Load params
 
     auto paramsFolder = getParamsFolder(argc, argv);
     auto params = readJson(paramsFolder + "train_with_caboost_params.json");
@@ -26,6 +26,12 @@ int main(int argc, const char* argv[]) {
     std::cout << "Running with parameters: {{{" << std::endl;
     std::cout << params.dump(4) << std::endl;
     std::cout << "}}}\n\n\n" << std::endl;
+
+    // Read dataset
+
+    auto dataset = readDataset(params[DatasetKey]);
+
+    // Init model
 
     const json& convParams = params[ModelKey][ConvKey];
     const json& classParams = params[ModelKey][ClassifierKey];
@@ -38,12 +44,9 @@ int main(int argc, const char* argv[]) {
     torch::setNumThreads(16);
 
     CatBoostNN nnTrainer(params,
-                         model);
+                         model,
+                         dataset.second);
 //                         createClassifier(2, classParams));
-
-    // Read dataset
-
-    auto dataset = readDataset(params[DatasetKey]);
 
     // Attach Listener
 

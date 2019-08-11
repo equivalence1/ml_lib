@@ -121,6 +121,10 @@ public:
 
     virtual void train(TensorPairDataset& ds, LossPtr loss, ModelPtr model) const = 0;
 
+    virtual void train(TensorPairDataset &trainDs, TensorPairDataset &validationDs, LossPtr loss, ModelPtr model) const {
+        throw std::runtime_error("Not implemented");
+    }
+
     void train(torch::Tensor& x, torch::Tensor& y, LossPtr loss, ModelPtr model) const {
         TensorPairDataset ds(x, y);
         this->train(ds, std::move(loss), std::move(model));

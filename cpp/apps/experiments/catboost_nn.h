@@ -19,10 +19,12 @@ public:
 
     CatBoostNN(json opts,
         ConvModelPtr model,
+        TensorPairDataset validationDs,
         experiments::ClassifierPtr init = nullptr)
             : EMLikeTrainer(getDefaultCifar10TrainTransform(), opts[NIterationsKey][0], model)
             , opts_(std::move(opts))
-            , initClassifier_(init) {
+            , initClassifier_(init)
+            , validationDs_(std::move(validationDs)) {
 
     }
 
@@ -49,9 +51,9 @@ public:
 
     void setLambda(double lambda);
 
-    experiments::ModelPtr trainFinalDecision(const TensorPairDataset& learn, const TensorPairDataset& test);
+    experiments::ModelPtr trainFinalDecision(TensorPairDataset& learn, const TensorPairDataset& test);
 
-    void train(TensorPairDataset& ds, const LossPtr& loss) override;
+    void train(TensorPairDataset& trainDs, const LossPtr& loss) override;
 
     experiments::ModelPtr getTrainedModel(TensorPairDataset& ds, const LossPtr& loss) override;
 
@@ -59,6 +61,7 @@ protected:
     void trainDecision(TensorPairDataset& ds, const LossPtr& loss);
     void trainRepr(TensorPairDataset& ds, const LossPtr& loss);
     void initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss);
+    TensorPairDataset getRepr(TensorPairDataset &ds, const experiments::ModelPtr& reprModel);
 
 protected:
     experiments::OptimizerPtr getReprOptimizer(const experiments::ModelPtr& reprModel) override;
@@ -76,6 +79,7 @@ private:
     double lr_ = 0;
     double lambdaMult_ = 1.0;
     int iter_ = 1;
+    TensorPairDataset validationDs_;
 };
 
 

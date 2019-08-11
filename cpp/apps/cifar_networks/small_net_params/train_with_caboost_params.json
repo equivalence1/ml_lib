@@ -2,13 +2,18 @@
   "model": {
     "conv": {
       "model_arch": "SmallNet",
-      "device": "GPU:1"
+      "device": "GPU"
     },
     "classifier": {
       "main": {
         "model_arch": "Polynom",
         "lambda": 1.0,
         "monom_type": "ExpProbMonom",
+        "device": "GPU"
+      },
+      "baseline": {
+        "model_arch": "MLP",
+        "dims": [512, 2],
         "device": "GPU"
       }
     }
@@ -17,7 +22,7 @@
   "checkpoint_file": "small_net_catboost_checkpoint.pt",
   "batch_size": 128,
   "reports_per_epoch": 10,
-  "n_iterations": [20, 5, 1],
+  "n_iterations": [10, 5, 1],
   "sgd_step": 0.1,
   "dropout": 0.0,
 
@@ -31,7 +36,7 @@
   "catboost_params": {
     "init_params": {
       "boosting_type": "Plain",
-      "iterations" : 1000,
+      "iterations" : 300,
       "depth" : 10,
       "devices": "0",
       "task_type": "GPU",
@@ -39,7 +44,7 @@
       "eval_metric": "Accuracy",
       "od_type": "IncToDec",
       "loss_function": "MultiClass",
-      "learning_rate" : 0.00001,
+      "learning_rate" : 0.01,
       "use_best_model": false,
       "feature_border_type": "Uniform",
       "rsm": 0.25,
@@ -89,19 +94,19 @@
     {
       "field": "catboost_params.intermediate_params.learning_rate",
       "type": "double",
-      "values": [0.0001, 0.001, 0.01, 0.02],
-      "iters": [0, 3, 6, 9]
+      "values": [0.003, 0.01],
+      "iters": [0, 5]
     },
     {
       "field": "catboost_params.intermediate_params.iterations",
       "type": "int",
-      "values": [1000, 500, 300, 200],
-      "iters": [0, 3, 6, 9]
+      "values": [700, 500],
+      "iters": [0, 5]
     },
     {
       "field": "catboost_params.intermediate_params.depth",
       "type": "int",
-      "values": [6, 9, 8, 7, 6],
+      "values": [6, 6, 6, 6, 6],
       "iters": [0, 2, 4, 6, 8]
     }
   ]
