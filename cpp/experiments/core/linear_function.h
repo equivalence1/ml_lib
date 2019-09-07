@@ -9,11 +9,11 @@
 
 #include <iostream>
 
-class LinearFunctionBackward : public torch::autograd::Function {
+class LinearFunctionBackward : public torch::autograd::Node {
 public:
     LinearFunctionBackward(torch::Tensor x, torch::Tensor w,
                            torch::autograd::edge_list&& next_edges)
-            : torch::autograd::Function(std::move(next_edges))
+            : torch::autograd::Node(std::move(next_edges))
             , x_(std::move(x))
             , w_(std::move(w)) {
 
@@ -33,7 +33,7 @@ private:
 
 namespace E = Eigen;
 
-class LinearFunction : public torch::autograd::Function {
+class LinearFunction : public torch::autograd::Node {
 public:
     LinearFunction() = default;
 

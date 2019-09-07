@@ -16,11 +16,11 @@
 #include <vec_tools/fill.h>
 
 
-class ObliviousTreeFunctionBackward : public torch::autograd::Function {
+class ObliviousTreeFunctionBackward : public torch::autograd::Node {
 public:
     ObliviousTreeFunctionBackward(torch::Tensor x, ModelPtr& tree,
                            torch::autograd::edge_list&& next_edges)
-            : torch::autograd::Function(std::move(next_edges))
+            : torch::autograd::Node(std::move(next_edges))
             , x_(std::move(x))
             , tree_(tree) {
 
@@ -49,7 +49,7 @@ private:
     ModelPtr tree_;
 };
 
-class ObliviousTreeFunction : public torch::autograd::Function {
+class ObliviousTreeFunction : public torch::autograd::Node {
 public:
 
     ObliviousTreeFunction(ModelPtr& tree)
