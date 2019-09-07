@@ -73,6 +73,10 @@ public:
         }
     }
 
+    virtual void enableScaleTrain(bool flag) {
+        classifierScale_.set_requires_grad(flag);
+    }
+
     torch::Tensor forward(torch::Tensor x) override;
 
 private:

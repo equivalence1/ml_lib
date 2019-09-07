@@ -394,6 +394,9 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
     auto decisionModel = model_->classifier();
     representationsModel->train(false);
 
+
+    model_->classifier()->enableScaleTrain(trainScale_);
+
     if (model_->classifier()->baseline()) {
         model_->classifier()->enableBaselineTrain(false);
     }
