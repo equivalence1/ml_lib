@@ -49,6 +49,11 @@ public:
 
     explicit Classifier(ModelPtr classifier) {
         classifier_ = register_module("classifier_", std::move(classifier));
+        torch::TensorOptions opts;
+        opts = opts.dtype(torch::kFloat32);
+        opts = opts.requires_grad(true);
+//        classifierScale_ = torch::ones({1}, opts).to(baseline_->device());
+        classifierScale_ = register_parameter("scale_", torch::ones({1}, opts).to(classifier_->device()));
     }
 
     explicit Classifier(ModelPtr classifier, ModelPtr baseline) {
@@ -79,6 +84,12 @@ public:
         classifierScale_.set_requires_grad(flag);
     }
 
+
+    void printScale() {
+        const at::Tensor &onCpu = classifierScale_.clone().to(torch::kCPU);
+        auto accessor = onCpu.accessor<float, 1>();
+        std::cout << "classifier scale = " << accessor.data()[0] << std::endl;
+    }
     torch::Tensor forward(torch::Tensor x) override;
 
 private:
