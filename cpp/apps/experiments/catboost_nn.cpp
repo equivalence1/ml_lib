@@ -142,8 +142,8 @@ namespace {
 
             auto trainBaseline = maybeMakeBaseline(trainDs.data().reshape({nTrainRows, -1}), classifier);
             auto validationBaseline = maybeMakeBaseline(validationDs.data().reshape({nValidationRows, -1}), classifier);
-            auto trainBaselineDim = trainBaseline.size(0);
-            auto validationBaselineDim = validationBaseline.size(0);
+            auto trainBaselineDim = (!trainBaseline.sizes().empty()) ? trainBaseline.size(0) : 0;
+            auto validationBaselineDim = (!validationBaseline.sizes().empty()) ? validationBaseline.size(0) : 0;
 
             auto trainTargets = trainDs.targets().to(torch::kCPU, torch::kFloat32).contiguous();
             auto validationTargets = validationDs.targets().to(torch::kCPU, torch::kFloat32).contiguous();
@@ -167,7 +167,7 @@ namespace {
                     trainData.data<float>(),
                     trainTargets.data<float>(),
                     nullptr,
-                    trainBaseline.size(0) != 0 ? trainBaseline.data<float>() : nullptr,
+                    trainBaselineDim != 0 ? trainBaseline.data<float>() : nullptr,
                     trainBaselineDim);
             TDataSet validationPool = MakePool(
                     featuresCount,
@@ -175,7 +175,7 @@ namespace {
                     validationData.data<float>(),
                     validationTargets.data<float>(),
                     nullptr,
-                    validationBaseline.size(0) != 0 ? validationBaseline.data<float>() : nullptr,
+                    validationBaselineDim != 0 ? validationBaseline.data<float>() : nullptr,
                     validationBaselineDim);
 
             std::cout << "Training catboost with options: " << catBoostOptions_ << std::endl;
