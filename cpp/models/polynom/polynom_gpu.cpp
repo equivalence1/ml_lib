@@ -4,6 +4,8 @@
 #include <util/singleton.h>
 #include <ostream>
 #include <stdexcept>
+#include <cuda_runtime.h>
+#include <stdexcept>
 
 using namespace std;
 namespace {
@@ -89,6 +91,10 @@ torch::Tensor PolynomCuda::Forward(torch::Tensor batch) const {
 
     auto transposed = batch.transpose(0, 1).contiguous();
 
+    cudaError_t errorCode = cudaGetLastError();
+    if (errorCode != cudaSuccess && errorCode != cudaErrorCudartUnloading) {
+        throw std::runtime_error("CUDA error " + std::to_string((int)errorCode) + ": " + cudaGetErrorString(errorCode));
+    }
     if (Polynom_->getMonomType() == Monom::MonomType::SigmoidProbMonom) {
         SigmoidProbPolynomForward(Polynom_->Lambda_,
                        transposed.data<float>(),
@@ -120,6 +126,10 @@ torch::Tensor PolynomCuda::Forward(torch::Tensor batch) const {
     } else {
         throw std::runtime_error("Unsupported monom type");
     }
+    errorCode = cudaGetLastError();
+    if (errorCode != cudaSuccess && errorCode != cudaErrorCudartUnloading) {
+        throw std::runtime_error("CUDA error " + std::to_string((int)errorCode) + ": " + cudaGetErrorString(errorCode));
+    }
 
     return result.transpose(0, 1).contiguous();
 
@@ -140,6 +150,10 @@ torch::Tensor PolynomCuda::Backward(torch::Tensor batch,
     torch::Tensor result = torch::zeros({batchSize, fCount},
         TorchHelpers::tensorOptionsOnDevice(ComputeDeviceType::Gpu));
 
+    cudaError_t errorCode = cudaGetLastError();
+    if (errorCode != cudaSuccess && errorCode != cudaErrorCudartUnloading) {
+        throw std::runtime_error("CUDA error " + std::to_string((int)errorCode) + ": " + cudaGetErrorString(errorCode));
+    }
     if (Polynom_->getMonomType() == Monom::MonomType::SigmoidProbMonom) {
         SigmoidProbPolynomBackward(
                 batchSize,
@@ -170,6 +184,10 @@ torch::Tensor PolynomCuda::Backward(torch::Tensor batch,
                 result.data<float>());
     } else {
         throw std::runtime_error("Unsupported monom type");
+    }
+    errorCode = cudaGetLastError();
+    if (errorCode != cudaSuccess && errorCode != cudaErrorCudartUnloading) {
+        throw std::runtime_error("CUDA error " + std::to_string((int)errorCode) + ": " + cudaGetErrorString(errorCode));
     }
 
     Singleton<PolynomForwardBackwardLog>().invokeBackward(batch, result);
