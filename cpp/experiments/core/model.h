@@ -69,7 +69,6 @@ public:
     virtual void enableBaselineTrain(bool flag) {
         if (baseline_) {
             baseline_->train(flag);
-            classifierScale_.set_requires_grad(flag);
         }
     }
 
