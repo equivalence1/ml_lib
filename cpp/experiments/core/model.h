@@ -54,7 +54,10 @@ public:
     explicit Classifier(ModelPtr classifier, ModelPtr baseline) {
         classifier_ = register_module("classifier_", std::move(classifier));
         baseline_ = register_module("baseline_", std::move(baseline));
-        classifierScale_ = torch::ones({1}, torch::kFloat32).to(baseline_->device());
+        torch::TensorOptions opts;
+        opts.dtype(torch::kFloat32);
+        opts.requires_grad(true);
+        classifierScale_ = torch::ones({1}, opts).to(baseline_->device());
         classifierScale_ = register_parameter("scale_", classifierScale_);
     }
 

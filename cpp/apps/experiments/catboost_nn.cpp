@@ -395,11 +395,11 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
     representationsModel->train(false);
 
 
-    model_->classifier()->enableScaleTrain(trainScale_);
 
     if (model_->classifier()->baseline()) {
         model_->classifier()->enableBaselineTrain(false);
     }
+    model_->classifier()->enableScaleTrain(trainScale_);
     model_->classifier()->classifier()->train(true);
 
     std::cout << "    getting representations" << std::endl;
