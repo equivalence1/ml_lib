@@ -415,23 +415,56 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
 
 void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
     auto representationsModel = model_->conv();
+    representationsModel->train(false);
+    auto reprData = getRepr(ds, representationsModel).data();
     representationsModel->train(true);
     auto decisionModel = model_->classifier();
     decisionModel->train(false);
     if (decisionModel->baseline()) {
         decisionModel->enableBaselineTrain(true);
     }
-    decisionModel->enableScaleTrain(true);
+    const torch::Tensor h_x = decisionModel->forward(reprData.slice(0, 0, 1024));
+    const at::TensorAccessor<float, 2> &h_x_accessor = h_x.accessor<float, 2>();
+    const at::TensorAccessor<int64_t, 1> &target_accessor = ((const torch::Tensor)ds.targets()).accessor<int64_t, 1>();
+    double scale = 1;
+    for (int it = 0; it < 1000; it++) {
+        double dT_dalpha = 0;
+        for (int64_t i = 0; i < h_x.dim(); i++) {
+            double p = 1./(1. + exp(-h_x_accessor[i][0]));
+            if (target_accessor[i] > 0)
+                dT_dalpha += (1 - p) * h_x_accessor[i][0];
+            else
+                dT_dalpha += - p * h_x_accessor[i][0];
+        }
+        const double step = 0.001;
+        scale += step * dT_dalpha;
+    }
+    double originalScore = 0;
+    double scaledScore = 0;
+    for (int64_t i = 0; i < h_x.dim(); i++) {
+        double pOrig = 1./(1. + exp(-h_x_accessor[i][0]));
+        double pScaled = 1./(1. + exp(-scale * h_x_accessor[i][0]));
+        if (target_accessor[i] > 0) {
+            originalScore += log(pOrig);
+            scaledScore += log(pScaled);
+        }
+        else {
+            originalScore += log(1 - pOrig);
+            scaledScore += log(1 - pScaled);
+        }
+    }
+    std::cout << "Scaled score: " << scaledScore << " original score: " << originalScore << std::endl;
+//    decisionModel->enableScaleTrain(true);
 
     std::cout << "    optimizing representation model" << std::endl;
-    decisionModel->printScale();
+//    decisionModel->printScale();
 
     LossPtr representationLoss = makeRepresentationLoss(decisionModel, loss);
     auto representationOptimizer = getReprOptimizer(model_);
 
     representationOptimizer->train(ds, representationLoss, representationsModel);
-    decisionModel->printScale();
-    decisionModel->enableScaleTrain(false);
+//    decisionModel->printScale();
+//    decisionModel->enableScaleTrain(false);
 }
 experiments::ModelPtr CatBoostNN::trainFinalDecision(TensorPairDataset& learn, const TensorPairDataset& test) {
     throw std::runtime_error("TODO");
