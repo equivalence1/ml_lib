@@ -423,7 +423,7 @@ void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
     if (decisionModel->baseline()) {
         decisionModel->enableBaselineTrain(true);
     }
-    const torch::Tensor h_x = decisionModel->forward(reprData.slice(0, 0, 1024));
+    const torch::Tensor h_x = decisionModel->forward(reprData.slice(0, 0, 1024)).to(torch::kCPU).contiguous();
     const at::TensorAccessor<float, 2> &h_x_accessor = h_x.accessor<float, 2>();
     const at::TensorAccessor<int64_t, 1> &target_accessor = ((const torch::Tensor)ds.targets()).accessor<int64_t, 1>();
     double scale = 1;
@@ -453,7 +453,8 @@ void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
             scaledScore += log(1 - pScaled);
         }
     }
-    std::cout << "Scaled score: " << scaledScore << " original score: " << originalScore << std::endl;
+    std::cout << "Scaled score: " << scaledScore << ", original score: " << originalScore
+            << ", scale: " << scale << std::endl;
 //    decisionModel->enableScaleTrain(true);
 
     std::cout << "    optimizing representation model" << std::endl;
