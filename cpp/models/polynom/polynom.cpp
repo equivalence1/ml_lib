@@ -100,7 +100,7 @@ void PolynomBuilder::AddTree(const TSymmetricTree& tree)  {
         if (dst.Weight < 0) {
             dst.Weight = weights[i];
         } else {
-            VERIFY(dst.Weight == weights[i], "Weight for fixed path should be equal for all polynoms");
+//            VERIFY(dst.Weight == weights[i], "Weight for fixed path should be equal for all polynoms");
         }
         dst.Value.resize(tree.OutputDim());
         for (uint32_t dim = 0; dim < tree.OutputDim(); ++dim) {

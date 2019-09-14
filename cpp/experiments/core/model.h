@@ -51,7 +51,7 @@ public:
         classifier_ = register_module("classifier_", std::move(classifier));
         torch::TensorOptions opts;
         opts = opts.dtype(torch::kFloat32);
-        opts = opts.requires_grad(true);
+//        opts = opts.requires_grad(true);
         opts = opts.device(classifier_->device());
         classifierScale_ = register_parameter("scale_", torch::ones({1}, opts));
     }
@@ -61,7 +61,7 @@ public:
         baseline_ = register_module("baseline_", std::move(baseline));
         torch::TensorOptions opts;
         opts = opts.dtype(torch::kFloat32);
-        opts = opts.requires_grad(true);
+//        opts = opts.requires_grad(true);
         opts = opts.device(classifier_->device());
         classifierScale_ = register_parameter("scale_", torch::ones({1}, opts));
     }
@@ -78,6 +78,10 @@ public:
         if (baseline_) {
             baseline_->train(flag);
         }
+    }
+
+    virtual void setScale(double scale) {
+        classifierScale_[0] = scale;
     }
 
     virtual void enableScaleTrain(bool flag) {

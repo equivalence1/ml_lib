@@ -416,47 +416,67 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
 void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
     auto representationsModel = model_->conv();
     representationsModel->train(false);
-    auto reprData = getRepr(ds, representationsModel).data();
+    auto reprDs = getRepr(ds, representationsModel);
+    auto reprData = reprDs.data();
+    auto reprTarget = reprDs.targets().to(torch::kCPU).contiguous();
     representationsModel->train(true);
     auto decisionModel = model_->classifier();
     decisionModel->train(false);
     if (decisionModel->baseline()) {
         decisionModel->enableBaselineTrain(true);
     }
-    const torch::Tensor h_x = decisionModel->forward(reprData.slice(0, 0, 1024)).to(torch::kCPU).contiguous();
-    const at::TensorAccessor<float, 2> &h_x_accessor = h_x.accessor<float, 2>();
-    const at::TensorAccessor<int64_t, 1> &target_accessor = ((const torch::Tensor)ds.targets()).accessor<int64_t, 1>();
+    std::vector<torch::Tensor> stack;
+    for (int64_t offset = 0; offset < reprTarget.size(0); offset += 1024) {
+       stack.push_back(decisionModel->forward(reprData.slice(0, offset, std::min(offset + 1024, reprData.size(0)))).to(torch::kCPU).contiguous());
+    }
+    const at::Tensor &tensor = torch::cat(stack, 0);
+    const at::TensorAccessor<float, 2> &h_x_accessor = tensor.accessor<float, 2>();
+    const at::TensorAccessor<int64_t, 1> &target_accessor = reprTarget.accessor<int64_t, 1>();
+
     double scale = 1;
-    for (int it = 0; it < 1000; it++) {
-        double dT_dalpha = 0;
-        for (int64_t i = 0; i < h_x.dim(); i++) {
-            double p = 1./(1. + exp(-h_x_accessor[i][0]));
-            if (target_accessor[i] > 0)
-                dT_dalpha += (1 - p) * h_x_accessor[i][0];
-            else
-                dT_dalpha += - p * h_x_accessor[i][0];
-        }
-        const double step = 0.001;
-        scale += step * dT_dalpha;
-    }
-    double originalScore = 0;
-    double scaledScore = 0;
-    for (int64_t i = 0; i < h_x.dim(); i++) {
-        double pOrig = 1./(1. + exp(-h_x_accessor[i][0]));
-        double pScaled = 1./(1. + exp(-scale * h_x_accessor[i][0]));
-        if (target_accessor[i] > 0) {
-            originalScore += log(pOrig);
-            scaledScore += log(pScaled);
-        }
-        else {
-            originalScore += log(1 - pOrig);
-            scaledScore += log(1 - pScaled);
+    {
+        const double step = 1;
+        for (int it = 0; it < 10; it++) {
+            double dT_dalpha = 0;
+            double dT_dalpha2 = 0;
+            for (int64_t i = 0; i < h_x_accessor.size(0); i++) {
+                double p = 1. / (1. + exp(scale * h_x_accessor[i][0]));
+                if (target_accessor[i] > 0)
+                    dT_dalpha += -(1 - p) * h_x_accessor[i][0];
+                else
+                    dT_dalpha += p * h_x_accessor[i][0];
+                dT_dalpha2 += p * (1 - p) * h_x_accessor[i][0] * h_x_accessor[i][0];
+            }
+            std::cout << dT_dalpha << " " << dT_dalpha2 << " ";
+            scale +=  dT_dalpha / dT_dalpha2;
+            std::cout << scale << std::endl;
         }
     }
-    std::cout << "Scaled score: " << scaledScore << ", original score: " << originalScore
-            << ", scale: " << scale << std::endl;
+    {
+        double originalScore = 0;
+        double scaledScore = 0;
+        int positive = 0;
+        int negative = 0;
+        for (int64_t i = 0; i < h_x_accessor.size(0); i++) {
+            double pOrig = 1. / (1. + exp(h_x_accessor[i][0]));
+            double pScaled = 1. / (1. + exp(scale * h_x_accessor[i][0]));
+            if (target_accessor[i] > 0) {
+                originalScore += log(pOrig);
+                scaledScore += log(pScaled);
+                positive++;
+            } else {
+                originalScore += log(1 - pOrig);
+                scaledScore += log(1 - pScaled);
+                negative++;
+            }
+        }
+        std::cout << "Scaled score: " << scaledScore << ", original score: " << originalScore
+                  << ", scale: " << scale << " positive: " << positive << " negative: " << negative << std::endl;
+    }
 //    decisionModel->enableScaleTrain(true);
 
+    decisionModel->setScale(scale);
+    decisionModel->printScale();
     std::cout << "    optimizing representation model" << std::endl;
 //    decisionModel->printScale();
 
@@ -464,8 +484,6 @@ void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
     auto representationOptimizer = getReprOptimizer(model_);
 
     representationOptimizer->train(ds, representationLoss, representationsModel);
-//    decisionModel->printScale();
-//    decisionModel->enableScaleTrain(false);
 }
 experiments::ModelPtr CatBoostNN::trainFinalDecision(TensorPairDataset& learn, const TensorPairDataset& test) {
     throw std::runtime_error("TODO");

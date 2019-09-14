@@ -32,7 +32,28 @@
     "auto_train_scale": true,
     "init_params": {
       "boosting_type": "Plain",
-      "iterations" : 300,
+      "iterations" : 3000,
+      "depth" : 1,
+      "devices": "0",
+      "task_type": "GPU",
+      "gpu_ram_part": 0.5,
+      "eval_metric": "Accuracy",
+      "od_type": "IncToDec",
+      "loss_function": "MultiClass",
+      "learning_rate" : 0.00001,
+      "use_best_model": false,
+      "feature_border_type": "Uniform",
+      "rsm": 0.05,
+      "random_strength": 1,
+      "bootstrap_type": "Bernoulli",
+      "subsample": 0.01,
+      "leaf_estimation_method": "Simple",
+      "logging_level" : "Debug",
+      "metric_period": 100
+    },
+    "intermediate_params": {
+      "boosting_type": "Plain",
+      "iterations" : 3000,
       "depth" : 6,
       "devices": "0",
       "task_type": "GPU",
@@ -40,30 +61,15 @@
       "eval_metric": "Accuracy",
       "od_type": "IncToDec",
       "loss_function": "MultiClass",
-      "learning_rate" : 0.001,
+      "learning_rate" : 0.00001,
       "use_best_model": false,
       "feature_border_type": "Uniform",
-      "rsm": 0.15,
-      "logging_level" : "Debug",
+      "rsm": 0.05,
       "random_strength": 1,
-      "bootstrap_type": "Bernoulli"
-    },
-    "intermediate_params": {
-      "boosting_type": "Plain",
-      "iterations" : 300,
-      "task_type": "GPU",
-      "devices": "0",
-      "depth" : 6,
-      "gpu_ram_part": 0.75,
-      "od_type": "IncToDec",
-      "logging_level" : "Verbose",
-      "loss_function": "MultiClass",
-      "learning_rate" : 0.07,
-      "feature_border_type": "Uniform",
-      "rsm": 0.1,
-      "use_best_model": false,
-      "random_strength": 1,
-      "bootstrap_type": "Bernoulli"
+      "bootstrap_type": "Bernoulli",
+      "subsample": 0.1,
+      "leaf_estimation_method": "Simple",
+      "metric_period": 100
     },
     "final_params": {
       "boosting_type": "Plain",
@@ -92,19 +98,19 @@
     {
       "field": "catboost_params.intermediate_params.learning_rate",
       "type": "double",
-      "values": [0.003, 0.01],
+      "values": [0.00001, 0.0001],
       "iters": [0, 5]
     },
     {
       "field": "catboost_params.intermediate_params.iterations",
       "type": "int",
-      "values": [700, 500],
+      "values": [3000, 5000],
       "iters": [0, 5]
     },
     {
       "field": "catboost_params.intermediate_params.depth",
       "type": "int",
-      "values": [6, 6, 6, 6, 6],
+      "values": [1, 1, 2, 2, 3],
       "iters": [0, 2, 4, 6, 8]
     }
   ]
