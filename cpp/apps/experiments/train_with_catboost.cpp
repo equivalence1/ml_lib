@@ -41,7 +41,7 @@ int main(int argc, const char* argv[]) {
 
     auto model = std::make_shared<ConvModel>(conv, classifier);
 
-    torch::setNumThreads(16);
+    //torch::setNumThreads(16);
 
     CatBoostNN nnTrainer(params,
                          model,

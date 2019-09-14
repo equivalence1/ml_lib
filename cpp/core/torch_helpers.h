@@ -44,7 +44,7 @@ namespace TorchHelpers {
         if (tensor.is_cuda()) {
             return ComputeDevice(ComputeDeviceType::Gpu);
         } else {
-            assert(tensor.type_id() == torch::CPUTensorId());
+            assert(tensor.type_id() == c10::TensorTypeId::CPUTensorId);
             return ComputeDevice(ComputeDeviceType::Cpu);
         }
     }

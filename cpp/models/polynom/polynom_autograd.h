@@ -11,12 +11,12 @@
 #include <util/parallel_executor.h>
 
 
-class PolynomBackward : public torch::autograd::Function {
+class PolynomBackward : public torch::autograd::Node {
 public:
     PolynomBackward(torch::Tensor samplesBatch,
                     PolynomPtr polynom,
                     torch::autograd::edge_list&& nextEdges)
-            : torch::autograd::Function(std::move(nextEdges))
+            : torch::autograd::Node(std::move(nextEdges))
             , samplesBatch_(std::move(samplesBatch))
             , polynom_(polynom) {
 
@@ -29,7 +29,7 @@ private:
     PolynomPtr polynom_;
 };
 
-class PolynomForward : public torch::autograd::Function {
+class PolynomForward : public torch::autograd::Node {
 public:
 
     PolynomForward(PolynomPtr polynom)
@@ -44,12 +44,12 @@ private:
 };
 
 
-class PolynomBackwardCuda : public torch::autograd::Function {
+class PolynomBackwardCuda : public torch::autograd::Node {
 public:
     PolynomBackwardCuda(torch::Tensor samplesBatch,
                     PolynomCudaPtr polynom,
                     torch::autograd::edge_list&& nextEdges)
-        : torch::autograd::Function(std::move(nextEdges))
+        : torch::autograd::Node(std::move(nextEdges))
           , samplesBatch_(std::move(samplesBatch))
           , polynom_(polynom) {
 
@@ -62,7 +62,7 @@ private:
     PolynomCudaPtr polynom_;
 };
 
-class PolynomForwardCuda : public torch::autograd::Function {
+class PolynomForwardCuda : public torch::autograd::Node {
 public:
 
     explicit PolynomForwardCuda(PolynomCudaPtr polynom)

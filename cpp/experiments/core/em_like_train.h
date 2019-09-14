@@ -56,6 +56,7 @@ public:
             std::cout << "    optimizing representation model" << std::endl;
 
             LossPtr representationLoss = makeRepresentationLoss(decisionModel, loss);
+	    std::cout << representationLoss->value(repr, targets) << std::endl;
             auto representationOptimizer = getReprOptimizer(representationsModel);
             representationOptimizer->train(ds, representationLoss, representationsModel);
 
