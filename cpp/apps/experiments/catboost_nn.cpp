@@ -421,14 +421,17 @@ void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
     if (decisionModel->baseline()) {
         decisionModel->enableBaselineTrain(true);
     }
+    decisionModel->enableScaleTrain(true);
 
     std::cout << "    optimizing representation model" << std::endl;
+    decisionModel->printScale();
 
     LossPtr representationLoss = makeRepresentationLoss(decisionModel, loss);
     auto representationOptimizer = getReprOptimizer(model_);
 
     representationOptimizer->train(ds, representationLoss, representationsModel);
-
+    decisionModel->printScale();
+    decisionModel->enableScaleTrain(false);
 }
 experiments::ModelPtr CatBoostNN::trainFinalDecision(TensorPairDataset& learn, const TensorPairDataset& test) {
     throw std::runtime_error("TODO");

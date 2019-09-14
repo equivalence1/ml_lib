@@ -52,8 +52,8 @@ public:
         torch::TensorOptions opts;
         opts = opts.dtype(torch::kFloat32);
         opts = opts.requires_grad(true);
-//        classifierScale_ = torch::ones({1}, opts).to(baseline_->device());
-        classifierScale_ = register_parameter("scale_", torch::ones({1}, opts).to(classifier_->device()));
+        opts = opts.device(classifier_->device());
+        classifierScale_ = register_parameter("scale_", torch::ones({1}, opts));
     }
 
     explicit Classifier(ModelPtr classifier, ModelPtr baseline) {
@@ -62,8 +62,8 @@ public:
         torch::TensorOptions opts;
         opts = opts.dtype(torch::kFloat32);
         opts = opts.requires_grad(true);
-        classifierScale_ = torch::ones({1}, opts).to(baseline_->device());
-        classifierScale_ = register_parameter("scale_", classifierScale_);
+        opts = opts.device(classifier_->device());
+        classifierScale_ = register_parameter("scale_", torch::ones({1}, opts));
     }
 
     virtual ModelPtr classifier() {
@@ -86,9 +86,10 @@ public:
 
 
     void printScale() {
-        const at::Tensor &onCpu = classifierScale_.clone().to(torch::kCPU);
-        auto accessor = onCpu.accessor<float, 1>();
-        std::cout << "classifier scale = " << accessor.data()[0] << std::endl;
+        std::cout << "classifier scale = " << classifierScale_[0]
+                << ", requires_grad = " << classifierScale_.requires_grad()
+                << ", grad = " << classifierScale_.grad()
+                << ", device = " << classifierScale_.device() << std::endl;
     }
     torch::Tensor forward(torch::Tensor x) override;
 
