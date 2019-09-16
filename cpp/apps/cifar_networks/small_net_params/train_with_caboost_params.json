@@ -8,7 +8,7 @@
       "main": {
         "model_arch": "Polynom",
         "lambda": 1.0,
-        "monom_type": "ExpProbMonom",
+        "monom_type": "SigmoidProbMonom",
         "device": "GPU"
       }
     }
@@ -92,7 +92,7 @@
     {
       "field": "sgd_step",
       "type": "double",
-      "values": [0.01, 0.004, 0.001],
+      "values": [0.01, 0.01, 0.001],
       "iters": [0, 3, 7]
     },
     {
@@ -110,7 +110,7 @@
     {
       "field": "catboost_params.intermediate_params.depth",
       "type": "int",
-      "values": [1, 1, 2, 2, 3],
+      "values": [1, 2, 3, 4, 5],
       "iters": [0, 2, 4, 6, 8]
     }
   ]

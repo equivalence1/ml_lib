@@ -425,6 +425,7 @@ void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
     if (decisionModel->baseline()) {
         decisionModel->enableBaselineTrain(true);
     }
+    decisionModel->setScale(1);
     std::vector<torch::Tensor> stack;
     for (int64_t offset = 0; offset < reprTarget.size(0); offset += 1024) {
        stack.push_back(decisionModel->forward(reprData.slice(0, offset, std::min(offset + 1024, reprData.size(0)))).to(torch::kCPU).contiguous());
