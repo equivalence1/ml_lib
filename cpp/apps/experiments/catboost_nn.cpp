@@ -12,6 +12,7 @@
 #include <random>
 #include <stdexcept>
 #include <memory>
+#include <algorithm>
 
 experiments::ModelPtr CatBoostNN::getTrainedModel(TensorPairDataset& ds, const LossPtr& loss) {
     train(ds, loss);
@@ -198,7 +199,7 @@ namespace {
                 }
             }
             std::cout << "Polynom used features: " << featureIds.size() << std::endl;
-            for (int k = 0; k < fCount; ++k) {
+            for (int k = 0; k <= fCount; ++k) {
                 std::cout << featureIds[k] / total << " ";
             }
             std::cout << std::endl << "===============" << std::endl;
@@ -206,7 +207,7 @@ namespace {
             polynom->PrintHistogram();
             std::cout << std::endl << "===============" << std::endl;
 
-
+//            exit(1);
             polynomModel->reset(polynom);
         }
 
@@ -389,12 +390,67 @@ TensorPairDataset CatBoostNN::getRepr(TensorPairDataset &ds, const experiments::
     return {repr, targets};
 }
 
+static void setLastBias(experiments::ModelPtr model_, TensorPairDataset &ds) {
+    auto data = ds.data().view({ds.data().size(0), -1}).t().to(torch::kCPU).contiguous();
+    auto dataAccessor = data.accessor<float, 2>();
+
+    torch::Tensor biases = torch::zeros({data.size(0)}, torch::kFloat32);
+    auto biasesAccessor = biases.accessor<float, 1>();
+
+    for (int f = 0; f < data.size(0); f++) {
+        std::vector<float> values;
+        for (int i = 0; i < data.size(1); i++) {
+            values.push_back(dataAccessor[f][i]);
+        }
+        std::sort(values.begin(), values.end());
+        int n = values.size();
+        float bias = 0;
+        if (n % 2 == 1) {
+            bias = values[n / 2];
+        } else {
+            bias = (values[n / 2 - 1] + values[n / 2]) / 2;
+        }
+        biasesAccessor[f] = -bias;
+    }
+
+    std::cout << "bias computed" << std::endl;
+
+    model_->setLastBias(biases);
+}
+
+static void reprPrintStats(TensorPairDataset &ds) {
+    auto data = ds.data().view({ds.data().size(0), -1}).to(torch::kCPU).contiguous();
+
+    auto dataAccessor = data.accessor<float, 2>();
+
+    struct counts {
+        int neg;
+        int zero;
+        int pos;
+    };
+
+    std::cout << "repr stats:" << std::endl;
+    for (int f = 0; f < data.size(1); f++) {
+        counts cnt = {0, 0, 0};
+        for (int i = 0; i < data.size(0); i++) {
+            if (dataAccessor[i][f] < 0) {
+                cnt.neg++;
+            } else if (dataAccessor[i][f] < 1e-9) {
+                cnt.zero++;
+            } else {
+                cnt.pos++;
+            }
+        }
+        std::cout << f << ": (< 0) " << cnt.neg << ", (= 0) " << cnt.zero << ", (> 0)" << cnt.pos << std::endl;
+    }
+}
+
 void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
     auto representationsModel = model_->conv();
     auto decisionModel = model_->classifier();
     representationsModel->train(false);
 
-
+    static bool needBias = true;
 
     if (model_->classifier()->baseline()) {
         model_->classifier()->enableBaselineTrain(false);
@@ -404,8 +460,19 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
 
     std::cout << "    getting representations" << std::endl;
 
+    representationsModel->lastNonlinearity(false);
     auto trainDsRepr = getRepr(ds, representationsModel);
+    if (needBias) {
+        std::cout << "\n\n Setting Bias \n\n" << std::endl;
+        setLastBias(representationsModel, trainDsRepr);
+        trainDsRepr = getRepr(ds, representationsModel);
+        needBias = false;
+    }
+//    representationsModel->lastNonlinearity(true);
     auto validationDsRepr = getRepr(validationDs_, representationsModel);
+
+//    reprPrintStats(trainDsRepr);
+//    reprPrintStats(validationDsRepr);
 
     std::cout << "    optimizing decision model" << std::endl;
 

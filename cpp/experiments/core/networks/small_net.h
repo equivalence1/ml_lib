@@ -19,6 +19,7 @@ private:
     torch::nn::Conv2d conv2_{nullptr};
     torch::nn::Conv2d conv3_{nullptr};
     torch::nn::Conv2d conv4_{nullptr};
+//    torch::nn::BatchNorm bn_{nullptr};
 //    torch::nn::Linear l_{nullptr};
 };
 

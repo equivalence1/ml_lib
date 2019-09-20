@@ -18,6 +18,8 @@
 int main(int argc, const char* argv[]) {
     using namespace experiments;
 
+    torch::manual_seed(0);
+
     // Load params
 
     auto paramsFolder = getParamsFolder(argc, argv);

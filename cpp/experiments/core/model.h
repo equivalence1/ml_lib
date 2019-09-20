@@ -20,9 +20,20 @@ public:
         // device of those models which don't have real parameters
         dummy_ = torch::zeros({});
         dummy_ = register_parameter("dummy", dummy_, false);
+        lastNonlinearity_ = true;
+        lastBias_ = torch::zeros({});
+        lastBias_ = register_parameter("lastBias", lastBias_, false);
     }
 
     virtual torch::Tensor  forward(torch::Tensor x) = 0;
+
+    virtual void lastNonlinearity(bool on) {
+        lastNonlinearity_ = on;
+    }
+
+    void setLastBias(torch::Tensor b) {
+        lastBias_ = b.to(dummy_.device());
+    }
 
     torch::Device device() const {
         return this->parameters().data()->device();
@@ -38,6 +49,10 @@ public:
 
 private:
     torch::Tensor dummy_;
+
+protected:
+    bool lastNonlinearity_;
+    torch::Tensor lastBias_;
 };
 
 using ModelPtr = std::shared_ptr<Model>;
