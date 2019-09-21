@@ -53,6 +53,8 @@ public:
 
     void setLambda(double lambda);
 
+    void setScale(TensorPairDataset &ds);
+
     experiments::ModelPtr trainFinalDecision(TensorPairDataset& learn, const TensorPairDataset& test);
 
     void train(TensorPairDataset& trainDs, const LossPtr& loss) override;

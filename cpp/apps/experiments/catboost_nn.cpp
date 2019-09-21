@@ -467,12 +467,9 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
         setLastBias(representationsModel, trainDsRepr);
         trainDsRepr = getRepr(ds, representationsModel);
         needBias = false;
+        reprPrintStats(trainDsRepr);
     }
-//    representationsModel->lastNonlinearity(true);
     auto validationDsRepr = getRepr(validationDs_, representationsModel);
-
-//    reprPrintStats(trainDsRepr);
-//    reprPrintStats(validationDsRepr);
 
     std::cout << "    optimizing decision model" << std::endl;
 
@@ -480,22 +477,18 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
     decisionFuncOptimizer->train(trainDsRepr, validationDsRepr, loss, model_);
 }
 
-void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
+void CatBoostNN::setScale(TensorPairDataset &ds) {
     auto representationsModel = model_->conv();
+    auto decisionModel = model_->classifier();
+
     representationsModel->train(false);
     auto reprDs = getRepr(ds, representationsModel);
     auto reprData = reprDs.data();
     auto reprTarget = reprDs.targets().to(torch::kCPU).contiguous();
-    representationsModel->train(true);
-    auto decisionModel = model_->classifier();
-    decisionModel->train(false);
-    if (decisionModel->baseline()) {
-        decisionModel->enableBaselineTrain(true);
-    }
-    decisionModel->setScale(1);
+
     std::vector<torch::Tensor> stack;
     for (int64_t offset = 0; offset < reprTarget.size(0); offset += 1024) {
-       stack.push_back(decisionModel->forward(reprData.slice(0, offset, std::min(offset + 1024, reprData.size(0)))).to(torch::kCPU).contiguous());
+        stack.push_back(decisionModel->forward(reprData.slice(0, offset, std::min(offset + 1024, reprData.size(0)))).to(torch::kCPU).contiguous());
     }
     const at::Tensor &tensor = torch::cat(stack, 0);
     const at::TensorAccessor<float, 2> &h_x_accessor = tensor.accessor<float, 2>();
@@ -503,51 +496,82 @@ void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
 
     double scale = 1;
     {
+        double p[h_x_accessor.size(1)];
         const double step = 1;
         for (int it = 0; it < 10; it++) {
-            double dT_dalpha = 0;
-            double dT_dalpha2 = 0;
+            double dJ_dalpha = 0;
+            double dJ_dalpha2 = 0;
             for (int64_t i = 0; i < h_x_accessor.size(0); i++) {
-                double p = 1. / (1. + exp(scale * h_x_accessor[i][0]));
-                if (target_accessor[i] > 0)
-                    dT_dalpha += -(1 - p) * h_x_accessor[i][0];
-                else
-                    dT_dalpha += p * h_x_accessor[i][0];
-                dT_dalpha2 += p * (1 - p) * h_x_accessor[i][0] * h_x_accessor[i][0];
+                double P = 0;
+                for (int j = 0; j < (int)h_x_accessor.size(1); j++) {
+                     P += exp(scale * h_x_accessor[i][j]);
+                }
+                for (int j = 0; j < (int)h_x_accessor.size(1); j++) {
+                    p[j] = exp(scale * h_x_accessor[i][j]) / P;
+                }
+                int yi = target_accessor[i];
+                for (int j = 0; j < (int)h_x_accessor.size(1); j++) {
+                    dJ_dalpha += (h_x_accessor[i][yi] - h_x_accessor[i][j]) * p[j];
+                }
+                double dJ_dalpha2_1 = 0;
+                double dJ_dalpha2_2 = 0;
+                double dJ_dalpha2_3 = 0;
+                for (int j = 0; j < (int)h_x_accessor.size(1); j++) {
+                    dJ_dalpha2_1 += (h_x_accessor[i][yi] - h_x_accessor[i][j]) * h_x_accessor[i][j] * p[j];
+                    dJ_dalpha2_2 += h_x_accessor[i][j] * p[j];
+                    dJ_dalpha2_3 += (h_x_accessor[i][yi] - h_x_accessor[i][j]) * p[j];
+                }
+                dJ_dalpha2 += dJ_dalpha2_1 - dJ_dalpha2_2 * dJ_dalpha2_3;
             }
-            std::cout << dT_dalpha << " " << dT_dalpha2 << " ";
-            scale +=  dT_dalpha / dT_dalpha2;
+            std::cout << dJ_dalpha << " " << dJ_dalpha2 << " ";
+            scale -= dJ_dalpha / dJ_dalpha2;
             std::cout << scale << std::endl;
         }
     }
     {
         double originalScore = 0;
         double scaledScore = 0;
-        int positive = 0;
-        int negative = 0;
+        double p_origin[h_x_accessor.size(1)];
+        double p_scaled[h_x_accessor.size(1)];
         for (int64_t i = 0; i < h_x_accessor.size(0); i++) {
-            double pOrig = 1. / (1. + exp(h_x_accessor[i][0]));
-            double pScaled = 1. / (1. + exp(scale * h_x_accessor[i][0]));
-            if (target_accessor[i] > 0) {
-                originalScore += log(pOrig);
-                scaledScore += log(pScaled);
-                positive++;
-            } else {
-                originalScore += log(1 - pOrig);
-                scaledScore += log(1 - pScaled);
-                negative++;
+            int yi = target_accessor[i];
+            double P_origin = 0;
+            double P_scaled = 0;
+            for (int j = 0; j < (int)h_x_accessor.size(1); j++) {
+                P_scaled += exp(scale * h_x_accessor[i][j]);
+                P_origin += exp(h_x_accessor[i][j]);
             }
+            for (int j = 0; j < (int)h_x_accessor.size(1); j++) {
+                p_scaled[j] = exp(scale * h_x_accessor[i][j]) / P_scaled;
+                p_origin[j] = exp(h_x_accessor[i][j]) / P_origin;
+            }
+            originalScore += log(p_origin[yi]);
+            scaledScore += log(p_scaled[yi]);
         }
         std::cout << "Scaled score: " << scaledScore << ", original score: " << originalScore
-                  << ", scale: " << scale << " positive: " << positive << " negative: " << negative << std::endl;
+                  << ", scale: " << scale << std::endl;
     }
-//    decisionModel->enableScaleTrain(true);
 
     decisionModel->setScale(scale);
     decisionModel->printScale();
+}
+
+void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
+    auto representationsModel = model_->conv();
+    auto decisionModel = model_->classifier();
+    decisionModel->train(false);
+    if (decisionModel->baseline()) {
+        decisionModel->enableBaselineTrain(true);
+    }
+
+    decisionModel->setScale(1);
+    setScale(ds);
+//    decisionModel->enableScaleTrain(true);
+
     std::cout << "    optimizing representation model" << std::endl;
 //    decisionModel->printScale();
 
+    representationsModel->train(true);
     LossPtr representationLoss = makeRepresentationLoss(decisionModel, loss);
     auto representationOptimizer = getReprOptimizer(model_);
 
