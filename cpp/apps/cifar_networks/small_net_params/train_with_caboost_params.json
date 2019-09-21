@@ -10,6 +10,11 @@
         "lambda": 1.0,
         "monom_type": "SigmoidProbMonom",
         "device": "GPU"
+      },
+      "baseline": {
+        "model_arch": "MLP",
+        "dims": [512, 2],
+        "device": "GPU"
       }
     }
   },
@@ -32,7 +37,7 @@
     "auto_train_scale": true,
     "init_params": {
       "boosting_type": "Plain",
-      "iterations" : 3000,
+      "iterations" : 100,
       "depth" : 6,
       "devices": "0",
       "task_type": "GPU",
@@ -106,12 +111,6 @@
       "type": "int",
       "values": [3000, 5000],
       "iters": [0, 5]
-    },
-    {
-      "field": "catboost_params.intermediate_params.rsm",
-      "type": "double",
-      "values": [0.01, 0.05, 0.1, 0.1],
-      "iters": [0, 2, 4, 7]
     },
     {
       "field": "catboost_params.intermediate_params.depth",

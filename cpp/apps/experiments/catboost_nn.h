@@ -85,6 +85,7 @@ private:
     int iter_ = 1;
     TensorPairDataset validationDs_;
     bool trainScale_ = false;
+    bool trainedBaseline_ = false;
 };
 
 
