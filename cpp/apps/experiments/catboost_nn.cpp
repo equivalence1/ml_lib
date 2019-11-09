@@ -91,6 +91,11 @@ static torch::Tensor maybeMakeBaseline(torch::Tensor data, const experiments::Cl
     return torch::zeros({});
 }
 
+static TensorPairDataset binarizeDs(TensorPairDataset &ds, double border) {
+    auto newData = torch::gt(ds.data(), border).to(torch::kFloat32).view({ds.data().size(0), -1});
+    return TensorPairDataset(newData, ds.targets());
+}
+
 experiments::OptimizerPtr CatBoostNN::getReprOptimizer(const experiments::ModelPtr& model) {
     auto transform = getDefaultCifar10TrainTransform();
     using TransT = decltype(transform);
@@ -120,6 +125,38 @@ experiments::OptimizerPtr CatBoostNN::getReprOptimizer(const experiments::ModelP
     return optimizer;
 }
 
+experiments::OptimizerPtr CatBoostNN::getBaselineOptimizer(const experiments::ModelPtr &model) {
+    // test transform just performs stacking
+    auto transform = getDefaultCifar10TestTransform();
+    using TransT = decltype(transform);
+
+    experiments::OptimizerArgs<TransT> args(transform, iter_);
+//
+    double lr = 0.001;
+    torch::optim::SGDOptions opt(lr);
+    opt.momentum_ = 0.9;
+//    torch::optim::AdamOptions opt(lr);
+    opt.weight_decay_ = 5e-4;
+//    auto optim = std::make_shared<torch::optim::Adam>(reprModel->parameters(), opt);
+    auto optim = std::make_shared<torch::optim::SGD>(model->parameters(), opt);
+    args.torchOptim_ = optim;
+
+    {
+        auto lr = &(optim->options.learning_rate_);
+        args.lrPtrGetter_ = [=]() { return lr; };
+    }
+
+    int batchSize = opts_[BatchSizeKey];
+    auto dloaderOptions = torch::data::DataLoaderOptions(batchSize);
+    args.dloaderOptions_ = std::move(dloaderOptions);
+
+    auto optimizer = std::make_shared<experiments::DefaultOptimizer<TransT>>(args);
+    int representationsIterations = 5;
+    int reportsPerEpoch = opts_[ReportsPerEpochKey];
+    attachReprListeners(optimizer, 50000 / batchSize / reportsPerEpoch, representationsIterations, lr, lr);
+//    attachDefaultListeners(optimizer, 50000 / batchSize / 10, "lenet_em_conv_checkpoint.pt");
+    return optimizer;
+}
 
 namespace {
 
@@ -154,8 +191,10 @@ namespace {
             auto trainData = trainDs.data().reshape({nTrainRows, -1}).to(torch::kCPU).t().contiguous();
             auto validationData = validationDs.data().reshape({nValidationRows, -1}).to(torch::kCPU).t().contiguous();
 
-            auto trainBaseline = maybeMakeBaseline(trainDs.data().reshape({nTrainRows, -1}), classifier, true);
-            auto validationBaseline = maybeMakeBaseline(validationDs.data().reshape({nValidationRows, -1}), classifier, true);
+            auto trainBaselineData = binarizeDs(trainDs, 0).data().reshape({nTrainRows, -1});
+            auto validationBaselineData = binarizeDs(validationDs, 0).data().reshape({nValidationRows, -1});
+            auto trainBaseline = maybeMakeBaseline(trainBaselineData, classifier, true);
+            auto validationBaseline = maybeMakeBaseline(validationBaselineData, classifier, true);
             auto trainBaselineDim = (!trainBaseline.sizes().empty()) ? trainBaseline.size(0) : 0;
             auto validationBaselineDim = (!validationBaseline.sizes().empty()) ? validationBaseline.size(0) : 0;
 
@@ -472,6 +511,7 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
     auto trainDsRepr = getRepr(ds, representationsModel);
     if (needBias) {
         std::cout << "\n\n Setting Bias \n\n" << std::endl;
+        reprPrintStats(trainDsRepr);
         setLastBias(representationsModel, trainDsRepr);
         trainDsRepr = getRepr(ds, representationsModel);
         needBias = false;
@@ -481,6 +521,7 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
 
     std::cout << "    optimizing decision model" << std::endl;
 
+    trainBaseline(trainDsRepr, loss);
     auto decisionFuncOptimizer = getDecisionOptimizer(decisionModel);
     decisionFuncOptimizer->train(trainDsRepr, validationDsRepr, loss, model_);
 }
@@ -488,26 +529,26 @@ void CatBoostNN::trainDecision(TensorPairDataset& ds, const LossPtr& loss) {
 void CatBoostNN::setScale(TensorPairDataset &ds) {
     auto representationsModel = model_->conv();
     auto decisionModel = model_->classifier();
-    auto classifier = decisionModel->classifier();
+//    auto classifier = decisionModel->classifier();
 
     representationsModel->train(false);
     auto reprDs = getRepr(ds, representationsModel);
     auto reprData = reprDs.data();
     auto reprTarget = reprDs.targets().to(torch::kCPU).contiguous();
 
-    auto baseline = maybeMakeBaseline(reprData, decisionModel).view({reprData.size(0), -1}).to(torch::kCPU).contiguous();
-    auto baselineAccessor = baseline.accessor<float, 2>();
+//    auto baseline = maybeMakeBaseline(reprData, decisionModel).view({reprData.size(0), -1}).to(torch::kCPU).contiguous();
 
     std::vector<torch::Tensor> stack;
     for (int64_t offset = 0; offset < reprTarget.size(0); offset += 1024) {
-        stack.push_back(classifier->forward(reprData.slice(0, offset, std::min(offset + 1024, reprData.size(0)))).to(torch::kCPU).contiguous());
+        stack.push_back(decisionModel->forward(reprData.slice(0, offset, std::min(offset + 1024, reprData.size(0)))).to(torch::kCPU).contiguous());
     }
-    const at::Tensor &tensor = torch::cat(stack, 0);
-    const at::TensorAccessor<float, 2> &h_x_accessor = tensor.accessor<float, 2>();
+    auto h_x = torch::cat(stack, 0);
+
+    const at::TensorAccessor<float, 2> &h_x_accessor = h_x.accessor<float, 2>();
     const at::TensorAccessor<int64_t, 1> &target_accessor = reprTarget.accessor<int64_t, 1>();
 
-    std::cout << "train data shape: " << tensor.sizes() << std::endl;
-    std::cout << "train baseline shape: " << baseline.sizes() << std::endl;
+    std::cout << "train data shape: " << h_x.sizes() << std::endl;
+//    std::cout << "train baseline shape: " << baseline.sizes() << std::endl;
 
     double scale = 1;
     {
@@ -518,16 +559,10 @@ void CatBoostNN::setScale(TensorPairDataset &ds) {
             for (int64_t i = 0; i < h_x_accessor.size(0); i++) {
                 double P = 0;
                 for (int j = 0; j < (int)h_x_accessor.size(1); j++) {
-                    double b = 0;
-                    if (baseline.dim() > 0)
-                        b = baselineAccessor[i][j];
-                    P += exp(scale * h_x_accessor[i][j] + b);
+                    P += exp(scale * h_x_accessor[i][j]);
                 }
                 for (int j = 0; j < (int)h_x_accessor.size(1); j++) {
-                    double b = 0;
-                    if (baseline.dim() > 0)
-                        b = baselineAccessor[i][j];
-                    p[j] = exp(scale * h_x_accessor[i][j] + b) / P;
+                    p[j] = exp(scale * h_x_accessor[i][j]) / P;
                 }
                 int yi = target_accessor[i];
                 for (int j = 0; j < (int)h_x_accessor.size(1); j++) {
@@ -558,18 +593,12 @@ void CatBoostNN::setScale(TensorPairDataset &ds) {
             double P_origin = 0;
             double P_scaled = 0;
             for (int j = 0; j < (int)h_x_accessor.size(1); j++) {
-                double b = 0;
-                if (baseline.dim() > 0)
-                    b = baselineAccessor[i][j];
-                P_scaled += exp(scale * h_x_accessor[i][j] + b);
-                P_origin += exp(h_x_accessor[i][j] + b);
+                P_scaled += exp(scale * h_x_accessor[i][j]);
+                P_origin += exp(h_x_accessor[i][j]);
             }
             for (int j = 0; j < (int)h_x_accessor.size(1); j++) {
-                double b = 0;
-                if (baseline.dim() > 0)
-                    b = baselineAccessor[i][j];
-                p_scaled[j] = exp(scale * h_x_accessor[i][j] + b) / P_scaled;
-                p_origin[j] = exp(h_x_accessor[i][j] + b) / P_origin;
+                p_scaled[j] = exp(scale * h_x_accessor[i][j]) / P_scaled;
+                p_origin[j] = exp(h_x_accessor[i][j]) / P_origin;
             }
             originalScore += log(p_origin[yi]);
             scaledScore += log(p_scaled[yi]);
@@ -582,20 +611,46 @@ void CatBoostNN::setScale(TensorPairDataset &ds) {
     decisionModel->printScale();
 }
 
+void CatBoostNN::trainBaseline(TensorPairDataset &ds, const LossPtr &loss) {
+    auto decisionModel = model_->classifier();
+    auto baselineModel = decisionModel->baseline();
+
+    if (!baselineModel) {
+        return;
+    }
+
+    model_->conv()->train(false);
+    decisionModel->classifier()->train(false);
+    baselineModel->train(true);
+
+    std::cout << "binarizing ds" << std::endl;
+    auto binarizedDs = binarizeDs(ds, 0);
+    std::cout << "binarized ds shape: " << binarizedDs.data().sizes() << std::endl;
+
+    // TODO baseline optimizer, but it uses the same for now
+    std::cout << "    training baseline" << std::endl;
+    auto optim = getBaselineOptimizer(baselineModel);
+    optim->train(binarizedDs, loss, baselineModel);
+    std::cout << "    done training baseline" << std::endl;
+}
+
 void CatBoostNN::trainRepr(TensorPairDataset& ds, const LossPtr& loss) {
     auto representationsModel = model_->conv();
     auto decisionModel = model_->classifier();
     decisionModel->train(false);
-    if (decisionModel->baseline()) {
-        decisionModel->enableBaselineTrain(true);
-    }
+//    if (decisionModel->baseline()) {
+//        decisionModel->enableBaselineTrain(true);
+//    }
 
-    if (!decisionModel->baseline() || trainedBaseline_) {
-        decisionModel->setScale(1);
-        setScale(ds);
-    } else {
-        trainedBaseline_ = true;
-    }
+    decisionModel->setScale(1);
+    setScale(ds);
+
+//    if (!decisionModel->baseline() || trainedBaseline_) {
+//        decisionModel->setScale(1);
+//        setScale(ds);
+//    } else {
+//        trainedBaseline_ = true;
+//    }
 //    decisionModel->enableScaleTrain(true);
 
     std::cout << "    optimizing representation model" << std::endl;
@@ -646,10 +701,10 @@ void CatBoostNN::initialTrainRepr(TensorPairDataset& ds, const LossPtr& loss) {
         representationOptimizer->train(ds, representationLoss, model_->conv());
     }
 
-    if (model_->classifier()->baseline()) {
-        iter_ = 1;
-        trainRepr(ds, loss);
-    }
+//    if (model_->classifier()->baseline()) {
+//        iter_ = 1;
+//        trainRepr(ds, loss);
+//    }
 
     iter_ =  opts_[NIterationsKey][1];
 }

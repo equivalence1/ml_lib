@@ -7,7 +7,7 @@
     "classifier": {
       "main": {
         "model_arch": "Polynom",
-        "lambda": 1.0,
+        "lambda": 0.1,
         "monom_type": "SigmoidProbMonom",
         "device": "GPU"
       },
@@ -37,7 +37,7 @@
     "auto_train_scale": true,
     "init_params": {
       "boosting_type": "Plain",
-      "iterations" : 100,
+      "iterations" : 1000,
       "depth" : 6,
       "devices": "0",
       "task_type": "GPU",
@@ -45,20 +45,20 @@
       "eval_metric": "Accuracy",
       "od_type": "IncToDec",
       "loss_function": "MultiClass",
-      "learning_rate" : 0.00001,
+      "learning_rate" : 0.001,
       "use_best_model": false,
       "feature_border_type": "Uniform",
-      "rsm": 0.01,
+      "rsm": 1,
       "random_strength": 1,
       "bootstrap_type": "Bernoulli",
-      "subsample": 0.01,
+      "subsample": 1,
       "leaf_estimation_method": "Simple",
       "logging_level" : "Debug",
       "metric_period": 100
     },
     "intermediate_params": {
       "boosting_type": "Plain",
-      "iterations" : 3000,
+      "iterations" : 300,
       "depth" : 6,
       "devices": "0",
       "task_type": "GPU",
@@ -66,13 +66,13 @@
       "eval_metric": "Accuracy",
       "od_type": "IncToDec",
       "loss_function": "MultiClass",
-      "learning_rate" : 0.00001,
+      "learning_rate" : 0.01,
       "use_best_model": false,
       "feature_border_type": "Uniform",
-      "rsm": 0.1,
+      "rsm": 1,
       "random_strength": 1,
       "bootstrap_type": "Bernoulli",
-      "subsample": 0.1,
+      "subsample": 1,
       "leaf_estimation_method": "Simple",
       "metric_period": 100
     },
@@ -103,13 +103,13 @@
     {
       "field": "catboost_params.intermediate_params.learning_rate",
       "type": "double",
-      "values": [0.00001, 0.0001],
+      "values": [0.0001, 0.001],
       "iters": [0, 5]
     },
     {
       "field": "catboost_params.intermediate_params.iterations",
       "type": "int",
-      "values": [3000, 5000],
+      "values": [1000, 2000],
       "iters": [0, 5]
     },
     {

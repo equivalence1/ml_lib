@@ -55,6 +55,10 @@ public:
 
     void setScale(TensorPairDataset &ds);
 
+    void trainBaseline(TensorPairDataset &ds, const LossPtr &loss);
+
+    experiments::OptimizerPtr getBaselineOptimizer(const experiments::ModelPtr& model);
+
     experiments::ModelPtr trainFinalDecision(TensorPairDataset& learn, const TensorPairDataset& test);
 
     void train(TensorPairDataset& trainDs, const LossPtr& loss) override;
