@@ -28,6 +28,7 @@
 #include <utility>
 #include <cstdint>
 #include <chrono>
+#include <stdexcept>
 
 namespace experiments::cifar10 {
 
@@ -39,7 +40,7 @@ namespace experiments::cifar10 {
     file.open(path, std::ios::in | std::ios::binary | std::ios::ate);
 
     if (!file) {
-        throw "Error opening file: " + path;
+        throw std::runtime_error("Error opening file: " + path);
     }
 
     auto file_size = file.tellg();
