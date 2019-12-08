@@ -3,8 +3,14 @@
 #include <torch/torch.h>
 #include <core/vec_factory.h>
 
+#include <stdexcept>
+
 DataSet loadFeaturesTxt(const std::string& file) {
     std::ifstream in(file);
+
+    if (!in) {
+        throw std::runtime_error("Failed to open file " + file);
+    }
 
     std::vector<float> pool;
     std::vector<float> target;

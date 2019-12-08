@@ -1,27 +1,22 @@
-#include <data/dataset.h>
 #include <data/load_data.h>
-
-#include <core/vec.h>
 
 #include <gtest/gtest.h>
 #include <data/grid_builder.h>
 #include <data/binarized_dataset.h>
 
 #define EPS 1e-5
+#define PATH_PREFIX "../../../../"
 
 //run it from root
 TEST(FeaturesTxt, TestLoad) {
-    auto ds = loadFeaturesTxt("test_data/featuresTxt/train");
+    auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
     EXPECT_EQ(ds.samplesCount(), 12465);
     EXPECT_EQ(ds.featuresCount(), 50);
 
 }
 
-
-
-//run it from root
 TEST(FeaturesTxt, TesGrid) {
-    auto ds = loadFeaturesTxt("test_data/featuresTxt/train");
+    auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
     EXPECT_EQ(ds.samplesCount(), 12465);
     EXPECT_EQ(ds.featuresCount(), 50);
 
@@ -47,10 +42,9 @@ TEST(FeaturesTxt, TesGrid) {
 
 }
 
-//run it from root
 TEST(FeaturesTxt, TesBinarize) {
     for (int32_t groupSize : {2, 4, 8, 11, 16, 32}) {
-        auto ds = loadFeaturesTxt("test_data/featuresTxt/train");
+        auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
         EXPECT_EQ(ds.samplesCount(), 12465);
         EXPECT_EQ(ds.featuresCount(), 50);
 
