@@ -1,25 +1,39 @@
 {
   "model": {
     "conv": {
-      "model_arch": "SmallNet"
+      "model_arch": "SmallNet",
+      "device": "GPU"
     },
     "classifier": {
       "main": {
         "model_arch": "MLP",
-        "dims": [512, 2]
+        "dims": [512, 2],
+        "device": "GPU"
       }
     }
   },
-  "device": "GPU",
+
   "dataset": {
     "name": "cifar-10",
     "base_classes": [0, 1, 2, 8, 9],
     "training_limit": -1,
     "test_limit": -1
   },
+
   "checkpoint_file": "small_net_checkpoint.pt",
   "batch_size": 128,
   "reports_per_epoch": 10,
   "n_iterations": 1000,
-  "step": 0.1
+  "sgd_step": 0.1,
+  "dropout": 0.0,
+  "device": "GPU",
+
+  "scheduled_param_modifiers": [
+    {
+      "field": "sgd_step",
+      "type": "double",
+      "values": [0.1, 0.01, 0.001, 0.0001],
+      "iters": [0, 10, 100, 500]
+    }
+  ]
 }

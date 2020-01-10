@@ -122,7 +122,7 @@ static ModelPtr _createConvLayers(const std::vector<int>& inputShape, const json
 }
 
 // TODO move it somewhere
-static torch::Device getDevice(const std::string& device) {
+torch::Device getDevice(const std::string& device) {
     auto ls = splitByDelim(device, ':');
     if (ls[0] == "GPU") {
         if (ls.size() > 1) {

@@ -126,10 +126,10 @@ void attachDefaultListeners(const experiments::OptimizerPtr& optimizer,
     optimizer->registerListener(epochReportOptimizerListener);
 
     // see https://github.com/kuangliu/pytorch-cifar/blob/master/README.md#learning-rate-adjustment
-    auto lrDecayListener = std::make_shared<experiments::LrDecayOptimizerListener>(reduction, threshold
-                                                                                   );
-//    auto lrDecayListener = std::make_shared<experiments::LrDecayOptimizerListener>(10,
-//                                                                                   std::vector<int>({50, 100, 150, 200}));
+//    auto lrDecayListener = std::make_shared<experiments::LrDecayOptimizerListener>(reduction, threshold
+//                                                                                   );
+    auto lrDecayListener = std::make_shared<experiments::LrDecayOptimizerListener>(10,
+                                                                                   std::vector<int>({10, 100, 200}));
     optimizer->registerListener(lrDecayListener);
 
 //    auto msListener = std::make_shared<experiments::ModelSaveOptimizerListener>(1, savePath);

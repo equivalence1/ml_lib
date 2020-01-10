@@ -252,4 +252,6 @@ inline torch::Tensor correctDevice(torch::Tensor x, const Model& to) {
     return correctDevice(std::move(x), to.device());
 }
 
+torch::Device getDevice(const std::string& deviceType);
+
 }
