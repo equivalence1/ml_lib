@@ -18,3 +18,6 @@ target_link_libraries(train_with_catboost "${TORCH_LIBRARIES}" experiments polyn
 
 add_executable(check_cuda_libtorch check_cuda_libtorch.cpp)
 target_link_libraries(check_cuda_libtorch "${TORCH_LIBRARIES}")
+
+add_executable(test_app test.cpp)
+target_link_libraries(test_app "${TORCH_LIBRARIES}" core methods data ${CATBOOST})

@@ -13,7 +13,7 @@ SmallNetConv::SmallNetConv() {
     conv2_ = register_module("conv2_", torch::nn::Conv2d(buildConvOptions( 8, 16, 3)));
     conv3_ = register_module("conv3_", torch::nn::Conv2d(buildConvOptions(16, 32, 3)));
     conv4_ = register_module("conv4_", torch::nn::Conv2d(buildConvOptions(32, 32, 3)));
-//    bn_ = register_module("bn_", torch::nn::BatchNorm(32));
+    bn_ = register_module("bn_", torch::nn::BatchNorm(32));
 //    l_ = register_module("l_", torch::nn::Linear(512, 512));
 }
 
@@ -33,10 +33,10 @@ torch::Tensor SmallNetConv::forward(torch::Tensor x) {
     x = torch::max_pool2d(x, 2, 2);
     // 32 * 4 * 4
     x = conv4_->forward(x);
-    if (lastBias_.dim() != 0) {
-        x = x.view({x.size(0), -1});
-        x += lastBias_;
-    }
+//    if (lastBias_.dim() != 0) {
+//        x = x.view({x.size(0), -1});
+//        x += lastBias_;
+//    }
 //    x = x.view({x.size(0), -1});
 //    x = l_->forward(x);
 //    x = bn_->forward(x);

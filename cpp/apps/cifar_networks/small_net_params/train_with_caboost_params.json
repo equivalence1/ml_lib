@@ -10,11 +10,6 @@
         "lambda": 0.1,
         "monom_type": "SigmoidProbMonom",
         "device": "GPU"
-      },
-      "baseline": {
-        "model_arch": "MLP",
-        "dims": [512, 2],
-        "device": "GPU"
       }
     }
   },
@@ -22,7 +17,7 @@
   "checkpoint_file": "small_net_catboost_checkpoint.pt",
   "batch_size": 128,
   "reports_per_epoch": 10,
-  "n_iterations": [10, 5, 1],
+  "n_iterations": [20, 5, 1],
   "sgd_step": 0.1,
   "dropout": 0.0,
 

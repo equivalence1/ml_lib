@@ -7,15 +7,14 @@
 #define EPS 1e-5
 #define PATH_PREFIX "../../../../"
 
-//run it from root
-TEST(FeaturesTxt, TestLoad) {
+TEST(Data, TestLoad) {
     auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
     EXPECT_EQ(ds.samplesCount(), 12465);
     EXPECT_EQ(ds.featuresCount(), 50);
 
 }
 
-TEST(FeaturesTxt, TesGrid) {
+TEST(Data, TesGrid) {
     auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
     EXPECT_EQ(ds.samplesCount(), 12465);
     EXPECT_EQ(ds.featuresCount(), 50);
@@ -42,7 +41,7 @@ TEST(FeaturesTxt, TesGrid) {
 
 }
 
-TEST(FeaturesTxt, TesBinarize) {
+TEST(Data, TestBinarize) {
     for (int32_t groupSize : {2, 4, 8, 11, 16, 32}) {
         auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
         EXPECT_EQ(ds.samplesCount(), 12465);

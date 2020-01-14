@@ -1,4 +1,7 @@
 #pragma once
+
+#include <set>
+
 #include <torch/torch.h>
 #include <core/object.h>
 #include <core/matrix.h>
@@ -37,6 +40,32 @@ public:
 
     Vec sample(int64_t line) const {
         return data_.row(line);
+    }
+
+    Vec sample(int64_t line, const std::set<int>& features) const {
+        auto x = sample(line);
+        auto x_arr = x.arrayRef();
+
+        Vec res(features.size());
+        auto res_arr = res.arrayRef();
+
+        int i = 0;
+        for (auto f : features) {
+            res_arr[i++] = x_arr[f];
+        }
+
+        return res;
+    }
+
+    Mx samplesMx() const {
+        return data_;
+    }
+
+    Mx sampleMx(const std::set<int>& features) const {
+        auto indexes = torch::tensor(std::vector<int>(features.begin(), features.end()));
+        auto resTensor = data_.data().transpose(0, 1)[indexes].transpose(0, 1).contiguous();
+        auto tmpResVec = Vec(resTensor);
+        return Mx(tmpResVec, samplesCount(), features.size());
     }
 
     Vec target() const {

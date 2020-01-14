@@ -29,6 +29,9 @@ include_directories(contrib/catboost/)
 include_directories(contrib/json)
 
 add_subdirectory(contrib/googletest)
+include_directories(contrib/googletest/include contrib/googletest)
+find_library(GTEST gtest NO_DEFAULT_PATH)
+message("gtest path: ${GTEST}")
 add_subdirectory(contrib/pybind11)
 enable_testing()
 

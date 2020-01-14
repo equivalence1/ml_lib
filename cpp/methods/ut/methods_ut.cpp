@@ -13,6 +13,7 @@
 #include <metrics/accuracy.h>
 
 #define EPS 1e-5
+#define PATH_PREFIX "../../../../"
 
 inline std::unique_ptr<GreedyObliviousTree> createWeakLearner(
     int32_t depth,
@@ -30,11 +31,10 @@ inline std::unique_ptr<EmpiricalTargetFactory>  createBootstrapWeakTarget() {
     return std::make_unique<GradientBoostingBootstrappedWeakTargetFactory>(options);
 }
 
-//run it from root
 TEST(FeaturesTxt, TestTrainMseFeaturesTxt) {
 
-    auto ds = loadFeaturesTxt("test_data/featuresTxt/train");
-    auto test = loadFeaturesTxt("test_data/featuresTxt/test");
+    auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
+    auto test = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/test");
     EXPECT_EQ(ds.samplesCount(), 12465);
     EXPECT_EQ(ds.featuresCount(), 50);
 
@@ -55,8 +55,8 @@ TEST(FeaturesTxt, TestTrainMseFeaturesTxt) {
 
 TEST(FeaturesTxt, TestTrainWithBootstrapMseFeaturesTxt) {
 
-    auto ds = loadFeaturesTxt("test_data/featuresTxt/train");
-    auto test = loadFeaturesTxt("test_data/featuresTxt/test");
+    auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
+    auto test = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/test");
     EXPECT_EQ(ds.samplesCount(), 12465);
     EXPECT_EQ(ds.featuresCount(), 50);
 
@@ -80,9 +80,9 @@ TEST(FeaturesTxt, TestTrainWithBootstrapMseFeaturesTxt) {
 
 TEST(FeaturesTxt, TestTrainWithBootstrapLogLikelihoodFeaturesTxt) {
 
-    auto ds = loadFeaturesTxt("test_data/featuresTxt/train");
+    auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
 
-    auto test = loadFeaturesTxt("test_data/featuresTxt/test");
+    auto test = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/test");
     EXPECT_EQ(ds.samplesCount(), 12465);
     EXPECT_EQ(ds.featuresCount(), 50);
 

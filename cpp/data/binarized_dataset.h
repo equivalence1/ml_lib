@@ -17,6 +17,9 @@ struct FeaturesBundle {
     };
 };
 
+class BinarizedDataSet;
+using BinarizedDataSetPtr = std::unique_ptr<BinarizedDataSet>;
+
 class BinarizedDataSet : public Object {
 public:
 
@@ -151,7 +154,8 @@ private:
         return owner_;
     }
 
-    friend std::unique_ptr<BinarizedDataSet> binarize(const DataSet& ds, GridPtr grid, int32_t maxGroupSize);
+    friend BinarizedDataSetPtr binarize(const DataSet& ds, GridPtr& grid, int32_t maxGroupSize);
+
 private:
     const DataSet& owner_;
     GridPtr grid_;
@@ -174,7 +178,7 @@ inline std::vector<FeaturesBundle> createGroups(const Grid& grid, int32_t maxGro
     return groups;
 }
 
-std::unique_ptr<BinarizedDataSet> binarize(const DataSet& ds, GridPtr grid, int32_t maxGroupSize = 16);
+BinarizedDataSetPtr binarize(const DataSet& ds, GridPtr& grid, int32_t maxGroupSize = 16);
 
 
 

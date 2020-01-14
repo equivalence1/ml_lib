@@ -59,6 +59,11 @@ public:
         return borders_[fIndex][binIndex];
     }
 
+    double condition(int64_t binIdx) const {
+        auto binFeature = this->binFeature(binIdx);
+        return condition(binFeature.featureId_, binFeature.conditionId_);
+    }
+
     ConstVecRef<Feature> nzFeatures() const {
         return ConstVecRef<Feature>(features_);
     }

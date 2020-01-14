@@ -1,7 +1,7 @@
 #include "binarized_dataset.h"
 
 
-std::unique_ptr<BinarizedDataSet> binarize(const DataSet& ds, GridPtr gridPtr, int32_t maxGroupSize) {
+BinarizedDataSetPtr binarize(const DataSet& ds, GridPtr& gridPtr, int32_t maxGroupSize) {
     const auto& grid = *gridPtr;
     std::unique_ptr<BinarizedDataSet>
         bds(new BinarizedDataSet(ds, gridPtr, ds.samplesCount(), createGroups(grid, maxGroupSize)));
