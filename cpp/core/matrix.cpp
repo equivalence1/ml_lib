@@ -45,6 +45,17 @@ Mx& Mx::operator^=(Scalar q) {
     return *this;
 }
 
+Mx operator*(const Mx& A, const Mx& B) {
+    assert(A.xdim() = B.ydim());
+
+    auto dataA = A.data().view({A.ydim(), A.xdim()});
+    auto dataB = B.data().view({B.ydim(), B.xdim()});
+    auto dataRes = torch::mm(dataA, dataB).contiguous().view({-1});
+    auto tmpResVec = Vec(dataRes);
+
+    return Mx(tmpResVec, A.ydim(), B.xdim());
+}
+
 Vec Mx::row(int64_t idx) {
     return Vec::slice(idx * xdim(), xdim());
 }

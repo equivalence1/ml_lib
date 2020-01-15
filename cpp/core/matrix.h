@@ -50,6 +50,18 @@ public:
 
     Scalar get(int64_t x, int64_t y) const;
 
+    Mx T() const {
+        auto newData = this->data().view({ydim(), xdim()}).transpose(0, 1).contiguous().view({-1});
+        auto tmpVec = Vec(newData);
+        return Mx(tmpVec, xdim(), ydim());
+    }
+
+    Mx inverse() const {
+        assert(rows_ == cols_);
+        Mx res(*this);
+        auto tensor = torch::inverse(this->data().view({rows_, cols_})).contiguous().view({-1});
+        return Mx(Vec(tensor), rows_, cols_);
+    }
 
     Mx& operator+=(const Mx& other);
     Mx& operator-=(const Mx& other);
@@ -87,3 +99,5 @@ private:
     int64_t rows_ = 0;
     int64_t cols_ = 0;
 };
+
+Mx operator*(const Mx& A, const Mx& B);
