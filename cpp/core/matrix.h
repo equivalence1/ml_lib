@@ -3,6 +3,8 @@
 #include "vec.h"
 #include "scalar.h"
 
+#include <iostream>
+
 enum class MatrixLayout {
     RowMajor
 };
@@ -101,3 +103,20 @@ private:
 };
 
 Mx operator*(const Mx& A, const Mx& B);
+Mx operator*(const Mx& A, Scalar s);
+Mx operator-(const Mx& A, const Mx& B);
+
+inline std::ostream& operator<<(std::ostream& os, const Mx& m)
+{
+    os << "[";
+    for (int i = 0; i < m.ydim(); ++i) {
+        if (i != 0)
+            os << " ";
+        for (int j = 0; j < m.xdim(); ++j) {
+            os << std::setw(5) << m.get(i, j) << " ";
+        }
+        os << "\n";
+    }
+    os << "]";
+    return os;
+}

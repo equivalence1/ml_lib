@@ -56,6 +56,18 @@ Mx operator*(const Mx& A, const Mx& B) {
     return Mx(tmpResVec, A.ydim(), B.xdim());
 }
 
+Mx operator*(const Mx& A, Scalar s) {
+    Mx B(Vec(A.copy()), A.ydim(), A.xdim());
+    B *= s;
+    return B;
+}
+
+Mx operator-(const Mx& A, const Mx& B) {
+    Mx res(Vec(A.copy()), A.ydim(), A.xdim());
+    res -= B;
+    return res;
+}
+
 Vec Mx::row(int64_t idx) {
     return Vec::slice(idx * xdim(), xdim());
 }

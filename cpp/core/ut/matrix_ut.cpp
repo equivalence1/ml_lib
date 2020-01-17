@@ -34,6 +34,19 @@ TEST(MatrixTest, Multiplication) {
     }
 }
 
+TEST(MatrixTest, MultScalar) {
+    Vec tmpA = VecFactory::fromVector({1, 2, 3, 4});
+    Mx A(tmpA, 2, 2);
+
+    Mx B = A * 2.5;
+
+    for (int i = 0; i < 2; ++i) {
+        for (int j = 0; j < 2; ++j) {
+            EXPECT_EQ(A.get(i, j) * 2.5, B.get(i, j));
+        }
+    }
+}
+
 TEST(MatrixTest, Inverse) {
     Vec tmp = VecFactory::fromVector({1, 4, 5, 3});
 
