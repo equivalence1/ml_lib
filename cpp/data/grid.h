@@ -87,6 +87,14 @@ public:
         return features_[fIndex].conditionsCount_;
     }
 
+    int32_t totalBins() const {
+        return binOffsets_.back();
+    }
+
+    ConstVecRef<int32_t> binOffsets() const {
+        return binOffsets_;
+    }
+
     void binarize(ConstVecRef<float> row, VecRef<uint8_t> dst) const;
 //
 //    void binarizeColumn(int32_t fIndex, const Vec& column, torch::Tensor* dst) const;
@@ -106,10 +114,17 @@ public:
             binFeatureOffsets_[i] = binFeatureOffsets_[i - 1] + features_[i - 1].conditionsCount_;
         }
 
+        int32_t cursor = 0;
+        for (int32_t fIndex = 0; fIndex < nzFeaturesCount(); ++fIndex) {
+            binOffsets_.push_back(cursor);
+            cursor += conditionsCount(fIndex) + 1;
+        }
+        binOffsets_.push_back(cursor);
     }
 
 private:
     int64_t fCount_;
+    std::vector<int32_t> binOffsets_;
     std::vector<BinaryFeature> binFeatures_;
     std::vector<Feature> features_;
     std::vector<std::vector<float>> borders_;

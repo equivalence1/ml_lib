@@ -34,6 +34,7 @@ public:
         : Buffer<float>(std::move(impl)) {
     }
 
+    Vec append(float val) const;
 
     void set(int64_t index, double value);
 

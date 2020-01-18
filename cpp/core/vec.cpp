@@ -16,6 +16,16 @@ int64_t Vec::dim() const {
     return TorchHelpers::totalSize(data());
 }
 
+Vec Vec::append(float val) const {
+    auto data = this->data();
+    auto valT = torch::ones({1}, torch::kFloat);
+    valT *= val;
+    auto newData = torch::cat({data, valT});
+    auto res = Vec(0);
+    res.data_ = newData;
+    return res;
+}
+
 //
 ////TODO: should be placeholder
 Vec::Vec(int64_t dim)

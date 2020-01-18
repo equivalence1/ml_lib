@@ -97,11 +97,11 @@ public:
 
 
     ConstVecRef<int32_t> binOffsets() const {
-        return binOffsets_;
+        return grid_->binOffsets();
     }
 
     int32_t totalBins() const {
-        return binOffsets_.back();
+        return grid_->totalBins();
     }
 private:
     VecRef<uint8_t> group(int64_t groupIdx) {
@@ -125,7 +125,7 @@ private:
         int64_t samplesCount,
         std::vector<FeaturesBundle>&& groups)
         : owner_(owner)
-        , grid_(grid)
+        , grid_(std::move(grid))
         , samplesCount_(samplesCount)
         , groups_(std::move(groups))
         , data_(Buffer<uint8_t>::create(samplesCount * (groups_.back().groupOffset_ + groups_.back().groupSize()))) {
@@ -140,14 +140,6 @@ private:
                 groupToFeatures[groupIdx].push_back(f);
             }
         }
-
-        int32_t cursor = 0;
-        for (int32_t fIndex = 0; fIndex < grid_->nzFeaturesCount(); ++fIndex) {
-            binOffsets_.push_back(cursor);
-            cursor += grid_->conditionsCount(fIndex) + 1;
-        }
-        binOffsets_.push_back(cursor);
-
     }
 
     const DataSet& owner() const {
@@ -164,9 +156,6 @@ private:
     std::vector<int32_t> featureToGroup_;
     std::vector<std::vector<int32_t>> groupToFeatures;
     Buffer<uint8_t> data_;
-
-    std::vector<int32_t> binOffsets_;
-
 };
 
 

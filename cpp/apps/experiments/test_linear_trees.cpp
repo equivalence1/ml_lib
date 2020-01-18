@@ -5,14 +5,14 @@
 #include <data/dataset.h>
 #include <data/grid_builder.h>
 
+#include <targets/l2.h>
+
 #include <methods/greedy_linear_oblivious_trees.h>
 
 #include <iostream>
 #include <vector>
 
-void testHistSimple() {
-    std::cout << "Hist Simple" << std::endl;
-
+DataSet simpleDs() {
     Vec dsDataVec = VecFactory::fromVector({
         0.1,   0,     0, 1.1,
         2,     0.1,   0, 1.2,
@@ -30,18 +30,25 @@ void testHistSimple() {
         -6,
         -6.8,
         -9.1,
-    });
+     });
+
+    return DataSet(Mx(dsDataVec, 7, 4), target);
+}
+
+void testHistSimple() {
+    std::cout << "\n\n======= Hist Simple\n" << std::endl;
+
+    auto ds = simpleDs();
 
     std::vector<int32_t> indices({0, 1, 2, 3, 4, 5, 6});
     std::set<int> usedFeatures({});
 
-    DataSet ds(Mx(dsDataVec, 7, 4), target);
     BinarizationConfig config;
     config.bordersCount_ = 32;
     GridPtr grid = buildGrid(ds, config);
     BinarizedDataSetPtr bds = binarize(ds, grid, 4);
 
-    Histogram h(bds);
+    Histogram h(grid);
 
     std::vector<std::vector<int>> a;
     a.resize(grid->nzFeatures().size());
@@ -60,6 +67,7 @@ void testHistSimple() {
         std::cout << std::endl;
     }
 
+    std::cout << "h.build" << std::endl;
     h.build(ds, usedFeatures, indices);
 
     double bestSplitScore = 1e9;
@@ -76,6 +84,7 @@ void testHistSimple() {
 
             auto score = sScore.first + sScore.second;
             if (score < bestSplitScore) {
+                std::cout << "new best score: " << score << ", fId: " << fId << ", cond: " << cond << std::endl;
                 bestSplitScore = score;
                 bestSplitFId = fId;
                 bestSplitCond = cond;
@@ -85,11 +94,31 @@ void testHistSimple() {
     }
 
     double border = grid->borders(bestSplitFId).at(bestSplitCond);
-    bestSplitFId = grid->nzFeatures().at(bestSplitFId).origFeatureId_;
+//    bestSplitFId = grid->nzFeatures().at(bestSplitFId).origFeatureId_;
     std::cout << "best split feature: " << bestSplitFId << ", border: "
             << std::setprecision(2) << border << ", cond id: " << bestSplitCond << std::endl;
 }
 
+void testLeafSimple() {
+    std::cout << "\n\n======= Leaf Simple\n" << std::endl;
+
+    auto ds = simpleDs();
+
+    BinarizationConfig config;
+    config.bordersCount_ = 32;
+    GridPtr grid = buildGrid(ds, config);
+
+    GreedyLinearObliviousTree g(grid, 2);
+    L2 target(ds);
+
+    g.fit(ds, target);
+
+    for (int i = 0; i < ds.samplesCount(); i++) {
+        std::cout << i << ": " << g.value(ds.sample(i)) << std::endl;
+    }
+}
+
 int main() {
     testHistSimple();
+    testLeafSimple();
 }

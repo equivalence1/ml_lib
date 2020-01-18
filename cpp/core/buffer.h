@@ -162,6 +162,6 @@ protected:
     : data_(std::move(data)) {
 
 }
-private:
+protected:
     torch::Tensor data_;
 };

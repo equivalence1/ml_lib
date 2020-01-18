@@ -11,7 +11,7 @@
 
 class Histogram {
 public:
-    explicit Histogram(BinarizedDataSetPtr& bds) : bds_(bds) {
+    explicit Histogram(GridPtr grid) : grid_(std::move(grid)) {
 
     }
 
@@ -20,13 +20,15 @@ public:
 
     std::pair<double, double> splitScore(int fId, int condId);
 
+    std::shared_ptr<Mx> getW();
+
 private:
     static double computeScore(Mx& XTX, Mx& XTy, uint32_t cnt);
 
     friend Histogram operator-(const Histogram& lhs, const Histogram& rhs);
 
 private:
-    BinarizedDataSetPtr& bds_;
+    GridPtr grid_;
 
     // (X^T * X) for bins
     std::vector<Mx> hist_XTX_;
@@ -38,50 +40,60 @@ private:
 
     std::vector<uint32_t> hist_cnt_;
     std::vector<uint32_t> histLeft_cnt_;
+
+    int usedFeature_ = -1; // any of them...
 };
 
 class LinearObliviousTreeLeaf;
 
-class GreedyLinearObliviousTree : public Optimizer
-//                                , public Stub<BinOptimizedModel, GreedyLinearObliviousTree>
-                                , std::enable_shared_from_this<GreedyLinearObliviousTree>  {
+class GreedyLinearObliviousTree final
+        : public Optimizer
+        , public Stub<Model, GreedyLinearObliviousTree>
+        , std::enable_shared_from_this<GreedyLinearObliviousTree>  {
 public:
-    explicit GreedyLinearObliviousTree(BinarizedDataSetPtr& bds, int32_t maxDepth = 6)
-            : //Stub<BinOptimizedModel, GreedyLinearObliviousTree>(bds->grid().origFeaturesCount(), 1)
-             bds_(bds)
+    explicit GreedyLinearObliviousTree(GridPtr grid, int32_t maxDepth = 6)
+            : Stub<Model, GreedyLinearObliviousTree>(grid->origFeaturesCount(), 1)
+            , grid_(std::move(grid))
             , maxDepth_(maxDepth) {
-
+        scale_ = 1;
     }
 
-//    ModelPtr fit(const DataSet& dataSet, const Target& target) override;
+    GreedyLinearObliviousTree(const GreedyLinearObliviousTree& other) = default;
+
+    GreedyLinearObliviousTree(const GreedyLinearObliviousTree& other, double scale)
+            : Stub<Model, GreedyLinearObliviousTree>(other.gridPtr()->origFeaturesCount(), 1) {
+        grid_ = other.grid_;
+        maxDepth_ = other.maxDepth_;
+        usedFeatures_ = other.usedFeatures_;
+        scale_ = scale;
+        leaves_ = other.leaves_;
+    }
+
+    ModelPtr fit(const DataSet& dataSet, const Target& target) override;
 
     Grid grid() const {
-        return bds_->grid();
+        return *grid_.get();
     }
 
     GridPtr gridPtr() const {
-        return bds_->gridPtr();
+        return grid_;
     }
 
-//    void appendTo(const Vec& x, Vec to) const override;
-//
+    void appendTo(const Vec& x, Vec to) const override;
+
 //    void applyToBds(const BinarizedDataSet& ds, Mx to, ApplyType type) const override;
-//
+
 //    void applyBinarizedRow(const Buffer<uint8_t>& x, Vec to) const;
-//
-//    double value(const Vec& x) override;
-//
-//    void grad(const Vec& x, Vec to) override;
 
-protected:
-    friend class LinearObliviousTreeLeaf;
+    double value(const Vec& x) override;
 
-    BinarizedDataSetPtr& bds_;
+    void grad(const Vec& x, Vec to) override;
 
 private:
+    GridPtr grid_;
     int32_t maxDepth_ = 6;
     std::set<int> usedFeatures_;
-    int32_t curDepth_ = 0;
+    double scale_ = 1;
 
     std::vector<std::shared_ptr<LinearObliviousTreeLeaf>> leaves_;
 };
