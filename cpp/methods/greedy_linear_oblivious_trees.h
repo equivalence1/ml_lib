@@ -46,30 +46,44 @@ private:
 
 class LinearObliviousTreeLeaf;
 
-class GreedyLinearObliviousTree final
-        : public Optimizer
-        , public Stub<Model, GreedyLinearObliviousTree>
-        , std::enable_shared_from_this<GreedyLinearObliviousTree>  {
+class GreedyLinearObliviousTreeLearner final
+        : public Optimizer {
 public:
-    explicit GreedyLinearObliviousTree(GridPtr grid, int32_t maxDepth = 6)
-            : Stub<Model, GreedyLinearObliviousTree>(grid->origFeaturesCount(), 1)
-            , grid_(std::move(grid))
+    explicit GreedyLinearObliviousTreeLearner(GridPtr grid, int32_t maxDepth = 6)
+            : grid_(std::move(grid))
             , maxDepth_(maxDepth) {
-        scale_ = 1;
     }
 
-    GreedyLinearObliviousTree(const GreedyLinearObliviousTree& other) = default;
+    GreedyLinearObliviousTreeLearner(const GreedyLinearObliviousTreeLearner& other) = default;
+
+    ModelPtr fit(const DataSet& dataSet, const Target& target) override;
+
+private:
+    GridPtr grid_;
+    int32_t maxDepth_ = 6;
+};
+
+class GreedyLinearObliviousTree final
+        : public Stub<Model, GreedyLinearObliviousTree>
+        , std::enable_shared_from_this<GreedyLinearObliviousTree> {
+public:
 
     GreedyLinearObliviousTree(const GreedyLinearObliviousTree& other, double scale)
             : Stub<Model, GreedyLinearObliviousTree>(other.gridPtr()->origFeaturesCount(), 1) {
         grid_ = other.grid_;
-        maxDepth_ = other.maxDepth_;
         usedFeatures_ = other.usedFeatures_;
         scale_ = scale;
         leaves_ = other.leaves_;
     }
 
-    ModelPtr fit(const DataSet& dataSet, const Target& target) override;
+    GreedyLinearObliviousTree(
+            GridPtr grid,
+            std::vector<std::shared_ptr<LinearObliviousTreeLeaf>> leaves)
+            : Stub<Model, GreedyLinearObliviousTree>(grid->origFeaturesCount(), 1)
+            , grid_(std::move(grid))
+            , leaves_(std::move(leaves)) {
+        scale_ = 1;
+    }
 
     Grid grid() const {
         return *grid_.get();
@@ -79,6 +93,8 @@ public:
         return grid_;
     }
 
+    // I have now idea what this function should do...
+    // For now just adding value(x) to @param to.
     void appendTo(const Vec& x, Vec to) const override;
 
 //    void applyToBds(const BinarizedDataSet& ds, Mx to, ApplyType type) const override;
@@ -90,8 +106,12 @@ public:
     void grad(const Vec& x, Vec to) override;
 
 private:
+    double value(const Vec& x) const;
+
+    friend class GreedyLinearObliviousTreeLearner;
+
+private:
     GridPtr grid_;
-    int32_t maxDepth_ = 6;
     std::set<int> usedFeatures_;
     double scale_ = 1;
 

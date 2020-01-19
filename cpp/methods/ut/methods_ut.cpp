@@ -8,6 +8,7 @@
 #include <models/oblivious_tree.h>
 #include <methods/boosting.h>
 #include <methods/greedy_oblivious_tree.h>
+#include <methods/greedy_linear_oblivious_trees.h>
 #include <methods/boosting_weak_target_factory.h>
 #include <targets/cross_entropy.h>
 #include <metrics/accuracy.h>
@@ -18,7 +19,13 @@
 inline std::unique_ptr<GreedyObliviousTree> createWeakLearner(
     int32_t depth,
     GridPtr grid) {
-    return std::make_unique<GreedyObliviousTree>(grid, depth);
+    return std::make_unique<GreedyObliviousTree>(std::move(grid), depth);
+}
+
+inline std::unique_ptr<GreedyLinearObliviousTreeLearner> createWeakLinearLearner(
+        int32_t depth,
+        GridPtr grid) {
+    return std::make_unique<GreedyLinearObliviousTreeLearner>(std::move(grid), depth);
 }
 
 inline std::unique_ptr<EmpiricalTargetFactory> createWeakTarget() {
@@ -32,7 +39,6 @@ inline std::unique_ptr<EmpiricalTargetFactory>  createBootstrapWeakTarget() {
 }
 
 TEST(FeaturesTxt, TestTrainMseFeaturesTxt) {
-
     auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
     auto test = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/test");
     EXPECT_EQ(ds.samplesCount(), 12465);
@@ -54,7 +60,6 @@ TEST(FeaturesTxt, TestTrainMseFeaturesTxt) {
 
 
 TEST(FeaturesTxt, TestTrainWithBootstrapMseFeaturesTxt) {
-
     auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
     auto test = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/test");
     EXPECT_EQ(ds.samplesCount(), 12465);
@@ -79,7 +84,6 @@ TEST(FeaturesTxt, TestTrainWithBootstrapMseFeaturesTxt) {
 
 
 TEST(FeaturesTxt, TestTrainWithBootstrapLogLikelihoodFeaturesTxt) {
-
     auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
 
     auto test = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/test");
@@ -132,4 +136,22 @@ TEST(FeaturesTxt, TestTrainMseMoscow) {
 
 }
 
+TEST(Boosting, FeaturesTxtLinearTrees) {
+    auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
+    auto test = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/test");
+    EXPECT_EQ(ds.samplesCount(), 12465);
+    EXPECT_EQ(ds.featuresCount(), 50);
 
+    BinarizationConfig config;
+    config.bordersCount_ = 32;
+    auto grid = buildGrid(ds, config);
+
+    BoostingConfig boostingConfig;
+    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(3, grid));
+
+    auto metricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
+    metricsCalcer->addMetric(L2(test), "l2");
+    boosting.addListener(metricsCalcer);
+    L2 target(ds);
+    auto ensemble = boosting.fit(ds, target);
+}

@@ -58,10 +58,11 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
     Detail::ArrayRef<const int32_t> indicesVecRef(indices.data(), indices.size());
 
     auto features = grid_->nzFeatures();
-    for (int f = 0; f < (int)features.size(); ++f) {
+    parallelFor(0, features.size(), [&](int64_t i){
+        auto f = i;
         auto newUsedFeatures = usedFeatures;
         newUsedFeatures.insert(features[f].origFeatureId_);
-        std::cout << "newUsedFeatures.size(): " << newUsedFeatures.size() << std::endl;
+//        std::cout << "newUsedFeatures.size(): " << newUsedFeatures.size() << std::endl;
         bds.visitFeature(features[f].featureId_, indicesVecRef, [&](int idxId, int8_t localBinId) {
             int offset = bds.binOffsets()[f];
             int binPos = offset + localBinId;
@@ -73,8 +74,8 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
             auto X = Mx(xb, xb.size(), 1);
             auto XT = X.T();
 
-            std::cout << "fId: " << f << ", bin: " << int(localBinId) << ", adding x " << X <<
-                     ", target " << std::setprecision(3) << y[sampleId] << std::endl;
+//            std::cout << "fId: " << f << ", bin: " << int(localBinId) << ", adding x " << X <<
+//                     ", target " << std::setprecision(3) << y[sampleId] << std::endl;
 
             auto XTX = X * XT;
             hist_XTX_[binPos] += XTX;
@@ -96,7 +97,7 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
             histLeft_XTy_[binPos] += histLeft_XTy_[binPos - 1];
             histLeft_cnt_[binPos] += histLeft_cnt_[binPos - 1];
         }
-    }
+    });
 
     std::cout << "built" << std::endl;
 }
@@ -112,16 +113,11 @@ std::shared_ptr<Mx> Histogram::getW() {
     Mx& XTX = histLeft_XTX_[lastPos];
     Mx& XTy = histLeft_XTy_[lastPos];
 
-    // -1 is because of bias
-    if (histLeft_cnt_[lastPos] <= XTX.ydim() - 1) {
-        return std::make_shared<Mx>(XTX.ydim(), XTX.xdim());
-    }
-
     try {
         XTX.inverse();
     } catch (...) {
-        std::cout << "No inverse" << std::endl;
-        return std::shared_ptr<Mx>(nullptr);
+//        std::cout << "No inverse" << std::endl;
+        return std::make_shared<Mx>((int64_t)XTX.ydim(), (int64_t)XTX.xdim());
     }
 
     return std::make_shared<Mx>(XTX.inverse() * XTy);
@@ -138,12 +134,12 @@ double Histogram::computeScore(Mx& XTX, Mx& XTy, uint32_t cnt) {
     try {
         XTX.inverse();
     } catch (...) {
-        std::cout << "No inverse" << std::endl;
+//        std::cout << "No inverse" << std::endl;
         return 0;
     }
 
     Mx w = XTX.inverse() * XTy;
-    std::cout << "w is " << w << std::endl;
+//    std::cout << "w is " << w << std::endl;
 
     Mx c1(XTy.T() * w);
     c1 *= -2;
@@ -172,7 +168,7 @@ std::pair<double, double> Histogram::splitScore(int fId, int condId) {
     uint32_t left_cnt = histLeft_cnt_[binPos];
     uint32_t right_cnt = histLeft_cnt_[lastPos] - left_cnt;
 
-    std::cout << "split fId: " << fId << ", cond: " << condId << " ";
+//    std::cout << "split fId: " << fId << ", cond: " << condId << " ";
 
     auto resLeft = computeScore(left_XTX, left_XTy, left_cnt);
     auto resRight = computeScore(right_XTX, right_XTy, right_cnt);
@@ -210,11 +206,11 @@ public:
             return;
         }
 
-        std::cout << "building hist with indices: ";
-        for (auto xId : xIds_) {
-            std::cout << xId << " ";
-        }
-        std::cout << std::endl;
+//        std::cout << "building hist with indices: ";
+//        for (auto xId : xIds_) {
+//            std::cout << xId << " ";
+//        }
+//        std::cout << std::endl;
 
         hist_ = std::make_unique<Histogram>(grid_);
         hist_->build(ds, usedFeatures_, xIds_);
@@ -286,7 +282,7 @@ private:
         int32_t origFeatureId = grid_->nzFeatures().at(fId).origFeatureId_;
         double border = grid_->borders(fId).at(condId);
 
-        std::cout << "Splitting on feature " << origFeatureId << std::endl;
+//        std::cout << "Splitting on feature " << origFeatureId << std::endl;
 
         for (auto xId : xIds_) {
             if (ds.sample(xId)(origFeatureId) <= border) {
@@ -305,10 +301,13 @@ private:
         left->splits_.emplace_back(std::make_tuple(fId, condId, true));
         right->splits_ = this->splits_;
         right->splits_.emplace_back(std::make_tuple(fId, condId, false));
+
+//        left->buildHist(ds);
+//        right->hist_ = std::make_unique<Histogram>((*hist_) - (*left->hist_));
     }
 
 private:
-    friend class GreedyLinearObliviousTree;
+    friend class GreedyLinearObliviousTreeLearner;
 
     GridPtr grid_;
     std::vector<int32_t> xIds_;
@@ -319,22 +318,23 @@ private:
     std::unique_ptr<Histogram> hist_;
 };
 
-ModelPtr GreedyLinearObliviousTree::fit(const DataSet& ds, const Target& target) {
+ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& target) {
     auto root = std::make_shared<LinearObliviousTreeLeaf>(this->grid_);
     root->xIds_.resize(ds.samplesCount());
     std::iota(root->xIds_.begin(), root->xIds_.end(), 0);
 
-    leaves_.push_back(std::move(root));
+    std::vector<std::shared_ptr<LinearObliviousTreeLeaf>> leaves;
+    leaves.push_back(std::move(root));
 
     for (int d = 0; d < maxDepth_; ++d) {
         double bestSplitScore = 1e9;
         int32_t splitFId = -1;
         int32_t splitCond = -1;
 
-        for (int fId = 0; fId < gridPtr()->nzFeatures().size(); ++fId) {
-            for (int cond = 0; cond < gridPtr()->conditionsCount(fId); ++cond) {
+        for (int fId = 0; fId < grid_->nzFeatures().size(); ++fId) {
+            for (int cond = 0; cond < grid_->conditionsCount(fId); ++cond) {
                 double splitScore = 0;
-                for (auto& l : leaves_) {
+                for (auto& l : leaves) {
                     splitScore += l->splitScore(ds, target, fId, cond);
                 }
 
@@ -347,27 +347,24 @@ ModelPtr GreedyLinearObliviousTree::fit(const DataSet& ds, const Target& target)
         }
 
         std::vector<std::shared_ptr<LinearObliviousTreeLeaf>> new_leaves;
-        for (auto& l : leaves_) {
+        for (auto& l : leaves) {
             auto nLeaves = l->split(ds, splitFId, splitCond);
             new_leaves.emplace_back(std::move(nLeaves.first));
             new_leaves.emplace_back(std::move(nLeaves.second));
         }
 
-        leaves_ = std::move(new_leaves);
+        leaves = std::move(new_leaves);
     }
 
-    for (auto& l : leaves_) {
+    for (auto& l : leaves) {
         l->fit(ds, target);
     }
 
-    return std::make_shared<GreedyLinearObliviousTree>(*this);
+    return std::make_shared<GreedyLinearObliviousTree>(grid_, std::move(leaves));
 }
 
-void GreedyLinearObliviousTree::appendTo(const Vec &x, Vec to) const {
-    throw std::runtime_error("Unimplemented");
-}
 
-double GreedyLinearObliviousTree::value(const Vec &x) {
+double GreedyLinearObliviousTree::value(const Vec& x) const {
     for (auto& l : leaves_) {
         if (l->isInRegion(x)) {
             return scale_ * l->value(x);
@@ -375,6 +372,14 @@ double GreedyLinearObliviousTree::value(const Vec &x) {
     }
 
     throw std::runtime_error("given x does not belong to any region O_o");
+}
+
+void GreedyLinearObliviousTree::appendTo(const Vec &x, Vec to) const {
+    to += static_cast<const GreedyLinearObliviousTree*>(this)->value(x);
+}
+
+double GreedyLinearObliviousTree::value(const Vec &x) {
+    return static_cast<const GreedyLinearObliviousTree*>(this)->value(x);
 }
 
 void GreedyLinearObliviousTree::grad(const Vec &x, Vec to) {
