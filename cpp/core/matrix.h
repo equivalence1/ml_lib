@@ -87,6 +87,8 @@ public:
         }
     }
 
+    void addColumn(const Vec& column);
+
     int64_t xdim() const {
         return cols_;
     }
@@ -119,4 +121,16 @@ inline std::ostream& operator<<(std::ostream& os, const Mx& m)
     }
     os << "]";
     return os;
+}
+
+inline Mx Diag(int n, float val = 1.0) {
+    Mx res(n, n);
+    for (int i = 0; i < n; ++i) {
+        res.set(i, i, val);
+    }
+    return res;
+}
+
+inline Mx I(int n) {
+    return Diag(n);
 }

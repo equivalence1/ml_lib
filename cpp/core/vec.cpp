@@ -28,8 +28,8 @@ Vec Vec::append(float val) const {
 
 //
 ////TODO: should be placeholder
-Vec::Vec(int64_t dim)
-    : Buffer<float>(torch::zeros({dim}, TorchHelpers::tensorOptionsOnDevice(CurrentDevice()))) {
+Vec::Vec(int64_t dim, float value)
+    : Buffer<float>(torch::ones({dim}, TorchHelpers::tensorOptionsOnDevice(CurrentDevice())) * value) {
 
 }
 

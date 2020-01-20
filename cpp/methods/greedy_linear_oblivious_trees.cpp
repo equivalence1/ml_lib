@@ -8,7 +8,7 @@
 #include <core/matrix.h>
 
 void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
-        const std::vector<int32_t>& indices) {
+        const std::vector<int32_t>& indices, bool needBias) {
     const auto& bds = cachedBinarize(ds, grid_);
 
     hist_XTX_ = std::vector<Mx>();
@@ -18,8 +18,13 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
     hist_cnt_ = std::vector<uint32_t>();
     histLeft_cnt_ = std::vector<uint32_t>();
 
-    if (!usedFeatures.empty()) {
-        usedFeature_ = *usedFeatures.begin();
+    if ((int)usedFeatures.size() - int(!needBias) > 0) {
+        // TODO here I assume that biasCol is always column #0..
+        auto it = usedFeatures.begin();
+        if (!needBias) {
+            ++it;
+        }
+        usedFeature_ = *it;
 
         auto features = grid_->nzFeatures();
         for (int f = 0; f < (int)features.size(); ++f) {
@@ -70,7 +75,7 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
             int32_t sampleId = indicesVecRef.at(idxId);
 
             auto x = ds.sample(sampleId, newUsedFeatures);
-            auto xb = x.append(1);
+            auto xb = needBias ? x.append(1) : std::move(x);
             auto X = Mx(xb, xb.size(), 1);
             auto XT = X.T();
 
@@ -99,10 +104,10 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
         }
     });
 
-    std::cout << "built" << std::endl;
+//    std::cout << "built" << std::endl;
 }
 
-std::shared_ptr<Mx> Histogram::getW() {
+std::shared_ptr<Mx> Histogram::getW(float l2reg) {
     if (usedFeature_ == -1) {
         throw std::runtime_error("No features are used");
     }
@@ -112,6 +117,8 @@ std::shared_ptr<Mx> Histogram::getW() {
 
     Mx& XTX = histLeft_XTX_[lastPos];
     Mx& XTy = histLeft_XTy_[lastPos];
+
+    XTX += Diag(XTX.ydim(), l2reg);
 
     try {
         XTX.inverse();
@@ -152,7 +159,7 @@ double Histogram::computeScore(Mx& XTX, Mx& XTy, uint32_t cnt) {
     return c2.get(0, 0);
 }
 
-std::pair<double, double> Histogram::splitScore(int fId, int condId) {
+std::pair<double, double> Histogram::splitScore(int fId, int condId, float l2reg) {
     uint32_t offset = grid_->binOffsets()[fId];
     uint32_t binPos = offset + condId;
     uint32_t lastPos = offset + grid_->conditionsCount(fId);
@@ -169,6 +176,9 @@ std::pair<double, double> Histogram::splitScore(int fId, int condId) {
     uint32_t right_cnt = histLeft_cnt_[lastPos] - left_cnt;
 
 //    std::cout << "split fId: " << fId << ", cond: " << condId << " ";
+
+    left_XTX += Diag(left_XTX.ydim(), l2reg);
+    right_XTX += Diag(right_XTX.ydim(), l2reg);
 
     auto resLeft = computeScore(left_XTX, left_XTy, left_cnt);
     auto resRight = computeScore(right_XTX, right_XTy, right_cnt);
@@ -190,14 +200,18 @@ Histogram operator-(const Histogram& lhs, const Histogram& rhs) {
         res.hist_cnt_.emplace_back(lhs.histLeft_cnt_[i] - rhs.histLeft_cnt_[i]);
     }
 
+    res.usedFeature_ = rhs.usedFeature_;
+
     return res;
 }
 
 
 class LinearObliviousTreeLeaf : std::enable_shared_from_this<LinearObliviousTreeLeaf> {
 public:
-    explicit LinearObliviousTreeLeaf(GridPtr grid)
-            : grid_(std::move(grid)) {
+    explicit LinearObliviousTreeLeaf(GridPtr grid, bool needBias, double l2reg)
+            : grid_(std::move(grid))
+            , needBias_(needBias)
+            , l2reg_(l2reg) {
 
     }
 
@@ -213,12 +227,12 @@ public:
 //        std::cout << std::endl;
 
         hist_ = std::make_unique<Histogram>(grid_);
-        hist_->build(ds, usedFeatures_, xIds_);
+        hist_->build(ds, usedFeatures_, xIds_, needBias_);
     }
 
     double splitScore(const DataSet& ds, const Target& target, int fId, int condId) {
         buildHist(ds);
-        auto sScore = hist_->splitScore(fId, condId);
+        auto sScore = hist_->splitScore(fId, condId, (float)l2reg_);
         return sScore.first + sScore.second;
     }
 
@@ -229,7 +243,7 @@ public:
         if (!hist_) {
             buildHist(ds);
         }
-        w_ = hist_->getW();
+        w_ = hist_->getW((float)l2reg_);
     }
 
     double value(const Vec& x) {
@@ -241,7 +255,7 @@ public:
         for (auto f : usedFeatures_) {
             tmp.push_back(x(f));
         }
-        auto xVec = VecFactory::fromVector(tmp).append(1);
+        auto xVec = needBias_ ? VecFactory::fromVector(tmp).append(1) : VecFactory::fromVector(tmp);
         Mx X(xVec, xVec.size(), 1);
         Mx res = X.T() * (*w_);
 
@@ -267,8 +281,8 @@ public:
 
     std::pair<std::shared_ptr<LinearObliviousTreeLeaf>, std::shared_ptr<LinearObliviousTreeLeaf>> split(const DataSet& ds,
             int32_t fId, int32_t condId) {
-        auto left = std::make_shared<LinearObliviousTreeLeaf>(grid_);
-        auto right = std::make_shared<LinearObliviousTreeLeaf>(grid_);
+        auto left = std::make_shared<LinearObliviousTreeLeaf>(grid_, needBias_, l2reg_);
+        auto right = std::make_shared<LinearObliviousTreeLeaf>(grid_, needBias_, l2reg_);
 
         initChildren(ds, left, right, fId, condId);
 
@@ -302,8 +316,10 @@ private:
         right->splits_ = this->splits_;
         right->splits_.emplace_back(std::make_tuple(fId, condId, false));
 
-//        left->buildHist(ds);
-//        right->hist_ = std::make_unique<Histogram>((*hist_) - (*left->hist_));
+        if (usedFeatures_.size() == left->usedFeatures_.size()) {
+            left->buildHist(ds);
+            right->hist_ = std::make_unique<Histogram>((*hist_) - (*left->hist_));
+        }
     }
 
 private:
@@ -314,14 +330,20 @@ private:
     std::set<int32_t> usedFeatures_;
     std::shared_ptr<Mx> w_;
     std::vector<std::tuple<int32_t, int32_t, bool>> splits_;
+    bool needBias_;
+    double l2reg_;
 
     std::unique_ptr<Histogram> hist_;
 };
 
 ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& target) {
-    auto root = std::make_shared<LinearObliviousTreeLeaf>(this->grid_);
+    auto root = std::make_shared<LinearObliviousTreeLeaf>(this->grid_, biasCol_ == -1, l2reg_);
     root->xIds_.resize(ds.samplesCount());
     std::iota(root->xIds_.begin(), root->xIds_.end(), 0);
+
+    if (biasCol_ != -1) {
+        root->usedFeatures_.insert(biasCol_);
+    }
 
     std::vector<std::shared_ptr<LinearObliviousTreeLeaf>> leaves;
     leaves.push_back(std::move(root));

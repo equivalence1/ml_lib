@@ -68,7 +68,7 @@ void testHistSimple() {
     }
 
     std::cout << "h.build" << std::endl;
-    h.build(ds, usedFeatures, indices);
+    h.build(ds, usedFeatures, indices, true);
 
     double bestSplitScore = 1e9;
     int bestSplitFId = -1;
@@ -103,18 +103,19 @@ void testLeafSimple() {
     std::cout << "\n\n======= Leaf Simple\n" << std::endl;
 
     auto ds = simpleDs();
+    ds.addBiasColumn();
 
     BinarizationConfig config;
     config.bordersCount_ = 32;
     GridPtr grid = buildGrid(ds, config);
 
-    GreedyLinearObliviousTree g(grid, 2);
+    GreedyLinearObliviousTreeLearner tl(grid, 2, 0);
     L2 target(ds);
 
-    g.fit(ds, target);
+    auto t = tl.fit(ds, target);
 
     for (int i = 0; i < ds.samplesCount(); i++) {
-        std::cout << i << ": " << g.value(ds.sample(i)) << std::endl;
+        std::cout << i << ": " << t->value(ds.sample(i)) << std::endl;
     }
 }
 

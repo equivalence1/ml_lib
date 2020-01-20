@@ -32,6 +32,10 @@ public:
         });
     }
 
+    void addBiasColumn() {
+        Vec x(samplesCount(), 1);
+        data_.addColumn(x);
+    }
 
     template <class Visitor>
     void visitColumn(int fIndex, Visitor&& visitor) const {

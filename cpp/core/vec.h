@@ -14,7 +14,7 @@
 
 class Vec : public Buffer<float> {
 public:
-    explicit Vec(int64_t dim);
+    explicit Vec(int64_t dim, float value = 0);
 
     Vec()
     : Vec(0) {

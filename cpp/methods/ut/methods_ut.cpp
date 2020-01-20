@@ -24,8 +24,10 @@ inline std::unique_ptr<GreedyObliviousTree> createWeakLearner(
 
 inline std::unique_ptr<GreedyLinearObliviousTreeLearner> createWeakLinearLearner(
         int32_t depth,
+        int biasCol,
+        double l2reg,
         GridPtr grid) {
-    return std::make_unique<GreedyLinearObliviousTreeLearner>(std::move(grid), depth);
+    return std::make_unique<GreedyLinearObliviousTreeLearner>(std::move(grid), depth, biasCol, l2reg);
 }
 
 inline std::unique_ptr<EmpiricalTargetFactory> createWeakTarget() {
@@ -142,16 +144,24 @@ TEST(Boosting, FeaturesTxtLinearTrees) {
     EXPECT_EQ(ds.samplesCount(), 12465);
     EXPECT_EQ(ds.featuresCount(), 50);
 
+//    ds.addBiasColumn();
+//    test.addBiasColumn();
+
     BinarizationConfig config;
     config.bordersCount_ = 32;
     auto grid = buildGrid(ds, config);
 
     BoostingConfig boostingConfig;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(3, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(6, -1, 1.0, grid));
 
-    auto metricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
-    metricsCalcer->addMetric(L2(test), "l2");
-    boosting.addListener(metricsCalcer);
+    auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
+    testMetricsCalcer->addMetric(L2(test), "l2-test");
+    boosting.addListener(testMetricsCalcer);
+
+    auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(ds);
+    trainMetricsCalcer->addMetric(L2(ds), "l2-train");
+    boosting.addListener(trainMetricsCalcer);
+
     L2 target(ds);
     auto ensemble = boosting.fit(ds, target);
 }
