@@ -79,7 +79,7 @@ void Mx::addColumn(const Vec& column) {
     assert(column.size() == rows_);
     auto data = this->data_.view({rows_, cols_});
     auto columnData = column.data().view({rows_, 1});
-    this->data_ = torch::cat({data, columnData}, 1).contiguous().view({-1});
+    this->data_ = torch::cat({columnData, data}, 1).contiguous().view({-1});
     cols_ += 1;
 }
 

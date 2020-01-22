@@ -115,7 +115,7 @@ inline std::ostream& operator<<(std::ostream& os, const Mx& m)
         if (i != 0)
             os << " ";
         for (int j = 0; j < m.xdim(); ++j) {
-            os << std::setw(5) << m.get(i, j) << " ";
+            os << std::setw(5) << m.get(j, i) << " ";
         }
         os << "\n";
     }

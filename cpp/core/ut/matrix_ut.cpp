@@ -4,13 +4,19 @@
 #include <core/vec_factory.h>
 
 TEST(MatrixTest, Transpose) {
-    Vec tmp = VecFactory::fromVector({1, 2, 3, 4});
-    Mx X(tmp, 2, 2);
+    Vec tmp = VecFactory::fromVector({1, 2, 3, 4, 5, 6});
+    Mx X(tmp, 2, 3);
     Mx XT = X.T();
 
+    std::cout << "X: " << X << std::endl;
+    std::cout << "XT: " << XT << std::endl;
+
+    EXPECT_EQ(X.ydim(), XT.xdim());
+    EXPECT_EQ(X.xdim(), XT.ydim());
+
     for (int i = 0; i < 2; ++i) {
-        for (int j = 0; j < 2; ++j) {
-            EXPECT_EQ(X.get(i, j), XT.get(j, i));
+        for (int j = 0; j < 3; ++j) {
+            EXPECT_EQ(X.get(j, i), XT.get(i, j));
         }
     }
 }
