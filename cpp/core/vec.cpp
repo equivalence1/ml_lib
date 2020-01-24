@@ -158,3 +158,12 @@ Vec eq(const Vec& left, const Vec& right) {
 Vec operator!=(const Vec& left, Scalar right) {
     return Vec(left.data().ne(right).to(torch::ScalarType::Float));
 }
+
+double l2(const Vec& x) {
+    double res = 0;
+    auto xRef = x.arrayRef();
+    for (float i : xRef) {
+        res += i * i;
+    }
+    return res;
+}

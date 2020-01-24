@@ -11,11 +11,9 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
         const std::vector<int32_t>& indices, bool needBias) {
     const auto& bds = cachedBinarize(ds, grid_);
 
-    hist_XTX_ = std::vector<Mx>();
     histLeft_XTX_ = std::vector<Mx>();
-    hist_XTy_ = std::vector<Mx>();
     histLeft_XTy_ = std::vector<Mx>();
-    hist_cnt_ = std::vector<uint32_t>();
+    histLeft_XTX_trace_ = std::vector<double>();
     histLeft_cnt_ = std::vector<uint32_t>();
 
     if ((int)usedFeatures.size() - int(!needBias) > 0) {
@@ -48,19 +46,19 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
         }
 
         // bias term
-        vecSize += 1;
+        vecSize += needBias ? 1 : 0;
 
-        hist_XTX_.emplace_back(vecSize, vecSize);
         histLeft_XTX_.emplace_back(vecSize, vecSize);
-        hist_XTy_.emplace_back(vecSize, 1);
         histLeft_XTy_.emplace_back(vecSize, 1);
-        hist_cnt_.emplace_back(0);
+        histLeft_XTX_trace_.emplace_back(0);
         histLeft_cnt_.emplace_back(0);
     }
 
     auto y = ds.target().arrayRef();
 
     Detail::ArrayRef<const int32_t> indicesVecRef(indices.data(), indices.size());
+
+//    std::cout << "Hello?" << std::endl;
 
     auto features = grid_->nzFeatures();
     parallelFor(0, features.size(), [&](int64_t i){
@@ -72,7 +70,7 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
             int offset = bds.binOffsets()[f];
             int binPos = offset + localBinId;
 
-            int32_t sampleId = indicesVecRef.at(idxId);
+            int32_t sampleId = indicesVecRef[idxId];
 
             auto x = ds.sample(sampleId, newUsedFeatures);
             auto xb = needBias ? x.append(1) : std::move(x);
@@ -83,15 +81,12 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
 //                     ", target " << std::setprecision(3) << y[sampleId] << std::endl;
 
             auto XTX = X * XT;
-            hist_XTX_[binPos] += XTX;
-            histLeft_XTX_[binPos] += XTX;
-
             auto XTy = XT * y[sampleId];
-            hist_XTy_[binPos] += XTy;
-            histLeft_XTy_[binPos] += XTy;
 
-            hist_cnt_[binPos] += 1;
+            histLeft_XTX_[binPos] += XTX;
+            histLeft_XTy_[binPos] += XTy;
             histLeft_cnt_[binPos] += 1;
+            histLeft_XTX_trace_[binPos] += l2(xb);
         }, false);
 
         int offset = bds.binOffsets()[f];
@@ -101,13 +96,45 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
             histLeft_XTX_[binPos] += histLeft_XTX_[binPos - 1];
             histLeft_XTy_[binPos] += histLeft_XTy_[binPos - 1];
             histLeft_cnt_[binPos] += histLeft_cnt_[binPos - 1];
+            histLeft_XTX_trace_[binPos] += histLeft_XTX_trace_[binPos - 1];
         }
     });
 
 //    std::cout << "built" << std::endl;
 }
 
-std::shared_ptr<Mx> Histogram::getW(float l2reg) {
+void Histogram::printEig(Mx& M) {
+    auto eigs = torch::eig(M.data().view({M.ydim(), M.xdim()}), false);
+    auto vals = std::get<0>(eigs);
+    for (int i = 0; i < vals.size(0); ++i) {
+        std::cout << vals[i].data()[0] << ", ";
+    }
+}
+
+void Histogram::printEig(double l2reg) {
+    if (usedFeature_ == -1) {
+        throw std::runtime_error("No features are used, can not print eig");
+    }
+
+    uint32_t offset = grid_->binOffsets().at(usedFeature_);
+    uint32_t lastPos = offset + grid_->conditionsCount(usedFeature_);
+
+    Mx& XTX = histLeft_XTX_[lastPos];
+
+    std::cout << "XTX eig: ";
+    printEig(XTX);
+    std::cout << std::endl;
+
+    Mx XTX_Reg = XTX + Diag(XTX.xdim(), l2reg);
+
+    std::cout << "(XTX + Diag(" << l2reg << ")) eig: ";
+    printEig(XTX_Reg);
+    std::cout << std::endl;
+
+    std::cout << "XTX trace: " << histLeft_XTX_trace_[lastPos] << std::endl;
+}
+
+std::shared_ptr<Mx> Histogram::getW(double l2reg) {
     if (usedFeature_ == -1) {
         throw std::runtime_error("No features are used");
     }
@@ -115,22 +142,20 @@ std::shared_ptr<Mx> Histogram::getW(float l2reg) {
     uint32_t offset = grid_->binOffsets().at(usedFeature_);
     uint32_t lastPos = offset + grid_->conditionsCount(usedFeature_);
 
-    Mx& XTX = histLeft_XTX_[lastPos];
+    int xtx_dim = histLeft_XTX_[lastPos].ydim();
+
+    Mx XTX = histLeft_XTX_[lastPos] + Diag(xtx_dim, l2reg);
     Mx& XTy = histLeft_XTy_[lastPos];
 
-    XTX += Diag(XTX.ydim(), l2reg);
-
     try {
-        XTX.inverse();
+        return std::make_shared<Mx>(XTX.inverse() * XTy);
     } catch (...) {
-//        std::cout << "No inverse" << std::endl;
+        std::cout << "No inverse" << std::endl;
         return std::make_shared<Mx>((int64_t)XTX.ydim(), (int64_t)XTX.xdim());
     }
-
-    return std::make_shared<Mx>(XTX.inverse() * XTy);
 }
 
-double Histogram::computeScore(Mx& XTX, Mx& XTy, uint32_t cnt) {
+double Histogram::computeScore(Mx& XTX, Mx& XTy, double XTX_trace, uint32_t cnt, double l2reg) {
     if (cnt == 0) {
         return 0;
     }
@@ -139,49 +164,51 @@ double Histogram::computeScore(Mx& XTX, Mx& XTy, uint32_t cnt) {
     // Not sure what we should do in this case...
     // For now just return 0.
     try {
-        XTX.inverse();
-    } catch (...) {
-//        std::cout << "No inverse" << std::endl;
-        return 0;
-    }
-
-    Mx w = XTX.inverse() * XTy;
+        Mx w = XTX.inverse() * XTy;
 //    std::cout << "w is " << w << std::endl;
 
-    Mx c1(XTy.T() * w);
-    c1 *= -2;
-    assert(c1.xdim() == 1 && c1.ydim() == 1);
+        Mx c1(XTy.T() * w);
+        c1 *= -2;
+        assert(c1.xdim() == 1 && c1.ydim() == 1);
 
-    Mx c2(w.T() * XTX * w);
-    assert(c2.xdim() == 1 && c2.ydim() == 1);
-    c2 += c1;
+        Mx c2(w.T() * XTX * w);
+        assert(c2.xdim() == 1 && c2.ydim() == 1);
 
-    return c2.get(0, 0);
+        Mx reg = w.T() * w * l2reg;
+        assert(reg.xdim() == 1 && reg.ydim() == 1);
+
+        Mx res = c1 + c2 + reg;
+
+        return res.get(0, 0) + 0.001 * XTX_trace / XTX.ydim();
+    } catch (...) {
+        std::cout << "No inverse" << std::endl;
+        return 0;
+    }
 }
 
-std::pair<double, double> Histogram::splitScore(int fId, int condId, float l2reg) {
+std::pair<double, double> Histogram::splitScore(int fId, int condId, double l2reg) {
     uint32_t offset = grid_->binOffsets()[fId];
     uint32_t binPos = offset + condId;
     uint32_t lastPos = offset + grid_->conditionsCount(fId);
 
-    Mx left_XTX(histLeft_XTX_[binPos]);
-    Mx right_XTX(Vec(histLeft_XTX_[lastPos].copy()), left_XTX.ydim(), left_XTX.xdim());
-    right_XTX -= left_XTX;
+    int xtx_dim = histLeft_XTX_[binPos].ydim();
+
+    Mx left_XTX = histLeft_XTX_[binPos] + Diag(xtx_dim, l2reg);
+    Mx right_XTX = histLeft_XTX_[lastPos] - histLeft_XTX_[binPos] + Diag(xtx_dim, l2reg);
 
     Mx left_XTy(histLeft_XTy_[binPos]);
-    Mx right_XTy(Vec(histLeft_XTy_[lastPos].copy()), left_XTy.ydim(), left_XTy.xdim());
-    right_XTy -= left_XTy;
+    Mx right_XTy = histLeft_XTy_[lastPos] - histLeft_XTy_[binPos];
 
     uint32_t left_cnt = histLeft_cnt_[binPos];
-    uint32_t right_cnt = histLeft_cnt_[lastPos] - left_cnt;
+    uint32_t right_cnt = histLeft_cnt_[lastPos] - histLeft_cnt_[binPos];
+
+    double left_XTX_trace = histLeft_XTX_trace_[binPos];
+    double right_XTX_trace = histLeft_XTX_trace_[lastPos] - histLeft_XTX_trace_[binPos];
 
 //    std::cout << "split fId: " << fId << ", cond: " << condId << " ";
 
-    left_XTX += Diag(left_XTX.ydim(), l2reg);
-    right_XTX += Diag(right_XTX.ydim(), l2reg);
-
-    auto resLeft = computeScore(left_XTX, left_XTy, left_cnt);
-    auto resRight = computeScore(right_XTX, right_XTy, right_cnt);
+    auto resLeft = computeScore(left_XTX, left_XTy, left_XTX_trace, left_cnt, l2reg);
+    auto resRight = computeScore(right_XTX, right_XTy, right_XTX_trace, right_cnt, l2reg);
 
     return std::make_pair(resLeft, resRight);
 }
@@ -190,14 +217,10 @@ Histogram operator-(const Histogram& lhs, const Histogram& rhs) {
     Histogram res(lhs.grid_);
 
     for (int32_t i = 0; i < lhs.grid_->totalBins(); ++i) {
-        res.hist_XTX_.emplace_back(lhs.hist_XTX_[i] - rhs.hist_XTX_[i]);
         res.histLeft_XTX_.emplace_back(lhs.histLeft_XTX_[i] - rhs.histLeft_XTX_[i]);
-
-        res.hist_XTy_.emplace_back(lhs.hist_XTy_[i] - rhs.hist_XTy_[i]);
         res.histLeft_XTy_.emplace_back(lhs.histLeft_XTy_[i] - rhs.histLeft_XTy_[i]);
-
-        res.hist_cnt_.emplace_back(lhs.hist_cnt_[i] - rhs.hist_cnt_[i]);
-        res.hist_cnt_.emplace_back(lhs.histLeft_cnt_[i] - rhs.histLeft_cnt_[i]);
+        res.histLeft_cnt_.emplace_back(lhs.histLeft_cnt_[i] - rhs.histLeft_cnt_[i]);
+        res.histLeft_XTX_trace_.emplace_back(lhs.histLeft_XTX_trace_[i] - rhs.histLeft_XTX_trace_[i]);
     }
 
     res.usedFeature_ = rhs.usedFeature_;
@@ -232,7 +255,7 @@ public:
 
     double splitScore(const DataSet& ds, const Target& target, int fId, int condId) {
         buildHist(ds);
-        auto sScore = hist_->splitScore(fId, condId, (float)l2reg_);
+        auto sScore = hist_->splitScore(fId, condId, l2reg_);
         return sScore.first + sScore.second;
     }
 
@@ -243,7 +266,7 @@ public:
         if (!hist_) {
             buildHist(ds);
         }
-        w_ = hist_->getW((float)l2reg_);
+        w_ = hist_->getW(l2reg_);
     }
 
     double value(const Vec& x) {
@@ -287,6 +310,10 @@ public:
         initChildren(ds, left, right, fId, condId);
 
         return std::make_pair(left, right);
+    }
+
+    void printEig() {
+        hist_->printEig(l2reg_);
     }
 
 private:
@@ -380,6 +407,7 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
 
     for (auto& l : leaves) {
         l->fit(ds, target);
+        l->printEig();
     }
 
     return std::make_shared<GreedyLinearObliviousTree>(grid_, std::move(leaves));

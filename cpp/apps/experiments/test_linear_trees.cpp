@@ -78,7 +78,7 @@ void testHistSimple() {
     for (int fId = 0; fId < nFeatures; ++fId) {
         int condCount = grid->conditionsCount(fId);
         for (int cond = 0; cond < condCount; ++cond) {
-            auto sScore = h.splitScore(fId, cond);
+            auto sScore = h.splitScore(fId, cond, 1.0);
             std::cout << "fId: " << fId << ", cond: " << cond << ", score: (" << sScore.first
                     << ", " << sScore.second << ")\n";
 
@@ -103,13 +103,13 @@ void testLeafSimple() {
     std::cout << "\n\n======= Leaf Simple\n" << std::endl;
 
     auto ds = simpleDs();
-    ds.addBiasColumn();
+//    ds.addBiasColumn();
 
     BinarizationConfig config;
     config.bordersCount_ = 32;
     GridPtr grid = buildGrid(ds, config);
 
-    GreedyLinearObliviousTreeLearner tl(grid, 2, 0);
+    GreedyLinearObliviousTreeLearner tl(grid, 2, -1);
     L2 target(ds);
 
     auto t = tl.fit(ds, target);
@@ -119,7 +119,31 @@ void testLeafSimple() {
     }
 }
 
+void testMxCreation() {
+    std::cout << "\n\n======= Mx Creation\n" << std::endl;
+
+    Vec tmpX = VecFactory::fromVector({1, 2, 3, 4});
+    Mx X(tmpX, 2, 2);
+
+    Mx Y(X);
+
+    Vec tmpA = VecFactory::fromVector({1, 2, 3, 4});
+    Mx A(tmpA, 2, 2);
+
+    Y += A;
+
+    std::cout << "X: " << X << std::endl;
+    std::cout << "Y: " << Y << std::endl;
+
+    Mx Z = X + A;
+
+    std::cout << "X: " << X << std::endl;
+    std::cout << "Y: " << Y << std::endl;
+    std::cout << "Z: " << Z << std::endl;
+}
+
 int main() {
     testHistSimple();
     testLeafSimple();
+    testMxCreation();
 }

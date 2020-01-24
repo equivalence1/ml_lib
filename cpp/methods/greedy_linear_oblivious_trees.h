@@ -19,27 +19,25 @@ public:
     void build(const DataSet& ds, const std::set<int>& usedFeatures,
             const std::vector<int32_t>& indices, bool needBias);
 
-    std::pair<double, double> splitScore(int fId, int condId, float l2reg);
+    std::pair<double, double> splitScore(int fId, int condId, double l2reg);
 
-    std::shared_ptr<Mx> getW(float l2reg);
+    std::shared_ptr<Mx> getW(double l2reg);
+
+
+    void printEig(double l2reg);
+    void printEig(Mx& M);
 
 private:
-    static double computeScore(Mx& XTX, Mx& XTy, uint32_t cnt);
+    static double computeScore(Mx& XTX, Mx& XTy, double XTX_trace, uint32_t cnt, double l2reg);
 
     friend Histogram operator-(const Histogram& lhs, const Histogram& rhs);
 
 private:
     GridPtr grid_;
 
-    // (X^T * X) for bins
-    std::vector<Mx> hist_XTX_;
-    std::vector<Mx> histLeft_XTX_;
-
-    // (X^T * y) for bins
-    std::vector<Mx> hist_XTy_;
-    std::vector<Mx> histLeft_XTy_;
-
-    std::vector<uint32_t> hist_cnt_;
+    std::vector<Mx> histLeft_XTX_; // (X^T * X) for bins
+    std::vector<Mx> histLeft_XTy_; // (X^T * y) for bins
+    std::vector<double> histLeft_XTX_trace_;
     std::vector<uint32_t> histLeft_cnt_;
 
     int usedFeature_ = -1; // any of them...

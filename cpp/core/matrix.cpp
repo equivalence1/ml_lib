@@ -46,11 +46,12 @@ Mx& Mx::operator^=(Scalar q) {
 }
 
 Mx operator*(const Mx& A, const Mx& B) {
-    assert(A.xdim() = B.ydim());
+    assert(A.xdim() == B.ydim());
 
     auto dataA = A.data().view({A.ydim(), A.xdim()});
     auto dataB = B.data().view({B.ydim(), B.xdim()});
     auto dataRes = torch::mm(dataA, dataB).contiguous().view({-1});
+    //auto dataRes = torch::mm(dataA.to(torch::kFloat64), dataB.to(torch::kFloat64)).contiguous().view({-1});
     auto tmpResVec = Vec(dataRes);
 
     return Mx(tmpResVec, A.ydim(), B.xdim());
@@ -65,6 +66,12 @@ Mx operator*(const Mx& A, Scalar s) {
 Mx operator-(const Mx& A, const Mx& B) {
     Mx res(Vec(A.copy()), A.ydim(), A.xdim());
     res -= B;
+    return res;
+}
+
+Mx operator+(const Mx& A, const Mx& B) {
+    Mx res(Vec(A.copy()), A.ydim(), A.xdim());
+    res += B;
     return res;
 }
 

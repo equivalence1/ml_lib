@@ -61,6 +61,7 @@ public:
     Mx inverse() const {
         assert(rows_ == cols_);
         Mx res(*this);
+        //auto tensor = torch::inverse(this->data().view({rows_, cols_}).to(torch::kFloat64)).contiguous().view({-1});
         auto tensor = torch::inverse(this->data().view({rows_, cols_})).contiguous().view({-1});
         return Mx(Vec(tensor), rows_, cols_);
     }
@@ -107,6 +108,7 @@ private:
 Mx operator*(const Mx& A, const Mx& B);
 Mx operator*(const Mx& A, Scalar s);
 Mx operator-(const Mx& A, const Mx& B);
+Mx operator+(const Mx& A, const Mx& B);
 
 inline std::ostream& operator<<(std::ostream& os, const Mx& m)
 {
@@ -123,7 +125,7 @@ inline std::ostream& operator<<(std::ostream& os, const Mx& m)
     return os;
 }
 
-inline Mx Diag(int n, float val = 1.0) {
+inline Mx Diag(int n, double val = 1.0) {
     Mx res(n, n);
     for (int i = 0; i < n; ++i) {
         res.set(i, i, val);
