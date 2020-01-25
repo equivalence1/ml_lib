@@ -17,18 +17,20 @@ public:
     }
 
     void build(const DataSet& ds, const std::set<int>& usedFeatures,
-            const std::vector<int32_t>& indices, bool needBias);
+            const std::vector<int32_t>& indices, int64_t biasCol);
 
-    std::pair<double, double> splitScore(int fId, int condId, double l2reg);
+    std::pair<double, double> splitScore(int fId, int condId, double l2reg, double traceReg);
 
     std::shared_ptr<Mx> getW(double l2reg);
 
 
     void printEig(double l2reg);
     void printEig(Mx& M);
+    void printCnt();
 
 private:
-    static double computeScore(Mx& XTX, Mx& XTy, double XTX_trace, uint32_t cnt, double l2reg);
+    static double computeScore(Mx& XTX, Mx& XTy, double XTX_trace, uint32_t cnt, double l2reg,
+            double traceReg);
 
     friend Histogram operator-(const Histogram& lhs, const Histogram& rhs);
 
@@ -49,11 +51,12 @@ class GreedyLinearObliviousTreeLearner final
         : public Optimizer {
 public:
     explicit GreedyLinearObliviousTreeLearner(GridPtr grid, int32_t maxDepth = 6, int biasCol = -1,
-            double l2reg = 0.0)
+            double l2reg = 0.0, double traceReg = 0.0)
             : grid_(std::move(grid))
             , biasCol_(biasCol)
             , maxDepth_(maxDepth)
-            , l2reg_(l2reg) {
+            , l2reg_(l2reg)
+            , traceReg_(traceReg) {
     }
 
     GreedyLinearObliviousTreeLearner(const GreedyLinearObliviousTreeLearner& other) = default;
@@ -65,6 +68,7 @@ private:
     int32_t maxDepth_ = 6;
     int biasCol_ = -1;
     double l2reg_ = 0.0;
+    double traceReg_ = 0.0;
 };
 
 class GreedyLinearObliviousTree final

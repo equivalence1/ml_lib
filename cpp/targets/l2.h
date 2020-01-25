@@ -154,6 +154,10 @@ public:
         return to;
     }
 
+    Vec targets() const override {
+        return nzTargets_;
+    }
+
 private:
     //TODO(noxoomo): this should be just sparse vec instead
     Vec nzTargets_;

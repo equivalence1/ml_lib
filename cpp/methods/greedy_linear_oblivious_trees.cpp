@@ -8,7 +8,7 @@
 #include <core/matrix.h>
 
 void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
-        const std::vector<int32_t>& indices, bool needBias) {
+        const std::vector<int32_t>& indices, int64_t biasCol) {
     const auto& bds = cachedBinarize(ds, grid_);
 
     histLeft_XTX_ = std::vector<Mx>();
@@ -16,18 +16,20 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
     histLeft_XTX_trace_ = std::vector<double>();
     histLeft_cnt_ = std::vector<uint32_t>();
 
+    bool needBias = biasCol < 0;
+
     if ((int)usedFeatures.size() - int(!needBias) > 0) {
         // TODO here I assume that biasCol is always column #0..
-        auto it = usedFeatures.begin();
-        if (!needBias) {
-            ++it;
+        for (auto f : usedFeatures) {
+            if (f != biasCol) {
+                usedFeature_ = f; // this one is origFeatureId
+            }
         }
-        usedFeature_ = *it;
 
         auto features = grid_->nzFeatures();
         for (int f = 0; f < (int)features.size(); ++f) {
             if (features.at(f).origFeatureId_ == usedFeature_) {
-                usedFeature_ = f;
+                usedFeature_ = f; // this one is nzFeatureId
                 break;
             }
         }
@@ -61,6 +63,7 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
 //    std::cout << "Hello?" << std::endl;
 
     auto features = grid_->nzFeatures();
+//    for (int64_t i = 0; i < features.size(); ++i) {
     parallelFor(0, features.size(), [&](int64_t i){
         auto f = i;
         auto newUsedFeatures = usedFeatures;
@@ -81,7 +84,7 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
 //                     ", target " << std::setprecision(3) << y[sampleId] << std::endl;
 
             auto XTX = X * XT;
-            auto XTy = XT * y[sampleId];
+            auto XTy = X * y[sampleId];
 
             histLeft_XTX_[binPos] += XTX;
             histLeft_XTy_[binPos] += XTy;
@@ -101,6 +104,17 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
     });
 
 //    std::cout << "built" << std::endl;
+}
+
+void Histogram::printCnt() {
+    if (usedFeature_ == -1) {
+        throw std::runtime_error("No features are used, can not print eig");
+    }
+
+    uint32_t offset = grid_->binOffsets().at(usedFeature_);
+    uint32_t lastPos = offset + grid_->conditionsCount(usedFeature_);
+
+    std::cout << "cnt: " << histLeft_cnt_[lastPos] << std::endl;
 }
 
 void Histogram::printEig(Mx& M) {
@@ -155,7 +169,8 @@ std::shared_ptr<Mx> Histogram::getW(double l2reg) {
     }
 }
 
-double Histogram::computeScore(Mx& XTX, Mx& XTy, double XTX_trace, uint32_t cnt, double l2reg) {
+double Histogram::computeScore(Mx& XTX, Mx& XTy, double XTX_trace, uint32_t cnt, double l2reg,
+        double traceReg) {
     if (cnt == 0) {
         return 0;
     }
@@ -179,14 +194,15 @@ double Histogram::computeScore(Mx& XTX, Mx& XTy, double XTX_trace, uint32_t cnt,
 
         Mx res = c1 + c2 + reg;
 
-        return res.get(0, 0) + 0.001 * XTX_trace / XTX.ydim();
+        return res.get(0, 0) + traceReg * XTX_trace / XTX.ydim();
     } catch (...) {
         std::cout << "No inverse" << std::endl;
         return 0;
     }
 }
 
-std::pair<double, double> Histogram::splitScore(int fId, int condId, double l2reg) {
+std::pair<double, double> Histogram::splitScore(int fId, int condId, double l2reg,
+        double traceReg) {
     uint32_t offset = grid_->binOffsets()[fId];
     uint32_t binPos = offset + condId;
     uint32_t lastPos = offset + grid_->conditionsCount(fId);
@@ -207,8 +223,8 @@ std::pair<double, double> Histogram::splitScore(int fId, int condId, double l2re
 
 //    std::cout << "split fId: " << fId << ", cond: " << condId << " ";
 
-    auto resLeft = computeScore(left_XTX, left_XTy, left_XTX_trace, left_cnt, l2reg);
-    auto resRight = computeScore(right_XTX, right_XTy, right_XTX_trace, right_cnt, l2reg);
+    auto resLeft = computeScore(left_XTX, left_XTy, left_XTX_trace, left_cnt, l2reg, traceReg);
+    auto resRight = computeScore(right_XTX, right_XTy, right_XTX_trace, right_cnt, l2reg, traceReg);
 
     return std::make_pair(resLeft, resRight);
 }
@@ -231,10 +247,11 @@ Histogram operator-(const Histogram& lhs, const Histogram& rhs) {
 
 class LinearObliviousTreeLeaf : std::enable_shared_from_this<LinearObliviousTreeLeaf> {
 public:
-    explicit LinearObliviousTreeLeaf(GridPtr grid, bool needBias, double l2reg)
+    LinearObliviousTreeLeaf(GridPtr grid, int64_t biasCol, double l2reg, double traceReg)
             : grid_(std::move(grid))
-            , needBias_(needBias)
-            , l2reg_(l2reg) {
+            , biasCol_(biasCol)
+            , l2reg_(l2reg)
+            , traceReg_(traceReg) {
 
     }
 
@@ -250,16 +267,16 @@ public:
 //        std::cout << std::endl;
 
         hist_ = std::make_unique<Histogram>(grid_);
-        hist_->build(ds, usedFeatures_, xIds_, needBias_);
+        hist_->build(ds, usedFeatures_, xIds_, biasCol_);
     }
 
-    double splitScore(const DataSet& ds, const Target& target, int fId, int condId) {
+    double splitScore(const DataSet& ds, int fId, int condId) {
         buildHist(ds);
-        auto sScore = hist_->splitScore(fId, condId, l2reg_);
+        auto sScore = hist_->splitScore(fId, condId, l2reg_, traceReg_);
         return sScore.first + sScore.second;
     }
 
-    void fit(const DataSet& ds, const Target& target) {
+    void fit(const DataSet& ds) {
         if (w_) {
             return;
         }
@@ -278,7 +295,7 @@ public:
         for (auto f : usedFeatures_) {
             tmp.push_back(x(f));
         }
-        auto xVec = needBias_ ? VecFactory::fromVector(tmp).append(1) : VecFactory::fromVector(tmp);
+        auto xVec = biasCol_ < 0 ? VecFactory::fromVector(tmp).append(1) : VecFactory::fromVector(tmp);
         Mx X(xVec, xVec.size(), 1);
         Mx res = X.T() * (*w_);
 
@@ -304,16 +321,32 @@ public:
 
     std::pair<std::shared_ptr<LinearObliviousTreeLeaf>, std::shared_ptr<LinearObliviousTreeLeaf>> split(const DataSet& ds,
             int32_t fId, int32_t condId) {
-        auto left = std::make_shared<LinearObliviousTreeLeaf>(grid_, needBias_, l2reg_);
-        auto right = std::make_shared<LinearObliviousTreeLeaf>(grid_, needBias_, l2reg_);
+        auto left = std::make_shared<LinearObliviousTreeLeaf>(grid_, biasCol_, l2reg_, traceReg_);
+        auto right = std::make_shared<LinearObliviousTreeLeaf>(grid_, biasCol_, l2reg_, traceReg_);
 
         initChildren(ds, left, right, fId, condId);
 
         return std::make_pair(left, right);
     }
 
-    void printEig() {
+    void printInfo() {
         hist_->printEig(l2reg_);
+        hist_->printCnt();
+        printSplits();
+        std::cout << std::endl;
+    }
+
+    void printSplits() {
+        for (auto& s : splits_) {
+            auto fId = std::get<0>(s);
+            auto condId = std::get<1>(s);
+            double minCondition = grid_->condition(fId, 0);
+            double maxCondition = grid_->condition(fId, grid_->conditionsCount(fId) - 1);
+            double condition = grid_->condition(fId, condId);
+            std::cout << "split: fId=" << fId << ", condId=" << condId
+                    << std::setprecision(5) << ", used cond=" << condition
+                    << ", min cond=" << minCondition << ", max cond=" << maxCondition << std::endl;
+        }
     }
 
 private:
@@ -357,14 +390,16 @@ private:
     std::set<int32_t> usedFeatures_;
     std::shared_ptr<Mx> w_;
     std::vector<std::tuple<int32_t, int32_t, bool>> splits_;
-    bool needBias_;
+    int64_t biasCol_;
+
     double l2reg_;
+    double traceReg_;
 
     std::unique_ptr<Histogram> hist_;
 };
 
 ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& target) {
-    auto root = std::make_shared<LinearObliviousTreeLeaf>(this->grid_, biasCol_ == -1, l2reg_);
+    auto root = std::make_shared<LinearObliviousTreeLeaf>(this->grid_, biasCol_, l2reg_, traceReg_);
     root->xIds_.resize(ds.samplesCount());
     std::iota(root->xIds_.begin(), root->xIds_.end(), 0);
 
@@ -375,6 +410,9 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
     std::vector<std::shared_ptr<LinearObliviousTreeLeaf>> leaves;
     leaves.push_back(std::move(root));
 
+    Vec ys = target.targets();
+    DataSet newDs(ds.samplesMx(), ys);
+
     for (int d = 0; d < maxDepth_; ++d) {
         double bestSplitScore = 1e9;
         int32_t splitFId = -1;
@@ -384,7 +422,7 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
             for (int cond = 0; cond < grid_->conditionsCount(fId); ++cond) {
                 double splitScore = 0;
                 for (auto& l : leaves) {
-                    splitScore += l->splitScore(ds, target, fId, cond);
+                    splitScore += l->splitScore(newDs, fId, cond);
                 }
 
                 if (splitScore < bestSplitScore) {
@@ -397,7 +435,7 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
 
         std::vector<std::shared_ptr<LinearObliviousTreeLeaf>> new_leaves;
         for (auto& l : leaves) {
-            auto nLeaves = l->split(ds, splitFId, splitCond);
+            auto nLeaves = l->split(newDs, splitFId, splitCond);
             new_leaves.emplace_back(std::move(nLeaves.first));
             new_leaves.emplace_back(std::move(nLeaves.second));
         }
@@ -406,8 +444,8 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
     }
 
     for (auto& l : leaves) {
-        l->fit(ds, target);
-        l->printEig();
+        l->fit(newDs);
+        l->printInfo();
     }
 
     return std::make_shared<GreedyLinearObliviousTree>(grid_, std::move(leaves));

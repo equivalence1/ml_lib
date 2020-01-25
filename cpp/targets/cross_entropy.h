@@ -37,6 +37,10 @@ public:
 
     DoubleRef valueTo(const Vec& x, DoubleRef to) const;
 
+    Vec targets() const override {
+        return target_;
+    }
+
 private:
     Vec target_;
 };

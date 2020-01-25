@@ -10,6 +10,8 @@ class Target : public virtual FuncC1 {
 public:
 
     virtual const DataSet& owner() const = 0;
+
+    virtual Vec targets() const = 0;
 };
 
 class PointwiseTarget : public Object {
