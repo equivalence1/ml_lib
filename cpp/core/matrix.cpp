@@ -90,6 +90,16 @@ void Mx::addColumn(const Vec& column) {
     cols_ += 1;
 }
 
+Mx Mx::XXT() const {
+    assert(xdim() == 1);
+    int64_t n = ydim();
+    auto x = data_.view({n, 1});
+    auto xt = x.transpose(0, 1);
+    auto resTensor = torch::mm(x, xt).contiguous().view({-1});
+    return Mx(Vec(resTensor), n, n);
+}
+
+
 //Vec Mx::col(int64_t idx) {
 //    return Vec(0);
 //}

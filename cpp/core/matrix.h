@@ -66,6 +66,8 @@ public:
         return Mx(Vec(tensor), rows_, cols_);
     }
 
+    Mx XXT() const;
+
     Mx& operator+=(const Mx& other);
     Mx& operator-=(const Mx& other);
 

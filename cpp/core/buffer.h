@@ -17,7 +17,7 @@ namespace Detail {
         }
 
         static uint8_t* data(const torch::Tensor& tensor) {
-            return tensor.data<uint8_t>();
+            return tensor.data_ptr<uint8_t>();
         }
 
 
@@ -38,7 +38,7 @@ namespace Detail {
         }
 
         static float* data(const torch::Tensor& tensor) {
-            return tensor.data<float>();
+            return tensor.data_ptr<float>();
         }
 
         static int64_t size(const torch::Tensor& tensor) {
@@ -57,7 +57,7 @@ namespace Detail {
         }
 
         static int* data(const torch::Tensor& tensor) {
-            return tensor.data<int>();
+            return tensor.data_ptr<int>();
         }
 
         static int64_t size(const torch::Tensor& tensor) {

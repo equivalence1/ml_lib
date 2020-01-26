@@ -1,7 +1,7 @@
 #include "vec.h"
 #include "vec_factory.h"
 #include "torch_helpers.h"
-
+#include "matrix.h"
 
 
 void Vec::set(int64_t index, double value) {

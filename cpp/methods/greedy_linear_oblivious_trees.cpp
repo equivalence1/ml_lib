@@ -3,6 +3,7 @@
 #include <memory>
 #include <set>
 #include <stdexcept>
+#include <chrono>
 
 #include <core/vec_factory.h>
 #include <core/matrix.h>
@@ -19,7 +20,6 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
     bool needBias = biasCol < 0;
 
     if ((int)usedFeatures.size() - int(!needBias) > 0) {
-        // TODO here I assume that biasCol is always column #0..
         for (auto f : usedFeatures) {
             if (f != biasCol) {
                 usedFeature_ = f; // this one is origFeatureId
@@ -62,12 +62,21 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
 
 //    std::cout << "Hello?" << std::endl;
 
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
     auto features = grid_->nzFeatures();
 //    for (int64_t i = 0; i < features.size(); ++i) {
     parallelFor(0, features.size(), [&](int64_t i){
         auto f = i;
+
         auto newUsedFeatures = usedFeatures;
         newUsedFeatures.insert(features[f].origFeatureId_);
+        std::vector<int64_t> newUsedFeaturesV(newUsedFeatures.begin(), newUsedFeatures.end());
+        auto indexes = torch::tensor(newUsedFeaturesV);
+        auto newDsDataTensor = ds.samplesMx().data().view({ds.samplesCount(), ds.featuresCount()}).index_select(1, indexes).contiguous().view({-1});
+        auto newDsDataMx = Mx(Vec(newDsDataTensor), ds.samplesCount(), newUsedFeatures.size());
+        DataSet samplesDs(newDsDataMx, ds.target());
+
 //        std::cout << "newUsedFeatures.size(): " << newUsedFeatures.size() << std::endl;
         bds.visitFeature(features[f].featureId_, indicesVecRef, [&](int idxId, int8_t localBinId) {
             int offset = bds.binOffsets()[f];
@@ -75,15 +84,14 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
 
             int32_t sampleId = indicesVecRef[idxId];
 
-            auto x = ds.sample(sampleId, newUsedFeatures);
+            auto x = samplesDs.sample(sampleId);
             auto xb = needBias ? x.append(1) : std::move(x);
             auto X = Mx(xb, xb.size(), 1);
-            auto XT = X.T();
 
 //            std::cout << "fId: " << f << ", bin: " << int(localBinId) << ", adding x " << X <<
 //                     ", target " << std::setprecision(3) << y[sampleId] << std::endl;
 
-            auto XTX = X * XT;
+            auto XTX = X.XXT();
             auto XTy = X * y[sampleId];
 
             histLeft_XTX_[binPos] += XTX;
@@ -103,7 +111,10 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
         }
     });
 
-//    std::cout << "built" << std::endl;
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+
+    std::cout << "Hist built in " << duration << " [ms]" << std::endl;
 }
 
 void Histogram::printCnt() {
