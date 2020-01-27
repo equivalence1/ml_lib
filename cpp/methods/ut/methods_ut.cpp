@@ -153,7 +153,7 @@ TEST(Boosting, FeaturesTxtLinearTrees) {
     auto grid = buildGrid(ds, config);
 
     BoostingConfig boostingConfig;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(6, 0, 1.0, 0.001, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(6, 0, 1.0, 0.01, grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     testMetricsCalcer->addMetric(L2(test), "l2-test");

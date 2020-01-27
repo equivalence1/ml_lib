@@ -18,7 +18,10 @@ add_library(util
         city.h
         json.h
         io.h
-        string_utils.h)
+        string_utils.h
+        semaphore.cpp
+        semaphore.h
+        )
 
 enable_cxx14(util)
 maybe_enable_cuda(util)

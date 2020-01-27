@@ -60,15 +60,13 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
 
     Detail::ArrayRef<const int32_t> indicesVecRef(indices.data(), indices.size());
 
-//    std::cout << "Hello?" << std::endl;
+    std::cout << "Hello?" << std::endl;
 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
     auto features = grid_->nzFeatures();
 //    for (int64_t i = 0; i < features.size(); ++i) {
-    parallelFor(0, features.size(), [&](int64_t i){
-        auto f = i;
-
+    parallelFor(0, features.size(), [&](int64_t f) {
         auto newUsedFeatures = usedFeatures;
         newUsedFeatures.insert(features[f].origFeatureId_);
         std::vector<int64_t> newUsedFeaturesV(newUsedFeatures.begin(), newUsedFeatures.end());
@@ -102,7 +100,7 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
 
         int offset = bds.binOffsets()[f];
 
-        for (int localBinId = 1; localBinId <= grid_->conditionsCount(f); ++localBinId) {
+        for (int localBinId = 1; localBinId <= (int)grid_->conditionsCount(f); ++localBinId) {
             int binPos = offset + localBinId;
             histLeft_XTX_[binPos] += histLeft_XTX_[binPos - 1];
             histLeft_XTy_[binPos] += histLeft_XTy_[binPos - 1];
@@ -131,7 +129,7 @@ void Histogram::printCnt() {
 void Histogram::printEig(Mx& M) {
     auto eigs = torch::eig(M.data().view({M.ydim(), M.xdim()}), false);
     auto vals = std::get<0>(eigs);
-    for (int i = 0; i < vals.size(0); ++i) {
+    for (int i = 0; i < (int)vals.size(0); ++i) {
         std::cout << vals[i].data()[0] << ", ";
     }
 }
@@ -409,6 +407,8 @@ private:
     std::unique_ptr<Histogram> hist_;
 };
 
+ThreadPool GreedyLinearObliviousTreeLearner::buildThreadPool_;
+
 ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& target) {
     auto root = std::make_shared<LinearObliviousTreeLeaf>(this->grid_, biasCol_, l2reg_, traceReg_);
     root->xIds_.resize(ds.samplesCount());
@@ -429,33 +429,51 @@ ModelPtr GreedyLinearObliviousTreeLearner::fit(const DataSet& ds, const Target& 
         int32_t splitFId = -1;
         int32_t splitCond = -1;
 
-        for (int fId = 0; fId < grid_->nzFeatures().size(); ++fId) {
-            for (int cond = 0; cond < grid_->conditionsCount(fId); ++cond) {
-                double splitScore = 0;
-                for (auto& l : leaves) {
-                    splitScore += l->splitScore(newDs, fId, cond);
-                }
+        parallelForInThreadPool(buildThreadPool_, 0, leaves.size(), [&](int64_t lId) {
+            auto& l = leaves[lId];
+            l->buildHist(newDs);
+        });
 
-                if (splitScore < bestSplitScore) {
-                    bestSplitScore = splitScore;
+        Mx splitScores(grid_->nzFeatures().size(), 32);
+
+        parallelForInThreadPool(buildThreadPool_, 0, grid_->nzFeatures().size(), [&](int64_t fId) {
+            parallelFor(0, grid_->conditionsCount(fId), [&](int64_t cond) {
+                for (auto& l : leaves) {
+                    double oldScore = splitScores.get(cond, fId);
+                    splitScores.set(cond, fId, oldScore + l->splitScore(newDs, fId, cond));
+                }
+            });
+        });
+
+        for (int fId = 0; fId < grid_->nzFeatures().size(); ++fId) {
+            for (int64_t cond = 0; cond < grid_->conditionsCount(fId); ++cond) {
+                double sScore = splitScores.get(cond, fId);
+                if (sScore < bestSplitScore) {
+                    bestSplitScore = sScore;
                     splitFId = fId;
                     splitCond = cond;
                 }
             }
         }
 
-        std::vector<std::shared_ptr<LinearObliviousTreeLeaf>> new_leaves;
-        for (auto& l : leaves) {
+        std::vector<std::shared_ptr<LinearObliviousTreeLeaf>> new_leaves(leaves.size() * 2);
+
+        parallelForInThreadPool(buildThreadPool_, 0, leaves.size(), [&](int64_t lId) {
+            auto& l = leaves[lId];
             auto nLeaves = l->split(newDs, splitFId, splitCond);
-            new_leaves.emplace_back(std::move(nLeaves.first));
-            new_leaves.emplace_back(std::move(nLeaves.second));
-        }
+            new_leaves[lId * 2] = std::move(nLeaves.first);
+            new_leaves[lId * 2 + 1] = std::move(nLeaves.second);
+        });
 
         leaves = std::move(new_leaves);
     }
 
-    for (auto& l : leaves) {
+    parallelForInThreadPool(buildThreadPool_, 0, leaves.size(), [&](int64_t lId) {
+        auto& l = leaves[lId];
         l->fit(newDs);
+    });
+
+    for (auto& l : leaves) {
         l->printInfo();
     }
 

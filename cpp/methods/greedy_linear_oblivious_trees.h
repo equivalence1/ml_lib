@@ -25,12 +25,13 @@ public:
 
 
     void printEig(double l2reg);
-    void printEig(Mx& M);
     void printCnt();
 
 private:
     static double computeScore(Mx& XTX, Mx& XTy, double XTX_trace, uint32_t cnt, double l2reg,
             double traceReg);
+
+    static void printEig(Mx& M);
 
     friend Histogram operator-(const Histogram& lhs, const Histogram& rhs);
 
@@ -69,6 +70,8 @@ private:
     int biasCol_ = -1;
     double l2reg_ = 0.0;
     double traceReg_ = 0.0;
+
+    static ThreadPool buildThreadPool_;
 };
 
 class GreedyLinearObliviousTree final

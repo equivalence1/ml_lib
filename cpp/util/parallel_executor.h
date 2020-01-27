@@ -1,6 +1,8 @@
 #pragma once
 
 #include "singleton.h"
+#include "semaphore.h"
+
 #include <cstdint>
 #include <functional>
 
@@ -35,20 +37,29 @@ inline ThreadPool& GlobalThreadPool() {
 
 
 template <class Task>
-inline void parallelFor(int64_t from, int64_t to, Task&& task) {
-    auto& pool = GlobalThreadPool();
+inline void parallelForInThreadPool(ThreadPool& pool, int64_t from, int64_t to, Task&& task) {
     const int64_t numBlocks = pool.numThreads();
     const int64_t blockSize = (to - from + numBlocks - 1) / numBlocks;
+
+    Semaphore sema;
+    SemaphoreAcquireGuard sag(sema, to - from);
+
     for (int64_t blockId = 0; blockId < numBlocks; ++blockId) {
         const int64_t startBlock = std::min<int64_t>(blockId * blockSize, to);
         const int64_t endBlock = std::min<int64_t>((blockId + 1) * blockSize, to);
         if (startBlock != endBlock) {
-            pool.enqueue([startBlock, endBlock, &task] {
+            pool.enqueue([startBlock, endBlock, blockId, &task, &sema] {
+                SemaphoreReleaseGuard srg(sema, endBlock - startBlock);
                 for (int64_t i = startBlock; i < endBlock; ++i) {
                     task(i);
                 }
             });
         }
     }
-    pool.waitComplete();
+}
+
+template <class Task>
+inline void parallelFor(int64_t from, int64_t to, Task&& task) {
+    auto& pool = GlobalThreadPool();
+    parallelForInThreadPool(pool, from, to, task);
 }
