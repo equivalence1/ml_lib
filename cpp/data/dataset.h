@@ -32,6 +32,10 @@ public:
         });
     }
 
+    void addColumn(const Vec& col) {
+        data_.addColumn(col, true);
+    }
+
     void addBiasColumn() {
         Vec x(samplesCount(), 1);
         data_.addColumn(x);
@@ -66,10 +70,15 @@ public:
     }
 
     Mx sampleMx(const std::set<int>& features) const {
-        auto indexes = torch::tensor(std::vector<int>(features.begin(), features.end()));
-        auto resTensor = data_.data().transpose(0, 1)[indexes].transpose(0, 1).contiguous();
+        auto indexes = torch::tensor(std::vector<long>(features.begin(), features.end()));
+        auto resTensor = data_.data().view({samplesCount(), featuresCount()}).transpose(0, 1).index_select(0, indexes).transpose(0, 1).contiguous().view({-1});
         auto tmpResVec = Vec(resTensor);
         return Mx(tmpResVec, samplesCount(), features.size());
+    }
+
+    DataSet subDs(const std::set<int>& features) const {
+        Mx data = sampleMx(features);
+        return DataSet(data, target_);
     }
 
     Vec target() const {

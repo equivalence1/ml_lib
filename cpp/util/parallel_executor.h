@@ -30,9 +30,9 @@ private:
     c10::ThreadPool pool_;
 };
 
-
+template <int N>
 inline ThreadPool& GlobalThreadPool() {
-    return Singleton<ThreadPool>();
+    return Singleton<N, ThreadPool>();
 }
 
 
@@ -60,6 +60,12 @@ inline void parallelForInThreadPool(ThreadPool& pool, int64_t from, int64_t to, 
 
 template <class Task>
 inline void parallelFor(int64_t from, int64_t to, Task&& task) {
-    auto& pool = GlobalThreadPool();
+    auto& pool = GlobalThreadPool<0>();
+    parallelForInThreadPool(pool, from, to, task);
+}
+
+template <int N, class Task>
+inline void parallelFor(int64_t from, int64_t to, Task&& task) {
+    auto& pool = GlobalThreadPool<N>();
     parallelForInThreadPool(pool, from, to, task);
 }

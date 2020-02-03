@@ -90,7 +90,7 @@ public:
         }
     }
 
-    void addColumn(const Vec& column);
+    void addColumn(const Vec& column, bool last = false);
 
     int64_t xdim() const {
         return cols_;

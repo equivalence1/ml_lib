@@ -169,7 +169,7 @@ namespace {
                 auto histograms = histograms_->arrayRef();
                 auto prevHistograms = prevHistograms_->arrayRef();
 
-                auto& executor = GlobalThreadPool();
+                auto& executor = GlobalThreadPool<0>();
                 const int64_t numBlocks = executor.numThreads();
                 const int64_t blockSize = (totalBins + numBlocks - 1) / numBlocks;
 
@@ -205,7 +205,7 @@ namespace {
         }
 
         void buildHistogramsForParts(ConstVecRef<int32_t> partIds, VecRef<Stat> dst) const {
-            auto& threadPool = GlobalThreadPool();
+            auto& threadPool = GlobalThreadPool<0>();
             for (int32_t i = 0; i < partIds.size(); ++i) {
                 const int32_t partId = partIds[i];
                 const auto& part = leaves_[partId];
@@ -240,7 +240,7 @@ namespace {
             auto statRef = stat_.arrayRef();
             auto leaves_stats_ref = leaves_stats_.arrayRef();
             std::mutex lock;
-            auto& executor = GlobalThreadPool();
+            auto& executor = GlobalThreadPool<0>();
             const int64_t numBlocks = executor.numThreads();
             const int64_t blockSize = (binsRef.size() + numBlocks - 1) / numBlocks;
 

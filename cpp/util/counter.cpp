@@ -22,6 +22,6 @@ namespace {
 }
 
 int64_t Counter::next() {
-    auto& impl =  Singleton<CounterImpl>();
+    auto& impl =  Singleton<0, CounterImpl>();
     return impl.next();
 }
