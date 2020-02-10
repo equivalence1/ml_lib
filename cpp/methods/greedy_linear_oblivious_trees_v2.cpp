@@ -8,167 +8,36 @@
 #include <core/vec_factory.h>
 #include <core/matrix.h>
 
-HistogramV2::HistogramV2(BinarizedDataSet& bds, GridPtr grid, unsigned int histSize, unsigned int nUsedFeatures,
-        int lastUsedFeatureId)
+HistogramV2::HistogramV2(BinarizedDataSet& bds, GridPtr grid, unsigned int nUsedFeatures, int lastUsedFeatureId)
         : bds_(bds)
         , grid_(std::move(grid))
-        , histSize_(histSize)
         , nUsedFeatures_(nUsedFeatures)
         , lastUsedFeatureId_(lastUsedFeatureId) {
     for (int i = 0; i < (int)grid_->totalBins(); ++i) {
-        hist_XTX_.emplace_back(histSize, histSize);
-        hist_XTy_.emplace_back(histSize, 1);
-        hist_XTX_trace_.emplace_back(0);
-        hist_cnt_.emplace_back(0);
+        hist_.emplace_back(nUsedFeatures + 1, nUsedFeatures);
     }
 }
 
-void HistogramV2::build(const DataSet& ds, const std::vector<int32_t>& indices) {
-    auto ys = ds.target();
-    auto ys_ref = ys.arrayRef();
-
-    parallelFor<123321>(0, grid_->nzFeaturesCount(), [&](int fId) {
-        int offset = bds_.binOffsets()[fId];
-        bds_.visitFeature(fId, indices, [&](int i, int8_t localBinId) {
-            int xId = indices[i];
-
-//            std::cout << "fId = " << fId << ", localBinId = " << (int)localBinId << ", xId = " << xId << std::endl;
-            int bin = offset + localBinId;
-
-            auto XTX_ref = hist_XTX_[bin].arrayRef();
-
-            auto x = ds.sample(xId);
-            auto x_ref = x.arrayRef();
-
-            // -- XTX
-            for (unsigned int r = 0; r < x.size(); ++r) {
-                for (unsigned int c = r; c < x.size(); ++c) {
-                    unsigned int mx_idx = r * histSize_ + c;
-                    float val = x_ref[r] * x_ref[c];
-                    XTX_ref[mx_idx] += val;
-                    if (c != r) {
-                        mx_idx = c * histSize_ + r;
-                        XTX_ref[mx_idx] += val;
-                    }
-                }
-            }
-
-            // --- XTy
-            auto XTy_ref = hist_XTy_[bin].arrayRef();
-            for (unsigned int r = 0; r < x.size(); ++r) {
-                XTy_ref[r] += x_ref[r] * ys_ref[xId];
-            }
-
-            // --- cnt
-            hist_cnt_[bin] += 1;
-        });
-    });
+void HistogramV2::addFullCorrelation(int bin, Vec x, double y) {
+    hist_[bin].addFullCorrelation(x, y);
 }
 
-void HistogramV2::updateBin(int64_t fId, int64_t binId, const Vec& x, double y, double fVal, int corOffset) {
-    int offset = bds_.binOffsets()[fId];
-    int binPos = offset + (int)binId;
+void HistogramV2::addNewCorrelation(int bin, const std::vector<double>& xtx, double xty) {
+    hist_[bin].addNewCorrelation(xtx, xty);
+}
 
-    auto XTX_ref = hist_XTX_[binPos].arrayRef();
-    auto x_ref = x.arrayRef();
-
-    unsigned int updatePos = nUsedFeatures_ + corOffset;
-
-    unsigned int r = 0;
-    unsigned int c = updatePos;
-
-    for (unsigned int i = 0; i < 2 * updatePos + 1; ++i) {
-        float updateVal;
-        unsigned int x_coord = std::min(r, c);
-        if (r != c) {
-            updateVal = x_ref[x_coord] * (float)fVal;
-        } else {
-            updateVal = (float)(fVal * fVal);
-        }
-        unsigned int xtxPos = r * histSize_ + c;
-        XTX_ref[xtxPos] += updateVal;
-
-        if (r < c) {
-            r++;
-            if (r == c) {
-                r = updatePos;
-                c = 0;
-            }
-        } else if (c < r) {
-            c++;
-        }
-    }
-
-    auto XTy_ref = hist_XTy_[binPos].arrayRef();
-    XTy_ref[updatePos] += (float)(fVal * y);
+void HistogramV2::addBinStat(int bin, const BinStat& stats) {
+    hist_[bin] += stats;
 }
 
 void HistogramV2::prefixSumBins() {
-    parallelFor<123321>(0, grid_->nzFeaturesCount(), [&](int fId) {
-        for (int localBinId = 1; localBinId <= (int)grid_->conditionsCount(fId); ++localBinId) {
-            int offset = bds_.binOffsets()[fId];
-            int binPos = offset + localBinId;
-
-            auto hist_XTX_cur_ref = hist_XTX_[binPos].arrayRef();
-            auto hist_XTy_cur_ref = hist_XTy_[binPos].arrayRef();
-
-            auto hist_XTX_prev_ref = hist_XTX_[binPos - 1].arrayRef();
-            auto hist_XTy_prev_ref = hist_XTy_[binPos - 1].arrayRef();
-
-            for (unsigned int r = 0; r < nUsedFeatures_; ++r) {
-                for (unsigned int c = 0; c < nUsedFeatures_; ++c) {
-                    unsigned int mx_pos = r * histSize_ + c;
-                    hist_XTX_cur_ref[mx_pos] += hist_XTX_prev_ref[mx_pos];
-                }
-                hist_XTy_cur_ref[r] += hist_XTy_prev_ref[r];
-            }
-
-            hist_cnt_[binPos] += hist_cnt_[binPos - 1];
-//            hist_XTX_trace_[binPos] += hist_XTX_trace_[binPos - 1];
+    for (int fId = 0; fId < (int)grid_->nzFeaturesCount(); ++fId) {
+        int offset = grid_->binOffsets()[fId];
+        for (int localBinId = 1; localBinId <= grid_->conditionsCount(fId); ++localBinId) {
+            int bin = offset + localBinId;
+            hist_[bin] += hist_[bin - 1];
         }
-    });
-}
-
-void HistogramV2::prefixSumBinsLastFeature(int corOffset) {
-    parallelFor<123321>(0, grid_->nzFeaturesCount(), [&](int fId) {
-        for (int localBinId = 1; localBinId <= (int)grid_->conditionsCount(fId); ++localBinId) {
-            int offset = bds_.binOffsets()[fId];
-            int binPos = offset + localBinId;
-
-            auto hist_XTX_cur_ref = hist_XTX_[binPos].arrayRef();
-            auto hist_XTy_cur_ref = hist_XTy_[binPos].arrayRef();
-
-            auto hist_XTX_prev_ref = hist_XTX_[binPos - 1].arrayRef();
-            auto hist_XTy_prev_ref = hist_XTy_[binPos - 1].arrayRef();
-
-            unsigned int updatePos = nUsedFeatures_ + corOffset;
-
-            unsigned int r = 0;
-            unsigned int c = updatePos;
-
-            for (unsigned int i = 0; i < 2 * updatePos + 1; ++i) {
-                unsigned int mx_pos = r * histSize_ + c;
-                hist_XTX_cur_ref[mx_pos] += hist_XTX_prev_ref[mx_pos];
-
-                if (r < c) {
-                    r++;
-                    if (r == c) {
-                        r = updatePos;
-                        c = 0;
-                    }
-                } else if (c < r) {
-                    c++;
-                }
-            }
-
-            hist_XTy_cur_ref[updatePos] += hist_XTy_prev_ref[updatePos];
-
-            // Don't update cnt here.
-
-            // TODO trace
-//            hist_XTX_trace_[binPos] += hist_XTX_trace_[binPos - 1];
-        }
-    });
+    }
 }
 
 std::shared_ptr<Mx> HistogramV2::getW(double l2reg) {
@@ -179,13 +48,13 @@ std::shared_ptr<Mx> HistogramV2::getW(double l2reg) {
     uint32_t offset = grid_->binOffsets().at(lastUsedFeatureId_);
     uint32_t lastPos = offset + grid_->conditionsCount(lastUsedFeatureId_);
 
-    int xtx_dim = hist_XTX_[lastPos].ydim();
+    auto XTX = hist_[lastPos].getXTX();
+    auto XTy = hist_[lastPos].getXTy();
 
-    Mx XTX = hist_XTX_[lastPos] + Diag(xtx_dim, l2reg);
-    Mx& XTy = hist_XTy_[lastPos];
+    Mx XTX_r = XTX + Diag(XTX.ydim(), l2reg);
 
     try {
-        auto fullW = XTX.inverse() * XTy;
+        auto fullW = XTX_r.inverse() * XTy;
         auto wVec = fullW.slice(0, nUsedFeatures_);
         return std::make_shared<Mx>(wVec, wVec.size(), 1);
     } catch (...) {
@@ -200,9 +69,6 @@ double HistogramV2::computeScore(Mx& XTX, Mx& XTy, double XTX_trace, uint32_t cn
         return 0;
     }
 
-    // Dealing with matrix singularity
-    // Not sure what we should do in this case...
-    // For now just return 0.
     try {
         Mx w = XTX.inverse() * XTy;
 //    std::cout << "w is " << w << std::endl;
@@ -232,19 +98,31 @@ std::pair<double, double> HistogramV2::splitScore(int fId, int condId, double l2
     uint32_t binPos = offset + condId;
     uint32_t lastPos = offset + grid_->conditionsCount(fId);
 
-    int xtx_dim = hist_XTX_[binPos].ydim();
+    auto XTX_binPos = hist_[binPos].getXTX();
+    auto XTX_lastPos = hist_[lastPos].getXTX();
 
-    Mx left_XTX = hist_XTX_[binPos] + Diag(xtx_dim, l2reg);
-    Mx right_XTX = hist_XTX_[lastPos] - hist_XTX_[binPos] + Diag(xtx_dim, l2reg);
+    auto XTy_binPos = hist_[binPos].getXTy();
+    auto XTy_lastPos = hist_[lastPos].getXTy();
 
-    Mx left_XTy(hist_XTy_[binPos]);
-    Mx right_XTy = hist_XTy_[lastPos] - hist_XTy_[binPos];
+    auto cnt_binPos = hist_[binPos].getCnt();
+    auto cnt_lastPos = hist_[lastPos].getCnt();
 
-    uint32_t left_cnt = hist_cnt_[binPos];
-    uint32_t right_cnt = hist_cnt_[lastPos] - hist_cnt_[binPos];
+    auto trace_binPos = hist_[binPos].getTrace();
+    auto trace_lastPos = hist_[lastPos].getTrace();
 
-    double left_XTX_trace = hist_XTX_trace_[binPos];
-    double right_XTX_trace = hist_XTX_trace_[lastPos] - hist_XTX_trace_[binPos];
+    auto ydim = XTX_binPos.ydim();
+
+    Mx left_XTX = XTX_binPos + Diag(ydim, l2reg);
+    Mx right_XTX = XTX_lastPos - XTX_binPos + Diag(ydim, l2reg);
+
+    Mx left_XTy(XTy_binPos);
+    Mx right_XTy = XTy_lastPos - XTy_binPos;
+
+    uint32_t left_cnt = cnt_binPos;
+    uint32_t right_cnt = cnt_lastPos - cnt_binPos;
+
+    double left_XTX_trace = trace_binPos;
+    double right_XTX_trace = trace_lastPos - trace_binPos;
 
 //    std::cout << "split fId: " << fId << ", cond: " << condId << " ";
 
@@ -263,7 +141,7 @@ void HistogramV2::printCnt() {
     uint32_t offset = grid_->binOffsets().at(lastUsedFeatureId_);
     uint32_t lastPos = offset + grid_->conditionsCount(lastUsedFeatureId_);
 
-    std::cout << "cnt: " << hist_cnt_[lastPos] << std::endl;
+    std::cout << "cnt: " << hist_[lastPos].getCnt() << std::endl;
 }
 
 void HistogramV2::printEig(Mx& M) {
@@ -282,10 +160,10 @@ void HistogramV2::printEig(double l2reg) {
     uint32_t offset = grid_->binOffsets().at(lastUsedFeatureId_);
     uint32_t lastPos = offset + grid_->conditionsCount(lastUsedFeatureId_);
 
-    Mx& XTX = hist_XTX_[lastPos];
+    auto XTX = hist_[lastPos].getXTX();
     std::cout << "XTX: " << XTX << std::endl;
 
-    Mx& XTy = hist_XTy_[lastPos];
+    auto XTy = hist_[lastPos].getXTy();
     std::cout << "XTy: " << XTy << std::endl;
 
     auto w = getW(l2reg);
@@ -301,7 +179,7 @@ void HistogramV2::printEig(double l2reg) {
     printEig(XTX_Reg);
     std::cout << std::endl;
 
-    std::cout << "XTX trace: " << hist_XTX_trace_[lastPos] << std::endl;
+    std::cout << "XTX trace: " << hist_[lastPos].getTrace() << std::endl;
 }
 
 void HistogramV2::print() {
@@ -311,53 +189,40 @@ void HistogramV2::print() {
         for (int cond = 0; cond <= grid_->conditionsCount(fId); ++cond) {
             uint32_t offset = grid_->binOffsets().at(fId);
             uint32_t bin = offset + cond;
-            std::cout << "fId: " << fId << ", cond: " << cond << ", XTX: " << hist_XTX_[bin] << ", XTy: " << hist_XTy_[bin] << ", cnt: " << hist_cnt_[bin] << std::endl;
+            std::cout << "fId: " << fId << ", cond: " << cond << ", XTX: " << hist_[bin].getXTX()
+                    << ", XTy: " << hist_[bin].getXTy()
+                    << ", cnt: " << hist_[bin].getCnt() << std::endl;
         }
     }
     std::cout << "}" << std::endl;
 }
 
-HistogramV2 operator-(const HistogramV2& lhs, const HistogramV2& rhs) {
-    GridPtr grid = lhs.grid_;
-
-    HistogramV2 res(rhs.bds_, grid, lhs.histSize_, rhs.nUsedFeatures_, rhs.lastUsedFeatureId_);
-
-    unsigned int nFeaturesToUse = lhs.nUsedFeatures_;
-
-    for (uint32_t bin = 0; bin < grid->totalBins(); ++bin) {
-        auto lhs_XTX_ref = lhs.hist_XTX_[bin].arrayRef();
-        auto rhs_XTX_ref = rhs.hist_XTX_[bin].arrayRef();
-        auto res_XTX_ref = res.hist_XTX_[bin].arrayRef();
-
-        // --- XTX
-
-        for (unsigned int i = 0; i < nFeaturesToUse; ++i) {
-            for (unsigned int j = 0; j < nFeaturesToUse; ++j) {
-                unsigned int pos = i * lhs.histSize_ + j;
-                res_XTX_ref[pos] = lhs_XTX_ref[pos] - rhs_XTX_ref[pos];
-            }
-        }
-
-        // --- XTy
-
-        auto lhs_XTy_ref = lhs.hist_XTy_[bin].arrayRef();
-        auto rhs_XTy_ref = rhs.hist_XTy_[bin].arrayRef();
-        auto res_XTy_ref = res.hist_XTy_[bin].arrayRef();
-
-        for (unsigned int i = 0; i < nFeaturesToUse; ++i) {
-            res_XTy_ref[i] = lhs_XTy_ref[i] - rhs_XTy_ref[i];
-        }
-
-        // --
-
-        res.hist_cnt_[bin] = lhs.hist_cnt_[bin] - rhs.hist_cnt_[bin];
-
-        // --
-
-        // TODO trace
+HistogramV2& HistogramV2::operator+=(const HistogramV2& h) {
+    for (int bin = 0; bin < (int)grid_->totalBins(); ++bin) {
+        hist_[bin] += h.hist_[bin];
     }
 
-    res.lastUsedFeatureId_ = rhs.lastUsedFeatureId_;
+    return *this;
+}
+
+HistogramV2& HistogramV2::operator-=(const HistogramV2& h) {
+    for (int bin = 0; bin < (int)grid_->totalBins(); ++bin) {
+        hist_[bin] -= h.hist_[bin];
+    }
+
+    return *this;
+}
+
+HistogramV2 operator-(const HistogramV2& lhs, const HistogramV2& rhs) {
+    HistogramV2 res(lhs);
+    res -= rhs;
+
+    return res;
+}
+
+HistogramV2 operator+(const HistogramV2& lhs, const HistogramV2& rhs) {
+    HistogramV2 res(lhs);
+    res += rhs;
 
     return res;
 }
@@ -374,12 +239,8 @@ public:
             , maxDepth_(maxDepth)
             , nUsedFeatures_(nUsedFeatures)
             , lastUsedFeatureId_(lastUsedFeatureId) {
-        hist_ = std::make_unique<HistogramV2>(bds_, grid_, maxDepth, nUsedFeatures, lastUsedFeatureId);
+        hist_ = std::make_unique<HistogramV2>(bds_, grid_, nUsedFeatures, lastUsedFeatureId);
         id_ = 0;
-    }
-
-    void updateBin(int64_t fId, int64_t binId, const Vec& x, double y, double f, int corOffset) {
-        hist_->updateBin(fId, binId, x, y, f, corOffset);
     }
 
     double splitScore(int fId, int condId) {
@@ -387,7 +248,7 @@ public:
         return sScore.first + sScore.second;
     }
 
-    void fit(const DataSet& ds) {
+    void fit() {
         if (w_) {
             return;
         }
@@ -431,7 +292,7 @@ public:
     }
 
     std::pair<std::shared_ptr<LinearObliviousTreeLeafV2>, std::shared_ptr<LinearObliviousTreeLeafV2>>
-    split(const DataSet& curDs, Vec& newCol, std::vector<int32_t>& leafId, int32_t fId, int32_t condId) {
+    split(int32_t fId, int32_t condId) {
         int origFId = grid_->origFeatureIndex(fId);
         unsigned int nUsedFeatures = nUsedFeatures_ + (1 - usedFeatures_.count(origFId));
 //        std::cout << "new nUsedFeatures: " << nUsedFeatures << std::endl;
@@ -443,7 +304,7 @@ public:
                 l2reg_, traceReg_,
                 maxDepth_, nUsedFeatures, fId);
 
-        initChildren(curDs, newCol, leafId, left, right, fId, condId);
+        initChildren(left, right, fId, condId);
 
         return std::make_pair(left, right);
     }
@@ -474,108 +335,13 @@ public:
     }
 
 private:
-    void initChildren(const DataSet& curDs,
-                      Vec& newCol, std::vector<int32_t>& leafId,
-                      std::shared_ptr<LinearObliviousTreeLeafV2>& left,
+    void initChildren(std::shared_ptr<LinearObliviousTreeLeafV2>& left,
                       std::shared_ptr<LinearObliviousTreeLeafV2>& right,
                       int32_t splitFId, int32_t condId) {
         left->id_ = 2 * id_;
         right->id_ = 2 * id_ + 1;
 
-//        std::cout << "Splitting on feature " << origFeatureId << std::endl;
-
-        std::vector<int32_t> leftXIds;
-        std::vector<int32_t> rightXIds;
-
-        auto newCol_ref = newCol.arrayRef();
-
-        double border = grid_->borders(splitFId).at(condId);
-        for (int i = 0; i < (int)newCol.size(); ++i) {
-            if (leafId[i] == id_) {
-                auto x = newCol_ref[i];
-                if (x <= border) {
-                    leafId[i] = left->id_;
-                    leftXIds.push_back(i);
-                } else {
-                    leafId[i] = right->id_;
-                    rightXIds.push_back(i);
-                }
-            }
-        }
-
-        // First, fully build left child, this takes three stages
-
-        auto ys = curDs.target().arrayRef();
-
         int32_t origFeatureId = grid_->origFeatureIndex(splitFId);
-
-        // 1) fill top corners with previous feature correlations
-
-//        std::cout << "build left" << std::endl;
-        left->hist_->build(curDs, leftXIds);
-
-        // 2) update histograms with the new feature, but only if this feature is new
-
-        if (usedFeatures_.count(origFeatureId) == 0) {
-            parallelFor<345>(0, grid_->nzFeaturesCount(), [&](int fId) {
-                bds_.visitFeature(fId, leftXIds, [&](int i, int8_t localBinId) {
-                    int xId = leftXIds[i];
-                    Vec x = curDs.sample(xId);
-                    double fVal = newCol_ref[xId];
-                    left->hist_->updateBin(fId, localBinId, x, ys[xId], fVal, -1);
-                });
-            });
-        }
-
-        // 3) prefix sum bins
-
-        left->hist_->prefixSumBins();
-
-//        // 1) fill top corners with previous feature correlations
-//
-////        std::cout << "build right" << std::endl;
-//        right->hist_->build(curDs, rightXIds);
-//
-//        // 2) update histograms with the new feature, but only if this feature is new
-//
-//        if (usedFeatures_.count(origFeatureId) == 0) {
-//            for (int32_t fId = 0; fId < grid_->nzFeaturesCount(); ++fId) {
-//                bds_.visitFeature(fId, rightXIds, [&](int i, int8_t localBinId) {
-//                    int xId = rightXIds[i];
-//                    Vec x = curDs.sample(xId);
-//                    double fVal = newCol_ref[xId];
-//                    right->hist_->updateBin(fId, localBinId, x, ys[xId], fVal, -1);
-//                });
-//            }
-//        }
-//
-//        // 3) prefix sum bins
-//
-//        right->hist_->prefixSumBins();
-
-        // Now, build right child, this process also takes three steps...
-
-        // 1) init first nUsedFeatures, using operator-
-
-        right->hist_ = std::make_unique<HistogramV2>(*hist_ - *left->hist_);
-
-        // 2) update with the last added feature, but only if this feature is new
-        // TODO copy-paste -- this one is the same as for the left child
-
-        if (usedFeatures_.count(origFeatureId) == 0) {
-            parallelFor<345>(0, grid_->nzFeaturesCount(), [&](int fId) {
-                bds_.visitFeature(fId, rightXIds, [&](int i, int8_t localBinId) {
-                    int xId = rightXIds[i];
-                    auto x = curDs.sample(xId);
-                    auto fVal = newCol_ref[xId];
-                    right->hist_->updateBin(fId, localBinId, x, ys[xId], fVal, -1);
-                });
-            });
-
-            // 3) sum prefixes, but only for this new feature
-
-            right->hist_->prefixSumBinsLastFeature(-1);
-        }
 
         left->usedFeatures_ = usedFeatures_;
         right->usedFeatures_ = usedFeatures_;
@@ -618,11 +384,14 @@ private:
     std::unique_ptr<HistogramV2> hist_;
 };
 
-//ThreadPool GreedyLinearObliviousTreeLearner::buildThreadPool_;
+
 
 ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target& target) {
+    auto beginAll = std::chrono::steady_clock::now();
+
     auto tree = std::make_shared<LinearObliviousTreeV2>(grid_);
 
+    // todo cache
     auto bds = cachedBinarize(ds, grid_);
 
     std::vector<std::shared_ptr<LinearObliviousTreeLeafV2>> leaves;
@@ -639,56 +408,152 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
         throw std::runtime_error("provide bias col!");
     }
 
+    cacheDs(ds);
     DataSet curDs(ds.sampleMx({biasCol_}), target.targets());
 
-    std::vector<int32_t> xIds(ds.samplesCount());
-    std::iota(xIds.begin(), xIds.end(), 0);
 
-    // build root
+
 
     auto root = std::make_shared<LinearObliviousTreeLeafV2>(bds, this->grid_, l2reg_, traceReg_, maxDepth_ + 1, 1, -1);
     root->usedFeatures_.insert(biasCol_);
     root->usedFeaturesInOrder_.push_back(biasCol_);
-    root->hist_->build(curDs, xIds);
+
+    parallelFor<0>(0, curDs.samplesCount(), [&](int blockId, int i) {
+        Vec x = curDs.sample(i);
+        auto bins = bds.sampleBins(i);
+        double y = ys[i];
+
+        for (int fId = 0; fId < (int)grid_->nzFeaturesCount(); ++fId) {
+            int offset = (int)binOffsets_[fId];
+            int bin = offset + bins[fId];
+            stats_[blockId][0][bin].addFullCorrelation(x, y);
+        }
+    });
+
+    parallelFor<0>(0, grid_->totalBins(), [&](int bin) {
+        for (int blockId = 1; blockId < nThreads_; ++blockId) {
+            stats_[0][0][bin] += stats_[blockId][0][bin];
+        }
+    });
+
+    parallelFor<0>(0, grid_->totalBins(), [&](int bin) {
+        root->hist_->addBinStat(bin, stats_[0][0][bin]);
+    });
+
     root->hist_->prefixSumBins();
 
     leaves.emplace_back(std::move(root));
 
+
+
+
+    // Root is built
+
+
+
+
+
     for (unsigned int d = 0; d < maxDepth_; ++d) {
 
-        // Update with new features
+        for (auto& l : leaves) {
+            try {
+                l->printInfo();
+            } catch (...) {
+
+            }
+        }
+
+        std::cout << "\n\n=================\n\n" << std::endl;
+
+        // Update new correlations
 
         std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
-        parallelFor<31>(0, grid_->nzFeaturesCount(), [&](int newF) {
-            auto newOrigF = grid_->origFeatureIndex(newF);
-            if (usedFeatures.count(newOrigF) != 0) return;
-            Vec fColumn(ds.samplesCount());
-            auto fColumn_ref = fColumn.arrayRef();
-            ds.copyColumn(newOrigF, &fColumn);
-            bds.visitFeature(newF, [&](int i, int8_t localBinId) {
-                Vec x = curDs.sample(i);
-                double fVal = fColumn_ref[i];
-                unsigned int lId = leafId[i];
-                leaves[lId]->updateBin(newF, localBinId, x, ys[i], fVal, 0);
-            });
+//        std::cout << 1 << std::endl;
+
+        auto nUsedFeatures = leaves[0]->nUsedFeatures_;
+
+        parallelFor(0, nThreads_, [&](int i) {
+            for (int j = 0; j < (int)leaves.size(); ++j) {
+                for (int k = 0; k < (int)grid_->totalBins(); ++k) {
+                    for (int l = 0; l <= (int)nUsedFeatures; ++l) {
+                        h_XTX_[i][j][k][l] = 0;
+                    }
+                    h_XTy_[i][j][k] = 0;
+                }
+            }
         });
 
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+        auto time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        std::cout << "1 in " << time_ms << " [ms]" << std::endl;
 
-        parallelFor<31>(0, leaves.size(), [&](int lId) {
-            auto& l = leaves[lId];
-            l->hist_->prefixSumBinsLastFeature(0);
-//            std::cout << "PRE SPLIT {" << std::endl;
-//            l->printHists();
-//            std::cout << "}" << std::endl;
+        begin = std::chrono::steady_clock::now();
+//        std::cout << 2 << std::endl;
+
+        parallelFor(0, bds.samplesCount(), [&](int blockId, int sampleId) {
+            auto bins = bds.sampleBins(sampleId);
+            Vec x = curDs.sample(sampleId);
+            auto xRef = x.arrayRef();
+            unsigned int lId = leafId[sampleId];
+
+            for (int fId = 0; fId < (int)grid_->nzFeaturesCount(); ++fId) {
+                int bin = binOffsets_[fId] + bins[fId];
+
+                auto origFId = grid_->origFeatureIndex(fId);
+                if (usedFeatures.count(origFId) != 0) continue;
+
+                double fVal = fColumnsRefs_[fId][sampleId];
+
+                for (unsigned int i = 0; i < nUsedFeatures; ++i) {
+                    h_XTX_[blockId][lId][bin][i] += xRef[i] * fVal;
+                }
+                h_XTX_[blockId][lId][bin][nUsedFeatures] += fVal * fVal;
+                h_XTy_[blockId][lId][bin] += fVal * ys[sampleId];
+            }
         });
 
-        auto time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+//        std::cout << 2.5 << std::endl;
 
-        std::cout << "Hists built in " << time_ms << " [ms], finding best split" << std::endl;
+        // todo change order?
+        parallelFor(0, grid_->nzFeaturesCount(), [&](int fId) {
+            auto origFId = grid_->origFeatureIndex(fId);
+            if (usedFeatures.count(origFId) != 0) return;
+
+            for (int localBinId = 0; localBinId <= (int)grid_->conditionsCount(fId); ++localBinId) {
+                int bin = binOffsets_[fId] + localBinId;
+                for (int lId = 0; lId < (int)leaves.size(); ++lId) {
+                    for (int thId = 0; thId < nThreads_; ++thId) {
+                        if (localBinId != 0) {
+                            for (unsigned int i = 0; i <= nUsedFeatures; ++i) {
+                                h_XTX_[thId][lId][bin][i] += h_XTX_[thId][lId][bin - 1][i];
+                            }
+                            h_XTy_[thId][lId][bin] += h_XTy_[thId][lId][bin - 1];
+                        }
+                        leaves[lId]->hist_->addNewCorrelation(bin, h_XTX_[thId][lId][bin], h_XTy_[thId][lId][bin]);
+                    }
+                }
+            }
+        });
+
+        end = std::chrono::steady_clock::now();
+        time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        std::cout << "2 in " << time_ms << " [ms]" << std::endl;
+
+
+        for (auto& l : leaves) {
+            l->printHists();
+        }
+
+
 
         // Find best split
+
+
+
+
+
+        begin = std::chrono::steady_clock::now();
 
         double bestSplitScore = 1e9;
         int32_t splitFId = -1;
@@ -701,18 +566,18 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
             splitScores.emplace_back(std::move(fSplitScores));
         }
 
-        parallelFor<133>(0, grid_->nzFeaturesCount(), [&](int fId) {
-            parallelFor<134>(0, grid_->conditionsCount(fId), [&](int cond) {
+        parallelFor<0>(0, grid_->nzFeaturesCount(), [&](int fId) {
+            parallelFor<1>(0, grid_->conditionsCount(fId), [&](int cond) {
                 for (auto& l : leaves) {
                    splitScores[fId][cond] += l->splitScore(fId, cond);
                 }
-//                std::cout << "fId: " << fId << ", cond: " << cond << ", split score: " << score << std::endl;
             });
         });
 
         for (int fId = 0; fId < grid_->nzFeatures().size(); ++fId) {
             for (int64_t cond = 0; cond < grid_->conditionsCount(fId); ++cond) {
                 double sScore = splitScores[fId][cond];
+                std::cout << "fId: " << fId << ", cond: " << cond << ", split score: " << sScore << std::endl;
                 if (sScore < bestSplitScore) {
                     bestSplitScore = sScore;
                     splitFId = fId;
@@ -721,60 +586,184 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
             }
         }
 
-        std::cout << "Best split found, splitting" << std::endl;
+        end = std::chrono::steady_clock::now();
+        time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        std::cout << "Best split found in " << time_ms << "[ms], splitting" << std::endl;
+
+        std::cout << "Best split fId = " << splitFId << ", split cond = " << splitCond << std::endl;
+
+
+
 
         // Split
 
-        int32_t splitOrigFId = grid_->origFeatureIndex(splitFId);
-        Vec fColumn(ds.samplesCount());
-        ds.copyColumn(splitOrigFId, &fColumn);
 
+
+
+
+        begin = std::chrono::steady_clock::now();
+
+        // 1) find new leaf ids
+
+//        std::cout << "1)" << std::endl;
+
+        double border = grid_->borders(splitFId).at(splitCond);
+        auto fColumnRef = fColumnsRefs_[splitFId];
+
+        parallelFor<0>(0, ds.samplesCount(), [&](int i) {
+            if (fColumnRef[i] <= border) {
+                leafId[i] = 2 * leafId[i];
+            } else {
+                leafId[i] = 2 * leafId[i] + 1;
+            }
+        });
+
+        // 2) init new leaves
+
+//        std::cout << "2)" << std::endl;
 
         std::vector<std::shared_ptr<LinearObliviousTreeLeafV2>> newLeaves;
         for (int i = 0; i < leaves.size() * 2; ++i) {
             newLeaves.emplace_back(std::shared_ptr<LinearObliviousTreeLeafV2>(nullptr));
         }
 
-        parallelFor<31>(0, leaves.size(), [&](int lId) {
+        parallelFor<0>(0, leaves.size(), [&](int lId) {
             auto& l = leaves[lId];
-            auto splits = l->split(curDs, fColumn, leafId, splitFId, splitCond);
+            auto splits = l->split(splitFId, splitCond);
             newLeaves[splits.first->id_] = std::move(splits.first);
             newLeaves[splits.second->id_] = std::move(splits.second);
         });
 
+        // 3) update current ds, reset stats
+
+//        std::cout << "3)" << std::endl;
+
+        int32_t splitOrigFId = grid_->origFeatureIndex(splitFId);
         if (usedFeatures.count(splitOrigFId) == 0) {
-            curDs.addColumn(fColumn);
+            curDs.addColumn(fColumns_[splitFId]);
             usedFeatures.insert(splitOrigFId);
         }
+        nUsedFeatures = usedFeatures.size();
 
-        std::cout << "Split done" << std::endl;
+//        std::cout << "newLeaves.size() = " << newLeaves.size() << ", nUsedFeatures = " << nUsedFeatures << ", usedFeatures.size() = " << usedFeatures.size()
+//                << "nzFeaturesCount() = " << grid_->nzFeaturesCount() << std::endl;
 
-//        std::cout << "\n\n\n==================\n\n" << std::endl;
+        parallelFor(0, nThreads_, [&](int i) {
+            for (int j = 0; j < (int)newLeaves.size(); ++j) {
+                for (int k = 0; k < (int)grid_->totalBins(); ++k) {
+                    for (int l = 0; l <= (int)nUsedFeatures; ++l) {
+                        h_XTX_[i][j][k][l] = 0;
+                    }
+                    h_XTy_[i][j][k] = 0;
+                    stats_[i][j][k].reset();
+                    stats_[i][j][k].setFilledSize(nUsedFeatures);
+                }
+            }
+        });
+
+        nUsedFeatures = usedFeatures.size();
+
+        // 4) build full correlations for left AND right children
+        // TODO build only for left
+
+        parallelFor<0>(0, curDs.samplesCount(), [&](int blockId, int i) {
+            Vec x = curDs.sample(i);
+            int lId = leafId[i];
+            auto bins = bds.sampleBins(i); // todo cache
+            double y = ys[i];
+
+            for (int fId = 0; fId < (int)grid_->nzFeaturesCount(); ++fId) {
+                int bin = (int)binOffsets_[fId] + bins[fId];
+                stats_[blockId][lId][bin].addFullCorrelation(x, y);
+            }
+        });
+
+//        std::cout << "4.1)" << std::endl;
+
+        parallelFor<0>(0, grid_->totalBins(), [&](int bin) {
+            for (int lId = 0; lId < (int)newLeaves.size(); ++lId) {
+                for (int blockId = 1; blockId < nThreads_; ++blockId) {
+                    stats_[0][lId][bin] += stats_[blockId][lId][bin];
+                }
+            }
+        });
+
+//        std::cout << "4.2)" << std::endl;
+
+        parallelFor<0>(0, grid_->totalBins(), [&](int bin) {
+            for (int lId = 0; lId < (int)newLeaves.size(); ++lId) {
+                newLeaves[lId]->hist_->addBinStat(bin, stats_[0][lId][bin]);
+            }
+        });
+
+        parallelFor<0>(0, newLeaves.size(), [&](int lId) {
+            newLeaves[lId]->hist_->prefixSumBins();
+        });
+
+//     TODO 5) subtract lefts from parents to obtain rights
+
+
+        end = std::chrono::steady_clock::now();
+        time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        std::cout << "Split done in" << time_ms << "[ms]" << std::endl;
 
         leaves = std::move(newLeaves);
-
-//        for (auto& l : leaves) {
-//            std::cout << "POST SPLIT {" << std::endl;
-//            l->printHists();
-//            std::cout << "}" << std::endl;
-//        }
     }
 
-//    std::cout << "\n\n\n==================\n\n" << std::endl;
-
-
-    parallelFor<31>(0, leaves.size(), [&](int lId) {
+    parallelFor<0>(0, leaves.size(), [&](int lId) {
         auto& l = leaves[lId];
-        l->fit(curDs);
-//            std::cout << "PRE SPLIT {" << std::endl;
-//            l->printInfo();
-//            std::cout << "}" << std::endl;
+        l->fit();
     });
 
+    for (auto& l : leaves) {
+        l->printInfo();
+    }
+
     tree->leaves_ = std::move(leaves);
-    tree->usedFeatures_ = std::move(usedFeatures);
+
+    auto endAll = std::chrono::steady_clock::now();
+    auto time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(endAll - beginAll).count();
+    std::cout << "ALl fit done in " << time_ms << "[ms]" << std::endl;
 
     return tree;
+}
+
+void GreedyLinearObliviousTreeLearnerV2::cacheDs(const DataSet &ds) {
+    if (isDsCached_) {
+        return;
+    }
+
+    for (int fId = 0; fId < (int)grid_->nzFeaturesCount(); ++fId) {
+        fColumns_.emplace_back(ds.samplesCount());
+        fColumnsRefs_.emplace_back(NULL);
+    }
+
+    parallelFor<0>(0, grid_->nzFeaturesCount(), [&](int fId) {
+        int origFId = grid_->origFeatureIndex(fId);
+        ds.copyColumn(origFId, &fColumns_[fId]);
+        fColumnsRefs_[fId] = fColumns_[fId].arrayRef();
+    });
+
+    totalBins_ = grid_->totalBins();
+    binOffsets_ = grid_->binOffsets();
+
+    nThreads_ = (int)GlobalThreadPool<0>().numThreads();
+    for (int i = 0; i < nThreads_; ++i) { // threads
+        h_XTX_.emplace_back();
+        h_XTy_.emplace_back();
+        stats_.emplace_back();
+        for (int j = 0; j < (1 << maxDepth_); ++j) { // leaves
+            h_XTy_[i].emplace_back(totalBins_, 0.0);
+            stats_[i].emplace_back();
+            h_XTX_[i].emplace_back();
+            for (int k = 0; k < totalBins_; ++k) { // bins
+                h_XTX_[i][j].emplace_back(grid_->nzFeaturesCount() + 2, 0.0);
+                stats_[i][j].emplace_back(BinStat((int)grid_->nzFeaturesCount() + 2, 1));
+            }
+        }
+    }
+
+    isDsCached_ = true;
 }
 
 

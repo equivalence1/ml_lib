@@ -40,7 +40,7 @@ namespace {
 
             ds_.visitFeature(feature.featureId_,
                              indicesRef,
-                             [&](int32_t i, uint8_t bin) {
+                             [&](int blockId, int32_t i, uint8_t bin) {
                 binsRef[i] |= (bin  > feature.conditionId_) << level_;
             }, /*parallel*/ true);
             ++level_;

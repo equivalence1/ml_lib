@@ -200,59 +200,59 @@ DataSet simpleDs() {
     return DataSet(Mx(dsDataVec, 7, 4), target);
 }
 
-TEST(HistV2, Simple) {
-    auto ds = simpleDs();
-
-    std::vector<int32_t> indices({0, 1, 2, 3, 4, 5, 6});
-    std::set<int> usedFeatures({});
-
-    BinarizationConfig config;
-    config.bordersCount_ = 32;
-    GridPtr grid = buildGrid(ds, config);
-    BinarizedDataSetPtr bds = binarize(ds, grid, 4);
-
-    std::set<int> features = {0, 1, 2};
-
-    std::cout << "bds.totalBins = " << bds->totalBins() << std::endl;
-
-    HistogramV2 h(*bds, grid, 5, features.size(), 0);
-
-    std::cout << "add bias column" << std::endl;
-    ds.addBiasColumn();
-
-    std::cout << "subDs" << std::endl;
-    auto curDs = ds.subDs(features);
-    std::cout << curDs.samplesMx() << std::endl;
-
-    std::cout << "h.build" << std::endl;
-    h.build(curDs, indices);
-    h.print();
-    std::cout << "h.prefixSumBins" << std::endl;
-    h.prefixSumBins();
-    h.print();
-
-    Vec newCol(ds.samplesCount());
-    ds.copyColumn(4, &newCol);
-    auto newCol_ref = newCol.arrayRef();
-
-    auto ys = ds.target().arrayRef();
-
-    std::cout << "update bins" << std::endl;
-
-    for (int32_t fId = 0; fId < grid->nzFeaturesCount(); ++fId) {
-        bds->visitFeature(fId, indices, [&](int i, int8_t localBinId) {
-            Vec x = curDs.sample(i);
-            double fVal = newCol_ref[i];
-            h.updateBin(fId, localBinId, x, ys[i], fVal, 0);
-        });
-    }
-
-    std::cout << "prefix sum last f" << std::endl;
-
-    h.prefixSumBinsLastFeature(0);
-
-    h.print();
-}
+//TEST(HistV2, Simple) {
+//    auto ds = simpleDs();
+//
+//    std::vector<int32_t> indices({0, 1, 2, 3, 4, 5, 6});
+//    std::set<int> usedFeatures({});
+//
+//    BinarizationConfig config;
+//    config.bordersCount_ = 32;
+//    GridPtr grid = buildGrid(ds, config);
+//    BinarizedDataSetPtr bds = binarize(ds, grid, 4);
+//
+//    std::set<int> features = {0, 1, 2};
+//
+//    std::cout << "bds.totalBins = " << bds->totalBins() << std::endl;
+//
+//    HistogramV2 h(*bds, grid, 5, features.size(), 0);
+//
+//    std::cout << "add bias column" << std::endl;
+//    ds.addBiasColumn();
+//
+//    std::cout << "subDs" << std::endl;
+//    auto curDs = ds.subDs(features);
+//    std::cout << curDs.samplesMx() << std::endl;
+//
+//    std::cout << "h.build" << std::endl;
+//    h.build(curDs, indices);
+//    h.print();
+//    std::cout << "h.prefixSumBins" << std::endl;
+//    h.prefixSumBins();
+//    h.print();
+//
+//    Vec newCol(ds.samplesCount());
+//    ds.copyColumn(4, &newCol);
+//    auto newCol_ref = newCol.arrayRef();
+//
+//    auto ys = ds.target().arrayRef();
+//
+//    std::cout << "update bins" << std::endl;
+//
+//    for (int32_t fId = 0; fId < grid->nzFeaturesCount(); ++fId) {
+//        bds->visitFeature(fId, indices, [&](int blockId, int i, int8_t localBinId) {
+//            Vec x = curDs.sample(i);
+//            double fVal = newCol_ref[i];
+//            h.updateBin(fId, localBinId, x, ys[i], fVal, 0);
+//        });
+//    }
+//
+//    std::cout << "prefix sum last f" << std::endl;
+//
+//    h.prefixSumBinsLastFeature(0);
+//
+//    h.print();
+//}
 
 TEST(BoostingSimple, V2) {
     auto ds = simpleDs();
@@ -266,9 +266,9 @@ TEST(BoostingSimple, V2) {
     auto grid = buildGrid(ds, config);
 
     BoostingConfig boostingConfig;
-    boostingConfig.iterations_ = 50;
+    boostingConfig.iterations_ = 1;
     boostingConfig.step_ = 1.0;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearnerV2(2, 0, 0.001, 0.0, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearnerV2(4, 0, 1e-5, 0.0, grid));
 
     auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(ds);
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
@@ -296,7 +296,8 @@ TEST(Boosting, LinearV2) {
     auto grid = buildGrid(ds, config);
 
     BoostingConfig boostingConfig;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearnerV2(3, 0, 1.0, 0.01, grid));
+    boostingConfig.iterations_ = 1000;
+    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearnerV2(6, 0, 0.5, 0.01, grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     testMetricsCalcer->addMetric(L2(test), "l2-test");

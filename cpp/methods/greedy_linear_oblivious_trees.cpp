@@ -76,7 +76,7 @@ void Histogram::build(const DataSet& ds, const std::set<int>& usedFeatures,
         DataSet samplesDs(newDsDataMx, ds.target());
 
 //        std::cout << "newUsedFeatures.size(): " << newUsedFeatures.size() << std::endl;
-        bds.visitFeature(features[f].featureId_, indicesVecRef, [&](int idxId, int8_t localBinId) {
+        bds.visitFeature(features[f].featureId_, indicesVecRef, [&](int blockId, int idxId, int8_t localBinId) {
             int offset = bds.binOffsets()[f];
             int binPos = offset + localBinId;
 

@@ -50,6 +50,19 @@ public:
         return samplesCount_;
     }
 
+    std::vector<uint8_t> sampleBins(int64_t sampleId) {
+        std::vector<uint8_t> res;
+        for (int fId = 0; fId < (int)grid_->nzFeaturesCount(); ++fId) {
+            int64_t groupIdx = featureToGroup_.at(fId);
+            const auto& groupInfo = groups_[groupIdx];
+            auto groupBundle = group(groupIdx);
+            const int64_t fIndexInGroup = fId - groupInfo.firstFeature_;
+
+            res.push_back(groupBundle[sampleId * groupInfo.groupSize() + fIndexInGroup]);
+        }
+        return res;
+    }
+
     template <class Visitor>
     void visitFeature(int64_t fIndex, Visitor&& visitor, bool parallel = false) const {
         int64_t groupIdx =  featureToGroup_.at(fIndex);
@@ -57,12 +70,12 @@ public:
         auto groupBundle = group(groupIdx);
         const int64_t fIndexInGroup = fIndex - groupInfo.firstFeature_;
         if (parallel) {
-            parallelFor(0, samplesCount_, [&](int64_t i) {
-                visitor(i, groupBundle[i * groupInfo.groupSize() + fIndexInGroup]);
+            parallelFor(0, samplesCount_, [&](int blockId, int64_t i) {
+                visitor(blockId, i, groupBundle[i * groupInfo.groupSize() + fIndexInGroup]);
             });
         } else {
             for (int64_t i = 0; i < samplesCount_; ++i) {
-                visitor(i, groupBundle[i * groupInfo.groupSize() + fIndexInGroup]);
+                visitor(0, i, groupBundle[i * groupInfo.groupSize() + fIndexInGroup]);
             }
         }
     }
@@ -85,12 +98,12 @@ public:
         auto groupBundle = group(groupIdx);
         const int64_t fIndexInGroup = fIndex - groupInfo.firstFeature_;
         if (parallel) {
-            parallelFor(0, indices.size(), [&](int64_t i) {
-                visitor(i, groupBundle[indices[i] * groupInfo.groupSize() + fIndexInGroup]);
+            parallelFor(0, indices.size(), [&](int blockId, int64_t i) {
+                visitor(blockId, i, groupBundle[indices[i] * groupInfo.groupSize() + fIndexInGroup]);
             });
         } else {
             for (int64_t i = 0; i < indices.size(); ++i) {
-                visitor(i, groupBundle[indices[i] * groupInfo.groupSize() + fIndexInGroup]);
+                visitor(0, i, groupBundle[indices[i] * groupInfo.groupSize() + fIndexInGroup]);
             }
         }
     }
@@ -175,8 +188,8 @@ inline const BinarizedDataSet& cachedBinarize(const DataSet& ds, GridPtr grid, i
     return ds.computeOrGet<Grid, BinarizedDataSet>(std::move(grid), [&](const DataSet& ds, GridPtr ptr) -> std::unique_ptr<BinarizedDataSet> {
         auto start = std::chrono::system_clock::now();
         auto binarized = binarize(ds, ptr, maxGroupSize);
-        std::cout << "binarization time " << std::chrono::duration<double>(std::chrono::system_clock::now() - start).count()
-                  << std::endl;
+//        std::cout << "binarization time " << std::chrono::duration<double>(std::chrono::system_clock::now() - start).count()
+//                  << std::endl;
         return binarized;
     });
 }

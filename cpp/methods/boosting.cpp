@@ -10,17 +10,26 @@ ModelPtr Boosting::fit(const DataSet& dataSet, const Target& target)  {
 
     auto start = std::chrono::system_clock::now();
     for (int32_t iter = 0; iter < config_.iterations_; ++iter) {
-        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
         auto weakTarget = weak_target_->create(dataSet, target, cursor);
-        models.push_back(weak_learner_->fit(dataSet, *weakTarget)->scale(config_.step_));
-        invoke(*models.back());
-        models.back()->append(dataSet, cursor);
 
+        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+        auto model = weak_learner_->fit(dataSet, *weakTarget);
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        std::cout << "Fit on iter " << iter << ": finished in " << duration << " [ms]" << std::endl;
 
-        std::cout << "iter " << iter << ": finished in " << duration << " [ms]" << std::endl;
+
+        begin = std::chrono::steady_clock::now();
+        model = model->scale(config_.step_);
+        end = std::chrono::steady_clock::now();
+        duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+        std::cout << "scale on iter " << iter << ": finished in " << duration << " [ms]" << std::endl;
+
+        models.push_back(model);
+
+        invoke(*models.back());
+        models.back()->append(dataSet, cursor);
     }
     std::cout << "fit time " <<  std::chrono::duration<double>(std::chrono::system_clock::now() - start).count() << std::endl;
 

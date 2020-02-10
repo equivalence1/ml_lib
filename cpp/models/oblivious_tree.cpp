@@ -26,7 +26,7 @@ void ObliviousTree::applyToBds(const BinarizedDataSet& ds, Mx to, ApplyType type
     for (int64_t i = 0; i < splits_.size(); ++i) {
         auto binFeature = splits_[i];
         //TODO:: this is map operation (but for non-trivial accessor)
-        ds.visitFeature(binFeature.featureId_, [&](const int64_t lineIdx, int32_t bin) {
+        ds.visitFeature(binFeature.featureId_, [&](int blockId, const int64_t lineIdx, int32_t bin) {
             if (bin > binFeature.conditionId_) {
                 binsArray[lineIdx] |= (1 << i);
             }
@@ -39,11 +39,11 @@ void ObliviousTree::applyToBds(const BinarizedDataSet& ds, Mx to, ApplyType type
 
     if (type == ApplyType::Set) {
         //TODO(noxoomo): this is gather primitive
-        parallelFor(0, binsArray.size(), [&](int64_t i) {
+        parallelFor(0, binsArray.size(), [&](int blockId, int64_t i) {
             dstArray[i] = leavesRef[binsArray[i]];
         });
     } else {
-        parallelFor(0, binsArray.size(), [&](int64_t i) {
+        parallelFor(0, binsArray.size(), [&](int blockId, int64_t i) {
             dstArray[i] += leavesRef[binsArray[i]];
         });
     }
