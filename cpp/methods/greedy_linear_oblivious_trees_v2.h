@@ -17,9 +17,7 @@ public:
     explicit BinStat(int size, int filledSize)
             : size_(size)
             , filledSize_(filledSize) {
-        for (int i = 0; i < size; ++i) {
-            XTX_.emplace_back(i + 1, 0.0);
-        }
+        XTX_.resize(size * (size + 1) / 2, 0.0);
         XTy_ = std::vector<double>(size, 0.0);
         cnt_ = 0;
         trace_ = 0.0;
@@ -29,10 +27,12 @@ public:
     void reset() {
         cnt_ = 0;
         trace_ = 0;
+        int pos = 0;
         for (int i = 0; i <= filledSize_; ++i) {
             for (int j = 0; j < i + 1; ++j) {
-                XTX_[i][j] = 0;
+                XTX_[pos + j] = 0;
             }
+            pos += i + 1;
             XTy_[i] = 0;
         }
         filledSize_ = 0;
@@ -49,8 +49,9 @@ public:
     void addNewCorrelation(const std::vector<double>& xtx, double xty) {
         assert(xtx.size() >= filledSize_ + 1);
 
+        int pos = filledSize_ * (filledSize_ + 1) / 2;
         for (int i = 0; i <= filledSize_; ++i) {
-            XTX_[filledSize_][i] += xtx[i];
+            XTX_[pos + i] += xtx[i];
         }
         XTy_[filledSize_] += xty;
         trace_ += xtx[filledSize_];
@@ -66,10 +67,12 @@ public:
             XTy_[i] += xRef[i] * y;
         }
 
+        int pos = 0;
         for (int i = 0; i < filledSize_; ++i) {
-            for (int j = i; j < filledSize_; ++j) {
-                XTX_[j][i] += xRef[i] * xRef[j]; // TODO change order, this one is bad for caches
+            for (int j = 0; j < i + 1; ++j) {
+                XTX_[pos + j] += xRef[i] * xRef[j];
             }
+            pos += i + 1;
         }
 
         cnt_ += 1;
@@ -79,13 +82,15 @@ public:
         Mx res(maxUpdatedPos_, maxUpdatedPos_);
         auto resRef = res.arrayRef();
 
+        int basePos = 0;
         for (int i = 0; i < maxUpdatedPos_; ++i) {
             for (int j = 0; j < i + 1; ++j) {
                 int pos = i * maxUpdatedPos_ + j;
-                resRef[pos] = XTX_[i][j];
+                resRef[pos] = XTX_[basePos + j];
                 pos = j * maxUpdatedPos_ + i;
-                resRef[pos] = XTX_[i][j];
+                resRef[pos] = XTX_[basePos + j];
             }
+            basePos += i + 1;
         }
 
         return res;
@@ -117,10 +122,12 @@ public:
         cnt_ += s.cnt_;
         trace_ += s.trace_;
 
+        int pos = 0;
         for (int i = 0; i < filledSize_; ++i) {
             for (int j = 0; j < i + 1; ++j) {
-                XTX_[i][j] += s.XTX_[i][j];
+                XTX_[pos + j] += s.XTX_[pos + j];
             }
+            pos += i + 1;
             XTy_[i] += s.XTy_[i];
         }
     }
@@ -130,10 +137,12 @@ public:
         cnt_ -= s.cnt_;
         trace_ -= s.trace_;
 
+        int pos = 0;
         for (int i = 0; i < filledSize_; ++i) {
             for (int j = 0; j < i + 1; ++j) {
-                XTX_[i][j] -= s.XTX_[i][j];
+                XTX_[pos + j] -= s.XTX_[pos + j];
             }
+            pos += i + 1;
             XTy_[i] -= s.XTy_[i];
         }
     }
@@ -147,7 +156,7 @@ private:
     int filledSize_;
     int maxUpdatedPos_;
 
-    std::vector<std::vector<double>> XTX_;
+    std::vector<double> XTX_;
     std::vector<double> XTy_;
     uint32_t cnt_;
     double trace_;
