@@ -254,6 +254,34 @@ DataSet simpleDs() {
 //    h.print();
 //}
 
+TEST(BoostingSimpleV1, V1) {
+    auto ds = simpleDs();
+
+    std::vector<int32_t> indices({0, 1, 2, 3, 4, 5, 6});
+
+    ds.addBiasColumn();
+
+    BinarizationConfig config;
+    config.bordersCount_ = 32;
+    auto grid = buildGrid(ds, config);
+
+    BoostingConfig boostingConfig;
+    boostingConfig.iterations_ = 1;
+    boostingConfig.step_ = 1.0;
+    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearner(4, 0, 1e-5, 0.0, grid));
+
+    auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(ds);
+    trainMetricsCalcer->addMetric(L2(ds), "l2-train");
+    boosting.addListener(trainMetricsCalcer);
+
+    L2 target(ds);
+    auto ensemble = boosting.fit(ds, target);
+
+    for (int i = 0; i < ds.samplesCount(); ++i) {
+        std::cout << "y = " << ds.target()(i) << ", y^ = " << ensemble->value(ds.sample(i)) << std::endl;
+    }
+}
+
 TEST(BoostingSimple, V2) {
     auto ds = simpleDs();
 
@@ -297,7 +325,7 @@ TEST(Boosting, LinearV2) {
 
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 1000;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearnerV2(6, 0, 0.5, 0.01, grid));
+    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearnerV2(6, 0, 1.0, 0.00, grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     testMetricsCalcer->addMetric(L2(test), "l2-test");

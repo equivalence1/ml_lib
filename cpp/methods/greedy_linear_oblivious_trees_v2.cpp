@@ -275,6 +275,7 @@ public:
     }
 
     bool isInRegion(const Vec& x) {
+        auto xRef = x.arrayRef();
         for (auto& s : splits_) {
             int32_t fId = std::get<0>(s);
             int32_t condId = std::get<1>(s);
@@ -283,7 +284,7 @@ public:
             int32_t origFId = grid_->nzFeatures().at(fId).origFeatureId_;
             float border = grid_->borders(fId).at(condId);
 
-            if ((x(origFId) <= border) ^ isLeft) {
+            if ((xRef[origFId] <= border) ^ isLeft) {
                 return false;
             }
         }
@@ -341,12 +342,12 @@ private:
         left->id_ = 2 * id_;
         right->id_ = 2 * id_ + 1;
 
-        int32_t origFeatureId = grid_->origFeatureIndex(splitFId);
-
         left->usedFeatures_ = usedFeatures_;
         right->usedFeatures_ = usedFeatures_;
         left->usedFeaturesInOrder_ = usedFeaturesInOrder_;
         right->usedFeaturesInOrder_ = usedFeaturesInOrder_;
+
+        int32_t origFeatureId = grid_->origFeatureIndex(splitFId);
 
         if (usedFeatures_.count(origFeatureId) == 0) {
             left->usedFeatures_.insert(origFeatureId);
@@ -408,9 +409,14 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
         throw std::runtime_error("provide bias col!");
     }
 
+    std::cout << "start" << std::endl;
+
+    auto beginC = std::chrono::steady_clock::now();
     cacheDs(ds);
     DataSet curDs(ds.sampleMx({biasCol_}), target.targets());
-
+    auto endC = std::chrono::steady_clock::now();
+    auto time_msC = std::chrono::duration_cast<std::chrono::milliseconds>(endC - beginC).count();
+    std::cout << "caching time: " << time_msC << " [ms]" << std::endl;
 
 
 
@@ -418,25 +424,26 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
     root->usedFeatures_.insert(biasCol_);
     root->usedFeaturesInOrder_.push_back(biasCol_);
 
-    parallelFor<0>(0, curDs.samplesCount(), [&](int blockId, int i) {
+    parallelFor(0, curDs.samplesCount(), [&](int blockId, int i) {
         Vec x = curDs.sample(i);
-        auto bins = bds.sampleBins(i);
+        auto bins = bds.sampleBins(i); // todo cache it somehow?
         double y = ys[i];
 
-        for (int fId = 0; fId < (int)grid_->nzFeaturesCount(); ++fId) {
+        for (int fId = 0; fId < fCount_; ++fId) {
             int offset = (int)binOffsets_[fId];
             int bin = offset + bins[fId];
             stats_[blockId][0][bin].addFullCorrelation(x, y);
         }
     });
+//    }
 
-    parallelFor<0>(0, grid_->totalBins(), [&](int bin) {
+    parallelFor(0, totalBins_, [&](int bin) {
         for (int blockId = 1; blockId < nThreads_; ++blockId) {
             stats_[0][0][bin] += stats_[blockId][0][bin];
         }
     });
 
-    parallelFor<0>(0, grid_->totalBins(), [&](int bin) {
+    parallelFor(0, totalBins_, [&](int bin) {
         root->hist_->addBinStat(bin, stats_[0][0][bin]);
     });
 
@@ -454,17 +461,6 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 
 
     for (unsigned int d = 0; d < maxDepth_; ++d) {
-
-        for (auto& l : leaves) {
-            try {
-                l->printInfo();
-            } catch (...) {
-
-            }
-        }
-
-        std::cout << "\n\n=================\n\n" << std::endl;
-
         // Update new correlations
 
         std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
@@ -475,7 +471,7 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 
         parallelFor(0, nThreads_, [&](int i) {
             for (int j = 0; j < (int)leaves.size(); ++j) {
-                for (int k = 0; k < (int)grid_->totalBins(); ++k) {
+                for (int k = 0; k < totalBins_; ++k) {
                     for (int l = 0; l <= (int)nUsedFeatures; ++l) {
                         h_XTX_[i][j][k][l] = 0;
                     }
@@ -497,11 +493,11 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
             auto xRef = x.arrayRef();
             unsigned int lId = leafId[sampleId];
 
-            for (int fId = 0; fId < (int)grid_->nzFeaturesCount(); ++fId) {
-                int bin = binOffsets_[fId] + bins[fId];
-
+            for (int fId = 0; fId < fCount_; ++fId) {
                 auto origFId = grid_->origFeatureIndex(fId);
                 if (usedFeatures.count(origFId) != 0) continue;
+
+                int bin = binOffsets_[fId] + bins[fId];
 
                 double fVal = fColumnsRefs_[fId][sampleId];
 
@@ -511,12 +507,13 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
                 h_XTX_[blockId][lId][bin][nUsedFeatures] += fVal * fVal;
                 h_XTy_[blockId][lId][bin] += fVal * ys[sampleId];
             }
+//        }
         });
 
-//        std::cout << 2.5 << std::endl;
+        std::cout << 2.5 << std::endl;
 
         // todo change order?
-        parallelFor(0, grid_->nzFeaturesCount(), [&](int fId) {
+        parallelFor(0, fCount_, [&](int fId) {
             auto origFId = grid_->origFeatureIndex(fId);
             if (usedFeatures.count(origFId) != 0) return;
 
@@ -541,11 +538,6 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
         std::cout << "2 in " << time_ms << " [ms]" << std::endl;
 
 
-        for (auto& l : leaves) {
-            l->printHists();
-        }
-
-
 
         // Find best split
 
@@ -560,24 +552,28 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
         int32_t splitCond = -1;
 
         std::vector<std::vector<double>> splitScores;
-        for (int64_t fId = 0; fId < grid_->nzFeaturesCount(); ++fId) {
+        for (int fId = 0; fId < fCount_; ++fId) {
             std::vector<double> fSplitScores;
             fSplitScores.resize(grid_->conditionsCount(fId), 0.0);
             splitScores.emplace_back(std::move(fSplitScores));
         }
 
-        parallelFor<0>(0, grid_->nzFeaturesCount(), [&](int fId) {
+        parallelFor(0, fCount_, [&](int fId) {
+//        for (int fId = 0; fId < fCount_; ++fId) {
+//            for (int cond = 0; cond < (int) grid_->conditionsCount(fId); ++cond) {
             parallelFor<1>(0, grid_->conditionsCount(fId), [&](int cond) {
-                for (auto& l : leaves) {
-                   splitScores[fId][cond] += l->splitScore(fId, cond);
+                for (auto &l : leaves) {
+                    splitScores[fId][cond] += l->splitScore(fId, cond);
                 }
             });
+//            }
+//        }
         });
 
-        for (int fId = 0; fId < grid_->nzFeatures().size(); ++fId) {
+        for (int fId = 0; fId < fCount_; ++fId) {
             for (int64_t cond = 0; cond < grid_->conditionsCount(fId); ++cond) {
                 double sScore = splitScores[fId][cond];
-                std::cout << "fId: " << fId << ", cond: " << cond << ", split score: " << sScore << std::endl;
+//                std::cout << "fId: " << fId << ", cond: " << cond << std::setprecision(6) << ", split score: " << sScore << std::endl;
                 if (sScore < bestSplitScore) {
                     bestSplitScore = sScore;
                     splitFId = fId;
@@ -590,7 +586,7 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
         time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
         std::cout << "Best split found in " << time_ms << "[ms], splitting" << std::endl;
 
-        std::cout << "Best split fId = " << splitFId << ", split cond = " << splitCond << std::endl;
+//        std::cout << "Best split fId = " << splitFId << ", split cond = " << splitCond << std::endl;
 
 
 
@@ -610,7 +606,7 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
         double border = grid_->borders(splitFId).at(splitCond);
         auto fColumnRef = fColumnsRefs_[splitFId];
 
-        parallelFor<0>(0, ds.samplesCount(), [&](int i) {
+        parallelFor(0, ds.samplesCount(), [&](int i) {
             if (fColumnRef[i] <= border) {
                 leafId[i] = 2 * leafId[i];
             } else {
@@ -623,11 +619,11 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 //        std::cout << "2)" << std::endl;
 
         std::vector<std::shared_ptr<LinearObliviousTreeLeafV2>> newLeaves;
-        for (int i = 0; i < leaves.size() * 2; ++i) {
+        for (int i = 0; i < (int)leaves.size() * 2; ++i) {
             newLeaves.emplace_back(std::shared_ptr<LinearObliviousTreeLeafV2>(nullptr));
         }
 
-        parallelFor<0>(0, leaves.size(), [&](int lId) {
+        parallelFor(0, leaves.size(), [&](int lId) {
             auto& l = leaves[lId];
             auto splits = l->split(splitFId, splitCond);
             newLeaves[splits.first->id_] = std::move(splits.first);
@@ -645,12 +641,9 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
         }
         nUsedFeatures = usedFeatures.size();
 
-//        std::cout << "newLeaves.size() = " << newLeaves.size() << ", nUsedFeatures = " << nUsedFeatures << ", usedFeatures.size() = " << usedFeatures.size()
-//                << "nzFeaturesCount() = " << grid_->nzFeaturesCount() << std::endl;
-
         parallelFor(0, nThreads_, [&](int i) {
             for (int j = 0; j < (int)newLeaves.size(); ++j) {
-                for (int k = 0; k < (int)grid_->totalBins(); ++k) {
+                for (int k = 0; k < totalBins_; ++k) {
                     for (int l = 0; l <= (int)nUsedFeatures; ++l) {
                         h_XTX_[i][j][k][l] = 0;
                     }
@@ -666,13 +659,13 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
         // 4) build full correlations for left AND right children
         // TODO build only for left
 
-        parallelFor<0>(0, curDs.samplesCount(), [&](int blockId, int i) {
+        parallelFor(0, curDs.samplesCount(), [&](int blockId, int i) {
             Vec x = curDs.sample(i);
             int lId = leafId[i];
             auto bins = bds.sampleBins(i); // todo cache
             double y = ys[i];
 
-            for (int fId = 0; fId < (int)grid_->nzFeaturesCount(); ++fId) {
+            for (int fId = 0; fId < fCount_; ++fId) {
                 int bin = (int)binOffsets_[fId] + bins[fId];
                 stats_[blockId][lId][bin].addFullCorrelation(x, y);
             }
@@ -680,7 +673,7 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 
 //        std::cout << "4.1)" << std::endl;
 
-        parallelFor<0>(0, grid_->totalBins(), [&](int bin) {
+        parallelFor(0, totalBins_, [&](int bin) {
             for (int lId = 0; lId < (int)newLeaves.size(); ++lId) {
                 for (int blockId = 1; blockId < nThreads_; ++blockId) {
                     stats_[0][lId][bin] += stats_[blockId][lId][bin];
@@ -690,13 +683,13 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 
 //        std::cout << "4.2)" << std::endl;
 
-        parallelFor<0>(0, grid_->totalBins(), [&](int bin) {
+        parallelFor(0, totalBins_, [&](int bin) {
             for (int lId = 0; lId < (int)newLeaves.size(); ++lId) {
                 newLeaves[lId]->hist_->addBinStat(bin, stats_[0][lId][bin]);
             }
         });
 
-        parallelFor<0>(0, newLeaves.size(), [&](int lId) {
+        parallelFor(0, newLeaves.size(), [&](int lId) {
             newLeaves[lId]->hist_->prefixSumBins();
         });
 
@@ -710,14 +703,10 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
         leaves = std::move(newLeaves);
     }
 
-    parallelFor<0>(0, leaves.size(), [&](int lId) {
+    parallelFor(0, leaves.size(), [&](int lId) {
         auto& l = leaves[lId];
         l->fit();
     });
-
-    for (auto& l : leaves) {
-        l->printInfo();
-    }
 
     tree->leaves_ = std::move(leaves);
 
@@ -729,6 +718,9 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
 }
 
 void GreedyLinearObliviousTreeLearnerV2::cacheDs(const DataSet &ds) {
+
+    // TODO this "caching" prevents from using bootstrap and rsm, but at least makes default boosting faster for now...
+
     if (isDsCached_) {
         return;
     }
@@ -746,6 +738,7 @@ void GreedyLinearObliviousTreeLearnerV2::cacheDs(const DataSet &ds) {
 
     totalBins_ = grid_->totalBins();
     binOffsets_ = grid_->binOffsets();
+    fCount_ = grid_->nzFeaturesCount();
 
     nThreads_ = (int)GlobalThreadPool<0>().numThreads();
     for (int i = 0; i < nThreads_; ++i) { // threads

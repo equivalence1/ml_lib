@@ -251,6 +251,7 @@ private:
     ConstVecRef<int32_t> binOffsets_;
     int nThreads_;
     int totalBins_;
+    int fCount_;
 };
 
 class LinearObliviousTreeV2 final

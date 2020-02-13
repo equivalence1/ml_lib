@@ -61,7 +61,7 @@ public:
     Mx inverse() const {
         assert(rows_ == cols_);
         Mx res(*this);
-        //auto tensor = torch::inverse(this->data().view({rows_, cols_}).to(torch::kFloat64)).contiguous().view({-1});
+//        auto tensor = torch::cholesky_inverse(torch::cholesky(this->data().view({rows_, cols_}))).contiguous().view({-1});
         auto tensor = torch::inverse(this->data().view({rows_, cols_})).contiguous().view({-1});
         return Mx(Vec(tensor), rows_, cols_);
     }
