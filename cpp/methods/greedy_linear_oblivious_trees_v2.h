@@ -260,6 +260,7 @@ private:
     ConstVecRef<int32_t> binOffsets_;
     int nThreads_;
     int totalBins_;
+    int totalCond_;
     int fCount_;
 };
 

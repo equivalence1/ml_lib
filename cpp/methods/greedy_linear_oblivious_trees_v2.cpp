@@ -31,13 +31,14 @@ void HistogramV2::addBinStat(int bin, const BinStat& stats) {
 }
 
 void HistogramV2::prefixSumBins() {
-    for (int fId = 0; fId < (int)grid_->nzFeaturesCount(); ++fId) {
+    parallelFor<1>(0, (int)grid_->nzFeaturesCount(), [&](int fId) {
+//    for (int fId = 0; fId < (int)grid_->nzFeaturesCount(); ++fId) {
         int offset = grid_->binOffsets()[fId];
         for (int localBinId = 1; localBinId <= grid_->conditionsCount(fId); ++localBinId) {
             int bin = offset + localBinId;
             hist_[bin] += hist_[bin - 1];
         }
-    }
+    });
 }
 
 std::shared_ptr<Mx> HistogramV2::getW(double l2reg) {
@@ -98,14 +99,20 @@ std::pair<double, double> HistogramV2::splitScore(int fId, int condId, double l2
     uint32_t binPos = offset + condId;
     uint32_t lastPos = offset + grid_->conditionsCount(fId);
 
+    auto cnt_binPos = hist_[binPos].getCnt();
+    auto cnt_lastPos = hist_[lastPos].getCnt();
+
+    if (condId != 0) {
+        if (cnt_binPos - hist_[binPos - 1].getCnt() == 0) {
+            return std::make_pair(-1e6, -1e6);
+        }
+    }
+
     auto XTX_binPos = hist_[binPos].getXTX();
     auto XTX_lastPos = hist_[lastPos].getXTX();
 
     auto XTy_binPos = hist_[binPos].getXTy();
     auto XTy_lastPos = hist_[lastPos].getXTy();
-
-    auto cnt_binPos = hist_[binPos].getCnt();
-    auto cnt_lastPos = hist_[lastPos].getCnt();
 
     auto trace_binPos = hist_[binPos].getTrace();
     auto trace_lastPos = hist_[lastPos].getTrace();
@@ -737,10 +744,11 @@ void GreedyLinearObliviousTreeLearnerV2::cacheDs(const DataSet &ds) {
     });
 
     totalBins_ = grid_->totalBins();
-    binOffsets_ = grid_->binOffsets();
     fCount_ = grid_->nzFeaturesCount();
-
+    totalCond_ = totalBins_ - fCount_;
+    binOffsets_ = grid_->binOffsets();
     nThreads_ = (int)GlobalThreadPool<0>().numThreads();
+
     for (int i = 0; i < nThreads_; ++i) { // threads
         h_XTX_.emplace_back();
         h_XTy_.emplace_back();
