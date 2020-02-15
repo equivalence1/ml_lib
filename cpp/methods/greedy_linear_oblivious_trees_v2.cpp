@@ -8,6 +8,26 @@
 #include <core/vec_factory.h>
 #include <core/matrix.h>
 
+#include <eigen3/Eigen/Core>
+
+
+namespace {
+    [[nodiscard]] Eigen::MatrixXd DiagMx(int dim, double v) {
+        Eigen::MatrixXd mx(dim, dim);
+        for (int i = 0; i < dim; ++i) {
+            for (int j = 0; j < dim; ++j) {
+                if (j == i) {
+                    mx(i, j) = v;
+                } else {
+                    mx(i, j) = 0;
+                }
+            }
+        }
+        return mx;
+    }
+}
+
+
 HistogramV2::HistogramV2(BinarizedDataSet& bds, GridPtr grid, unsigned int nUsedFeatures, int lastUsedFeatureId)
         : bds_(bds)
         , grid_(std::move(grid))
@@ -41,7 +61,7 @@ void HistogramV2::prefixSumBins() {
     });
 }
 
-std::shared_ptr<Mx> HistogramV2::getW(double l2reg) {
+std::shared_ptr<Eigen::MatrixXd> HistogramV2::getW(double l2reg) {
     if (lastUsedFeatureId_ == -1) {
         throw std::runtime_error("No features are used");
     }
@@ -52,41 +72,40 @@ std::shared_ptr<Mx> HistogramV2::getW(double l2reg) {
     auto XTX = hist_[lastPos].getXTX();
     auto XTy = hist_[lastPos].getXTy();
 
-    Mx XTX_r = XTX + Diag(XTX.ydim(), l2reg);
+    Eigen::MatrixXd XTX_r = XTX + DiagMx(XTX.rows(), l2reg);
 
     try {
         auto fullW = XTX_r.inverse() * XTy;
-        auto wVec = fullW.slice(0, nUsedFeatures_);
-        return std::make_shared<Mx>(wVec, wVec.size(), 1);
+        return std::make_shared<Eigen::MatrixXd>(std::move(fullW));
     } catch (...) {
         std::cout << "No inverse" << std::endl;
-        return std::make_shared<Mx>((int64_t)XTX.ydim(), (int64_t)XTX.xdim());
+        return std::make_shared<Eigen::MatrixXd>((int64_t)XTX.rows(), (int64_t)XTX.cols());
     }
 }
 
-double HistogramV2::computeScore(Mx& XTX, Mx& XTy, double XTX_trace, uint32_t cnt, double l2reg,
+double HistogramV2::computeScore(Eigen::MatrixXd& XTX, Eigen::MatrixXd& XTy, double XTX_trace, uint32_t cnt, double l2reg,
                                double traceReg) {
     if (cnt == 0) {
         return 0;
     }
 
     try {
-        Mx w = XTX.inverse() * XTy;
+        Eigen::MatrixXd w = XTX.inverse() * XTy;
 //    std::cout << "w is " << w << std::endl;
 
-        Mx c1(XTy.T() * w);
+        Eigen::MatrixXd c1(XTy.transpose() * w);
         c1 *= -2;
-        assert(c1.xdim() == 1 && c1.ydim() == 1);
+        assert(c1.rows() == 1 && c1.cols() == 1);
 
-        Mx c2(w.T() * XTX * w);
-        assert(c2.xdim() == 1 && c2.ydim() == 1);
+        Eigen::MatrixXd c2(w.transpose() * XTX * w);
+        assert(c2.rows() == 1 && c2.cols() == 1);
 
-        Mx reg = w.T() * w * l2reg;
-        assert(reg.xdim() == 1 && reg.ydim() == 1);
+        Eigen::MatrixXd reg = w.transpose() * w * l2reg;
+        assert(reg.rows() == 1 && reg.cols() == 1);
 
-        Mx res = c1 + c2 + reg;
+        Eigen::MatrixXd res = c1 + c2 + reg;
 
-        return res.get(0, 0) + traceReg * XTX_trace / XTX.ydim();
+        return res(0, 0) + traceReg * XTX_trace / XTX.rows();
     } catch (...) {
         std::cout << "No inverse" << std::endl;
         return 0;
@@ -117,13 +136,13 @@ std::pair<double, double> HistogramV2::splitScore(int fId, int condId, double l2
     auto trace_binPos = hist_[binPos].getTrace();
     auto trace_lastPos = hist_[lastPos].getTrace();
 
-    auto ydim = XTX_binPos.ydim();
+    auto ydim = XTX_binPos.size();
 
-    Mx left_XTX = XTX_binPos + Diag(ydim, l2reg);
-    Mx right_XTX = XTX_lastPos - XTX_binPos + Diag(ydim, l2reg);
+    Eigen::MatrixXd left_XTX = XTX_binPos + DiagMx(ydim, l2reg);
+    Eigen::MatrixXd right_XTX = XTX_lastPos - XTX_binPos + DiagMx(ydim, l2reg);
 
-    Mx left_XTy(XTy_binPos);
-    Mx right_XTy = XTy_lastPos - XTy_binPos;
+    Eigen::MatrixXd left_XTy = XTy_binPos;
+    Eigen::MatrixXd right_XTy = XTy_lastPos - XTy_binPos;
 
     uint32_t left_cnt = cnt_binPos;
     uint32_t right_cnt = cnt_lastPos - cnt_binPos;
@@ -151,42 +170,44 @@ void HistogramV2::printCnt() {
     std::cout << "cnt: " << hist_[lastPos].getCnt() << std::endl;
 }
 
-void HistogramV2::printEig(Mx& M) {
-    auto eigs = torch::eig(M.data().view({M.ydim(), M.xdim()}), false);
-    auto vals = std::get<0>(eigs);
-    for (int i = 0; i < (int)vals.size(0); ++i) {
-        std::cout << vals[i].data()[0] << ", ";
-    }
+void HistogramV2::printEig(Eigen::MatrixXd& M) {
+//    auto eigs = torch::eig(M.data().view({M.rows(), M.cols()}), false);
+//    auto vals = std::get<0>(eigs);
+//    for (int i = 0; i < (int)vals.size(0); ++i) {
+//        std::cout << vals[i].data()[0] << ", ";
+//    }
+    std::cout << "TODO Eig" << std::endl;
 }
 
 void HistogramV2::printEig(double l2reg) {
-    if (lastUsedFeatureId_ == -1) {
-        throw std::runtime_error("No features are used, can not print eig");
-    }
-
-    uint32_t offset = grid_->binOffsets().at(lastUsedFeatureId_);
-    uint32_t lastPos = offset + grid_->conditionsCount(lastUsedFeatureId_);
-
-    auto XTX = hist_[lastPos].getXTX();
-    std::cout << "XTX: " << XTX << std::endl;
-
-    auto XTy = hist_[lastPos].getXTy();
-    std::cout << "XTy: " << XTy << std::endl;
-
-    auto w = getW(l2reg);
-    std::cout << "w: " << *w << std::endl;
-
-    std::cout << "XTX eig: ";
-    printEig(XTX);
-    std::cout << std::endl;
-
-    Mx XTX_Reg = XTX + Diag(XTX.xdim(), l2reg);
-
-    std::cout << "(XTX + Diag(" << l2reg << ")) eig: ";
-    printEig(XTX_Reg);
-    std::cout << std::endl;
-
-    std::cout << "XTX trace: " << hist_[lastPos].getTrace() << std::endl;
+//    if (lastUsedFeatureId_ == -1) {
+//        throw std::runtime_error("No features are used, can not print eig");
+//    }
+//
+//    uint32_t offset = grid_->binOffsets().at(lastUsedFeatureId_);
+//    uint32_t lastPos = offset + grid_->conditionsCount(lastUsedFeatureId_);
+//
+//    auto XTX = hist_[lastPos].getXTX();
+//    std::cout << "XTX: " << XTX << std::endl;
+//
+//    auto XTy = hist_[lastPos].getXTy();
+//    std::cout << "XTy: " << XTy << std::endl;
+//
+//    auto w = getW(l2reg);
+//    std::cout << "w: " << *w << std::endl;
+//
+//    std::cout << "XTX eig: ";
+//    printEig(XTX);
+//    std::cout << std::endl;
+//
+//    Mx XTX_Reg = XTX + DiagMx(XTX.rows(), l2reg);
+//
+//    std::cout << "(XTX + Diag(" << l2reg << ")) eig: ";
+//    printEig(XTX_Reg);
+//    std::cout << std::endl;
+//
+//    std::cout << "XTX trace: " << hist_[lastPos].getTrace() << std::endl;
+    std::cout << "TODO Eig" << std::endl;
 }
 
 void HistogramV2::print() {
@@ -268,17 +289,18 @@ public:
         }
 
         auto x_ref = x.arrayRef();
+        Eigen::MatrixXd X(1, usedFeaturesInOrder_.size());
 
+        int i = 0;
         std::vector<double> tmp;
         for (auto f : usedFeaturesInOrder_) {
-            tmp.push_back(x_ref[f]);
+            X(0, i) = x_ref[f];
+            i += 1;
         }
-        auto xVec = VecFactory::fromVector(tmp);
-        Mx X(xVec, xVec.size(), 1);
 
-        Mx res = X.T() * (*w_);
+        Eigen::MatrixXd res = X * (*w_);
 
-        return res.get(0, 0);
+        return res(0, 0);
     }
 
     bool isInRegion(const Vec& x) {
@@ -377,7 +399,7 @@ private:
     GridPtr grid_;
     std::set<int32_t> usedFeatures_;
     std::vector<int32_t> usedFeaturesInOrder_;
-    std::shared_ptr<Mx> w_;
+    std::shared_ptr<Eigen::MatrixXd> w_;
     std::vector<std::tuple<int32_t, int32_t, bool>> splits_;
 
     double l2reg_;
@@ -442,7 +464,6 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
             stats_[blockId][0][bin].addFullCorrelation(x, y);
         }
     });
-//    }
 
     parallelFor(0, totalBins_, [&](int bin) {
         for (int blockId = 1; blockId < nThreads_; ++blockId) {
@@ -566,21 +587,16 @@ ModelPtr GreedyLinearObliviousTreeLearnerV2::fit(const DataSet& ds, const Target
         }
 
         parallelFor(0, fCount_, [&](int fId) {
-//        for (int fId = 0; fId < fCount_; ++fId) {
-//            for (int cond = 0; cond < (int) grid_->conditionsCount(fId); ++cond) {
             parallelFor<1>(0, grid_->conditionsCount(fId), [&](int cond) {
                 for (auto &l : leaves) {
                     splitScores[fId][cond] += l->splitScore(fId, cond);
                 }
             });
-//            }
-//        }
         });
 
         for (int fId = 0; fId < fCount_; ++fId) {
             for (int64_t cond = 0; cond < grid_->conditionsCount(fId); ++cond) {
                 double sScore = splitScores[fId][cond];
-//                std::cout << "fId: " << fId << ", cond: " << cond << std::setprecision(6) << ", split score: " << sScore << std::endl;
                 if (sScore < bestSplitScore) {
                     bestSplitScore = sScore;
                     splitFId = fId;

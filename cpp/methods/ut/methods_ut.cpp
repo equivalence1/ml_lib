@@ -325,7 +325,8 @@ TEST(Boosting, LinearV2) {
 
     BoostingConfig boostingConfig;
     boostingConfig.iterations_ = 1000;
-    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearnerV2(6, 0, 1.0, 0.00, grid));
+    boostingConfig.step_ = 0.05;
+    Boosting boosting(boostingConfig, createWeakTarget(), createWeakLinearLearnerV2(6, 0, 0.5, 0.00, grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     testMetricsCalcer->addMetric(L2(test), "l2-test");

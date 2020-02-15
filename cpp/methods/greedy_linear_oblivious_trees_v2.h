@@ -5,9 +5,14 @@
 #include <memory>
 
 #include "optimizer.h"
+
 #include <models/model.h>
-#include <data/grid.h>
 #include <models/bin_optimized_model.h>
+
+#include <data/grid.h>
+
+#include <eigen3/Eigen/Core>
+
 
 class GreedyLinearObliviousTreeLearnerV2;
 
@@ -78,17 +83,14 @@ public:
         cnt_ += 1;
     }
 
-    Mx getXTX() const {
-        Mx res(maxUpdatedPos_, maxUpdatedPos_);
-        auto resRef = res.arrayRef();
+    [[nodiscard]] Eigen::MatrixXd getXTX() const {
+        Eigen::MatrixXd res(maxUpdatedPos_, maxUpdatedPos_);
 
         int basePos = 0;
         for (int i = 0; i < maxUpdatedPos_; ++i) {
             for (int j = 0; j < i + 1; ++j) {
-                int pos = i * maxUpdatedPos_ + j;
-                resRef[pos] = XTX_[basePos + j];
-                pos = j * maxUpdatedPos_ + i;
-                resRef[pos] = XTX_[basePos + j];
+                res(i, j) = XTX_[basePos + j];
+                res(j, i) = XTX_[basePos + j];
             }
             basePos += i + 1;
         }
@@ -96,12 +98,11 @@ public:
         return res;
     }
 
-    Mx getXTy() const {
-        Mx res(maxUpdatedPos_, 1);
-        auto resRef = res.arrayRef();
+    [[nodiscard]] Eigen::MatrixXd getXTy() const {
+        Eigen::MatrixXd res(maxUpdatedPos_, 1);
 
         for (int i = 0; i < maxUpdatedPos_; ++i) {
-            resRef[i] = XTy_[i];
+            res(i, 0) = XTy_[i];
         }
 
         return res;
@@ -190,7 +191,7 @@ public:
 
     std::pair<double, double> splitScore(int fId, int condId, double l2reg, double traceReg);
 
-    std::shared_ptr<Mx> getW(double l2reg);
+    std::shared_ptr<Eigen::MatrixXd> getW(double l2reg);
 
     void printEig(double l2reg);
     void printCnt();
@@ -200,10 +201,10 @@ public:
     HistogramV2& operator-=(const HistogramV2& h);
 
 private:
-    static double computeScore(Mx& XTX, Mx& XTy, double XTX_trace, uint32_t cnt, double l2reg,
+    static double computeScore(Eigen::MatrixXd& XTX, Eigen::MatrixXd& XTy, double XTX_trace, uint32_t cnt, double l2reg,
                                double traceReg);
 
-    static void printEig(Mx& M);
+    static void printEig(Eigen::MatrixXd& M);
 
     friend HistogramV2 operator-(const HistogramV2& lhs, const HistogramV2& rhs);
     friend HistogramV2 operator+(const HistogramV2& lhs, const HistogramV2& rhs);

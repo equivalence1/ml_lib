@@ -27,7 +27,9 @@ add_library(methods
 enable_cxx17(methods)
 #maybe_enable_cuda(trees)
 
-target_link_libraries(methods "${TORCH_LIBRARIES}" core util models targets data)
+find_package(Eigen3 REQUIRED NO_MODULE)
+
+target_link_libraries(methods "${TORCH_LIBRARIES}" core util models targets data Eigen3::Eigen)
 #target_link_libraries(trees_kernels util)
 
 
