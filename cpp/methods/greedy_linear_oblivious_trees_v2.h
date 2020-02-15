@@ -12,6 +12,7 @@
 #include <data/grid.h>
 
 #include <eigen3/Eigen/Core>
+#include <eigen3/Eigen/LU>
 
 
 class GreedyLinearObliviousTreeLearnerV2;
@@ -51,16 +52,18 @@ public:
         return filledSize_;
     }
 
-    void addNewCorrelation(const std::vector<double>& xtx, double xty) {
-        assert(xtx.size() >= filledSize_ + 1);
+    void addNewCorrelation(const std::vector<double>& xtx, double xty, int shift = 0) {
+        assert(xtx.size() >= filledSize_ + shift + 1);
 
-        int pos = filledSize_ * (filledSize_ + 1) / 2;
-        for (int i = 0; i <= filledSize_; ++i) {
+        const int corPos = filledSize_ + shift;
+
+        int pos = corPos * (corPos + 1) / 2;
+        for (int i = 0; i <= corPos; ++i) {
             XTX_[pos + i] += xtx[i];
         }
-        XTy_[filledSize_] += xty;
-        trace_ += xtx[filledSize_];
-        maxUpdatedPos_ = filledSize_ + 1;
+        XTy_[corPos] += xty;
+        trace_ += xtx[corPos];
+        maxUpdatedPos_ = std::max(maxUpdatedPos_, corPos + 1);
     }
 
     void addFullCorrelation(Vec x, double y) {
@@ -118,13 +121,13 @@ public:
 
     // This one DOES NOT add up new correlations
     BinStat& operator+=(const BinStat& s) {
-        assert(filledSize_ == s.filledSize_);
-
         cnt_ += s.cnt_;
         trace_ += s.trace_;
 
+        int size = std::min(filledSize_, s.filledSize_);
+
         int pos = 0;
-        for (int i = 0; i < filledSize_; ++i) {
+        for (int i = 0; i < size; ++i) {
             for (int j = 0; j < i + 1; ++j) {
                 XTX_[pos + j] += s.XTX_[pos + j];
             }
@@ -138,8 +141,10 @@ public:
         cnt_ -= s.cnt_;
         trace_ -= s.trace_;
 
+        int size = std::min(filledSize_, s.filledSize_);
+
         int pos = 0;
-        for (int i = 0; i < filledSize_; ++i) {
+        for (int i = 0; i < size; ++i) {
             for (int j = 0; j < i + 1; ++j) {
                 XTX_[pos + j] -= s.XTX_[pos + j];
             }
@@ -184,7 +189,7 @@ public:
     HistogramV2(BinarizedDataSet& bds, GridPtr grid, unsigned int nUsedFeatures, int lastUsedFeatureId);
 
     void addFullCorrelation(int bin, Vec x, double y);
-    void addNewCorrelation(int bin, const std::vector<double>& xtx, double xty);
+    void addNewCorrelation(int bin, const std::vector<double>& xtx, double xty, int shift = 0);
     void prefixSumBins();
 
     void addBinStat(int bin, const BinStat& stats);
@@ -257,6 +262,9 @@ private:
     std::vector<std::vector<std::vector<std::vector<double>>>> h_XTX_;
     std::vector<std::vector<std::vector<double>>> h_XTy_;
     std::vector<std::vector<std::vector<BinStat>>> stats_;
+
+    std::vector<bool> fullUpdate_;
+    std::vector<int> samplesLeavesCnt_;
 
     ConstVecRef<int32_t> binOffsets_;
     int nThreads_;

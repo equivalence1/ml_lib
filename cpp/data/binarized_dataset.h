@@ -188,8 +188,8 @@ inline const BinarizedDataSet& cachedBinarize(const DataSet& ds, GridPtr grid, i
     return ds.computeOrGet<Grid, BinarizedDataSet>(std::move(grid), [&](const DataSet& ds, GridPtr ptr) -> std::unique_ptr<BinarizedDataSet> {
         auto start = std::chrono::system_clock::now();
         auto binarized = binarize(ds, ptr, maxGroupSize);
-//        std::cout << "binarization time " << std::chrono::duration<double>(std::chrono::system_clock::now() - start).count()
-//                  << std::endl;
+        std::cout << "binarization time " << std::chrono::duration<double>(std::chrono::system_clock::now() - start).count()
+                  << std::endl;
         return binarized;
     });
 }
