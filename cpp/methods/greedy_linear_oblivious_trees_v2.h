@@ -24,7 +24,7 @@ public:
             : size_(size)
             , filledSize_(filledSize) {
         XTX_.resize(size * (size + 1) / 2, 0.0);
-        XTy_ = std::vector<double>(size, 0.0);
+        XTy_ = std::vector<float>(size, 0.0);
         cnt_ = 0;
         trace_ = 0.0;
         maxUpdatedPos_ = filledSize_;
@@ -52,7 +52,7 @@ public:
         return filledSize_;
     }
 
-    void addNewCorrelation(const std::vector<double>& xtx, double xty, int shift = 0) {
+    void addNewCorrelation(const std::vector<float>& xtx, float xty, int shift = 0) {
         assert(xtx.size() >= filledSize_ + shift + 1);
 
         const int corPos = filledSize_ + shift;
@@ -66,19 +66,17 @@ public:
         maxUpdatedPos_ = std::max(maxUpdatedPos_, corPos + 1);
     }
 
-    void addFullCorrelation(Vec x, double y) {
+    void addFullCorrelation(const std::vector<float>& x, float y) {
         assert(x.size() >= filledSize_);
 
-        auto xRef = x.arrayRef();
-
         for (int i = 0; i < filledSize_; ++i) {
-            XTy_[i] += xRef[i] * y;
+            XTy_[i] += x[i] * y;
         }
 
         int pos = 0;
         for (int i = 0; i < filledSize_; ++i) {
             for (int j = 0; j < i + 1; ++j) {
-                XTX_[pos + j] += xRef[i] * xRef[j];
+                XTX_[pos + j] += x[i] * x[j];
             }
             pos += i + 1;
         }
@@ -162,8 +160,8 @@ private:
     int filledSize_;
     int maxUpdatedPos_;
 
-    std::vector<double> XTX_;
-    std::vector<double> XTy_;
+    std::vector<float> XTX_;
+    std::vector<float> XTy_;
     uint32_t cnt_;
     double trace_;
 };
@@ -188,8 +186,8 @@ class HistogramV2 {
 public:
     HistogramV2(BinarizedDataSet& bds, GridPtr grid, unsigned int nUsedFeatures, int lastUsedFeatureId);
 
-    void addFullCorrelation(int bin, Vec x, double y);
-    void addNewCorrelation(int bin, const std::vector<double>& xtx, double xty, int shift = 0);
+//    void addFullCorrelation(int bin, Vec x, double y);
+    void addNewCorrelation(int bin, const std::vector<float>& xtx, float xty, int shift = 0);
     void prefixSumBins();
 
     void addBinStat(int bin, const BinStat& stats);
@@ -246,6 +244,7 @@ public:
 
 private:
     void cacheDs(const DataSet& ds);
+    void resetState();
 
 private:
     GridPtr grid_;
@@ -257,10 +256,16 @@ private:
     bool isDsCached_ = false;
     std::vector<Vec> fColumns_;
     std::vector<ConstVecRef<float>> fColumnsRefs_;
+    std::vector<std::vector<float>> curX_;
+
+    std::vector<int32_t> leafId_;
+
+    std::set<int> usedFeatures_;
+    std::vector<int> usedFeaturesOrdered_;
 
     // thread      leaf         bin         coordinate
-    std::vector<std::vector<std::vector<std::vector<double>>>> h_XTX_;
-    std::vector<std::vector<std::vector<double>>> h_XTy_;
+    std::vector<std::vector<std::vector<std::vector<float>>>> h_XTX_;
+    std::vector<std::vector<std::vector<float>>> h_XTy_;
     std::vector<std::vector<std::vector<BinStat>>> stats_;
 
     std::vector<bool> fullUpdate_;
@@ -271,6 +276,7 @@ private:
     int totalBins_;
     int totalCond_;
     int fCount_;
+    int nSamples_;
 };
 
 class LinearObliviousTreeV2 final

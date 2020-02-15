@@ -11,6 +11,7 @@ class DataSet : public Object, public CacheHolder<DataSet> {
 public:
     explicit DataSet(Mx data, Vec target)
     : data_(data)
+    , dataRef_(data.arrayRef())
     , target_(target){
         assert(target.dim() == samplesCount());
     }
@@ -34,16 +35,32 @@ public:
 
     void addColumn(const Vec& col) {
         data_.addColumn(col, true);
+        dataRef_ = data_.arrayRef();
     }
 
     void addBiasColumn() {
         Vec x(samplesCount(), 1);
         data_.addColumn(x);
+        dataRef_ = data_.arrayRef();
     }
 
     template <class Visitor>
     void visitColumn(int fIndex, Visitor&& visitor) const {
         data_.iterateOverColumn(fIndex, visitor);
+    }
+
+    void fillSample(int64_t line, const std::vector<int>& indxs, std::vector<float>& x) const {
+        int64_t basePos = featuresCount() * line;
+
+        int i = 0;
+        for (int indx : indxs) {
+            x[i] = dataRef_[basePos + indx];
+            ++i;
+        }
+    }
+
+    float fVal(int64_t line, int32_t fId) const {
+        return dataRef_[featuresCount() * line + fId];
     }
 
     Vec sample(int64_t line) const {
@@ -97,5 +114,6 @@ public:
     }
 private:
     Mx data_;
+    ConstVecRef<float> dataRef_;
     Vec target_;
 };
