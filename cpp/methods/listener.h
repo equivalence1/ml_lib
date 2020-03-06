@@ -48,10 +48,15 @@ public:
 
     void operator()(const Model& model) override {
         model.append(ds_, cursor_);
-        if (iter_ % 10 == 0) {
+        if (iter_ % 1 == 0) {
             std::cout << "iter " << iter_<<": ";
             for (int32_t i = 0; i < metrics_.size(); ++i) {
-                std::cout << metricName[i] << "=" << metrics_[i]->value(cursor_);
+                double val = metrics_[i]->value(cursor_);
+                if (val < bestValue_) {
+                    bestValue_ = val;
+                    bestIter_  = iter_;
+                }
+                std::cout << metricName[i] << "=" << val << ", best: (" << bestValue_ << ", " << bestIter_ << ")";
                 if (i + 1 != metrics_.size()) {
                     std::cout << "\t";
                 }
@@ -71,6 +76,9 @@ private:
     const DataSet& ds_;
     Mx cursor_;
     int32_t iter_ = 0;
+
+    double bestValue_ = 1e9;
+    int bestIter_ = 0;
 };
 
 

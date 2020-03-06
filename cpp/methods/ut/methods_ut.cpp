@@ -339,3 +339,30 @@ TEST(Boosting, LinearV2) {
     L2 target(ds);
     auto ensemble = boosting.fit(ds, target);
 }
+
+TEST(Boosting, LinearV2FeaturesTxtBootstrap) {
+    auto ds = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/train");
+    auto test = loadFeaturesTxt(PATH_PREFIX "test_data/featuresTxt/test");
+    EXPECT_EQ(ds.samplesCount(), 12465);
+    EXPECT_EQ(ds.featuresCount(), 50);
+
+    BinarizationConfig config;
+    config.bordersCount_ = 32;
+    auto grid = buildGrid(ds, config);
+
+    BoostingConfig boostingConfig;
+    boostingConfig.iterations_ = 200;
+    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLinearLearnerV2(6, 0, 1, 0.00, grid));
+
+    auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
+    testMetricsCalcer->addMetric(L2(test), "l2-test");
+    boosting.addListener(testMetricsCalcer);
+
+    auto trainMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(ds);
+    trainMetricsCalcer->addMetric(L2(ds), "l2-train");
+    boosting.addListener(trainMetricsCalcer);
+
+    L2 target(ds);
+    auto ensemble = boosting.fit(ds, target);
+
+}
