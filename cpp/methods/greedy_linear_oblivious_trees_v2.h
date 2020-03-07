@@ -198,17 +198,17 @@ public:
             return 0;
         }
 
-        EMx wHat = getW(l2reg);
+        EMx wHat = getW(l2reg * w_);
 
         EMx xty = getXTy();
         xty -= (sumY_ / w_) * getSumX();
 //        xty *= 1.0 / w;
 
-        float reg = 1 + 0.005f * std::log(w_ + 1);
+        float reg = 1 + std::log(w_ + 1);
 
         float scoreFromLinear = (xty.transpose() * wHat)(0, 0);
         float scoreFromConst = (sumY_ * sumY_) / w_;
-        float targetValue = scoreFromConst + scoreFromLinear - l2reg * (wHat.transpose() * wHat)(0, 0);
+        float targetValue = scoreFromConst + scoreFromLinear - w_ * l2reg * (wHat.transpose() * wHat)(0, 0);
 
         return -targetValue * reg;
     }
