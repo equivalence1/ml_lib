@@ -33,144 +33,200 @@ class GreedyLinearObliviousTreeLearnerV2;
 
 class BinStat {
 public:
+    using EMx = Eigen::MatrixXd;
+    using fType = float;
+
     explicit BinStat(int size, int filledSize)
             : size_(size)
             , filledSize_(filledSize) {
-        XTX_.resize(size * (size + 1) / 2, 0.0);
-        XTy_ = std::vector<float>(size, 0.0);
-        w_ = 0.;
-        trace_ = 0.0;
         maxUpdatedPos_ = filledSize_;
+
+        w_ = 0;
+        sumY_ = 0;
+        sumY2_ = 0;
+        trace_ = 0;
+        xtx_.resize(size * (size + 1) / 2);
+        xty_.resize(size);
+        sumX_.resize(size);
     }
 
     void reset() {
         w_ = 0;
+        sumY_ = 0;
+        sumY2_ = 0;
         trace_ = 0;
-        int pos = 0;
-        for (int i = 0; i <= filledSize_; ++i) {
-            for (int j = 0; j < i + 1; ++j) {
-                XTX_[pos + j] = 0;
-            }
-            pos += i + 1;
-            XTy_[i] = 0;
-        }
+        memset(xtx_.data(), 0, (maxUpdatedPos_ * (maxUpdatedPos_ + 1) / 2) * sizeof(float));
+        memset(xty_.data(), 0, maxUpdatedPos_ * sizeof(float));
+
         filledSize_ = 0;
+        maxUpdatedPos_ = 0;
+        memset(sumX_.data(), 0, maxUpdatedPos_ * sizeof(float));
     }
 
     void setFilledSize(int filledSize) {
         filledSize_ = filledSize;
+        maxUpdatedPos_ = filledSize_;
     }
 
-    int filledSize() {
+    [[nodiscard]] int filledSize() const {
         return filledSize_;
     }
 
-    void addNewCorrelation(const std::vector<float>& xtx, float xty, int shift = 0) {
-        assert(xtx.size() >= filledSize_ + shift + 1);
+    [[nodiscard]] int mxSize() const {
+        return maxUpdatedPos_;
+    }
 
+    void addNewCorrelation(const std::vector<float>& xtx, float xty, int shift = 0) {
         const int corPos = filledSize_ + shift;
 
         int pos = corPos * (corPos + 1) / 2;
         for (int i = 0; i <= corPos; ++i) {
-            XTX_[pos + i] += xtx[i];
+            xtx_[pos + i] += xtx[i];
         }
-        XTy_[corPos] += xty;
-        trace_ += xtx[corPos];
+        xty_[corPos] += xty;
         maxUpdatedPos_ = std::max(maxUpdatedPos_, corPos + 1);
     }
 
     void addFullCorrelation(const std::vector<float>& x, float y, float w) {
-        assert(x.size() >= filledSize_);
-
-        for (int i = 0; i < filledSize_; ++i) {
-            XTy_[i] += x[i] * y * w;
-        }
-
         int pos = 0;
         for (int i = 0; i < filledSize_; ++i) {
+            float xiw = x[i] * w;
             for (int j = 0; j < i + 1; ++j) {
-                XTX_[pos + j] += x[i] * x[j] * w;
+                xtx_[pos + j] += xiw * x[j];
             }
+            sumX_[i] += xiw;
+            xty_[i] += xiw * y;
             pos += i + 1;
         }
 
         w_ += w;
+        float yw = y * w;
+        sumY_ += yw;
+        sumY2_ += yw * y;
     }
 
-    [[nodiscard]] Eigen::MatrixXd getXTX() const {
-        Eigen::MatrixXd res(maxUpdatedPos_, maxUpdatedPos_);
-
+    void fillXTX(EMx& XTX) const {
         int basePos = 0;
         for (int i = 0; i < maxUpdatedPos_; ++i) {
             for (int j = 0; j < i + 1; ++j) {
-                res(i, j) = XTX_[basePos + j];
-                res(j, i) = XTX_[basePos + j];
+                XTX(i, j) = xtx_[basePos + j];
+                XTX(j, i) = xtx_[basePos + j];
             }
             basePos += i + 1;
         }
+    }
 
+    [[nodiscard]] EMx getXTX() const {
+        EMx res(maxUpdatedPos_, maxUpdatedPos_);
+        fillXTX(res);
         return res;
     }
 
-    [[nodiscard]] Eigen::MatrixXd getXTy() const {
-        Eigen::MatrixXd res(maxUpdatedPos_, 1);
-
+    void fillXTy(EMx& XTy) const {
         for (int i = 0; i < maxUpdatedPos_; ++i) {
-            res(i, 0) = XTy_[i];
+            XTy(i, 0) = xty_[i];
+        }
+    }
+
+    [[nodiscard]] EMx getXTy() const {
+        EMx res(maxUpdatedPos_, 1);
+        fillXTy(res);
+        return res;
+    }
+
+    void fillSumX(EMx& sumX) const {
+        for (int i = 0; i < maxUpdatedPos_; ++i) {
+            sumX(i, 0) = sumX_[i];
+        }
+    }
+
+    [[nodiscard]] EMx getSumX() const {
+        EMx res(maxUpdatedPos_, 1);
+        fillSumX(res);
+        return res;
+    }
+
+    [[nodiscard]] EMx getW(double l2reg) const {
+        EMx XTX = getXTX();
+
+        if (w_ < 1e-6) {
+            auto w = EMx(XTX.rows(), 1);
+            for (int i = 0; i < w.rows(); ++i) {
+                w(i, 0) = 0;
+            }
+            return w;
         }
 
-        return res;
+        EMx XTX_r = XTX + DiagMx(XTX.rows(), l2reg);
+        return XTX_r.inverse() * getXTy();
     }
 
-    float getWeight() {
+    [[nodiscard]] float getWeight() const {
         return w_;
     }
 
-    double getTrace() {
-        return trace_;
-    }
-
     double fitScore(double l2reg, bool log = false) {
-        if (log) std::cout << "fitScoring, " << maxUpdatedPos_ << ", l2=" << l2reg << std::endl;
-        if (log) std::cout << "getXTX():\n" << getXTX() << "\nDiagMx:\n" << DiagMx(maxUpdatedPos_, l2reg) << "\n+\n"<< getXTX() + DiagMx(maxUpdatedPos_, l2reg) << std::endl;
-        Eigen::MatrixXd XTX = getXTX() + DiagMx(maxUpdatedPos_, l2reg);
-        if (log) std::cout << "XTX=\n" << XTX << std::endl;
-        Eigen::MatrixXd XTy = getXTy();
-        if (log) std::cout << "XTy=\n" << XTy << std::endl;
+//        if (log) std::cout << "fitScoring, " << maxUpdatedPos_ << ", l2=" << l2reg << std::endl;
+//        if (log) std::cout << "getXTX():\n" << getXTX() << "\nDiagMx:\n" << DiagMx(maxUpdatedPos_, l2reg) << "\n+\n"<< getXTX() + DiagMx(maxUpdatedPos_, l2reg) << std::endl;
+//        Eigen::MatrixXd XTX = getXTX() + DiagMx(maxUpdatedPos_, l2reg);
+//        if (log) std::cout << "XTX=\n" << XTX << std::endl;
+//        Eigen::MatrixXd XTy = getXTy();
+//        if (log) std::cout << "XTy=\n" << XTy << std::endl;
+//
+//        Eigen::MatrixXd w = XTX.inverse() * XTy;
+//        if (log) std::cout << "w=\n" << w << std::endl;
+//
+//        Eigen::MatrixXd c1(XTy.transpose() * w);
+//        c1 *= -2;
+//        assert(c1.rows() == 1 && c1.cols() == 1);
+//        if (log) std::cout << "c1=\n" << c1 << std::endl;
+//
+//        Eigen::MatrixXd c2(w.transpose() * XTX * w);
+//        assert(c2.rows() == 1 && c2.cols() == 1);
+//        if (log) std::cout << "c2=\n" << c2 << std::endl;
+//
+//        Eigen::MatrixXd reg = w.transpose() * w * l2reg;
+//        assert(reg.rows() == 1 && reg.cols() == 1);
+//        if (log) std::cout << "reg=\n" << reg << std::endl;
+//
+//        Eigen::MatrixXd res = c1 + c2 + reg;
+//        if (log) std::cout << "res=\n" << reg << std::endl;
+//
+//        return res(0, 0);
 
-        Eigen::MatrixXd w = XTX.inverse() * XTy;
-        if (log) std::cout << "w=\n" << w << std::endl;
+        if (w_ < 2) {
+            return 0;
+        }
 
-        Eigen::MatrixXd c1(XTy.transpose() * w);
-        c1 *= -2;
-        assert(c1.rows() == 1 && c1.cols() == 1);
-        if (log) std::cout << "c1=\n" << c1 << std::endl;
+        EMx wHat = getW(l2reg);
 
-        Eigen::MatrixXd c2(w.transpose() * XTX * w);
-        assert(c2.rows() == 1 && c2.cols() == 1);
-        if (log) std::cout << "c2=\n" << c2 << std::endl;
+        EMx xty = getXTy();
+        xty -= (sumY_ / w_) * getSumX();
+//        xty *= 1.0 / w;
 
-        Eigen::MatrixXd reg = w.transpose() * w * l2reg;
-        assert(reg.rows() == 1 && reg.cols() == 1);
-        if (log) std::cout << "reg=\n" << reg << std::endl;
+        float reg = 1 + 0.005f * std::log(w_ + 1);
 
-        Eigen::MatrixXd res = c1 + c2 + reg;
-        if (log) std::cout << "res=\n" << reg << std::endl;
+        float scoreFromLinear = (xty.transpose() * wHat)(0, 0);
+        float scoreFromConst = (sumY_ * sumY_) / w_;
+        float targetValue = scoreFromConst + scoreFromLinear - l2reg * (wHat.transpose() * wHat)(0, 0);
 
-        return res(0, 0);
+        return -targetValue * reg;
     }
 
     BinStat& addSized(const BinStat& s, int size) {
         w_ += s.w_;
+        sumY_ += s.sumY_;
+        sumY2_ += s.sumY2_;
         trace_ += s.trace_;
 
         int pos = 0;
         for (int i = 0; i < size; ++i) {
             for (int j = 0; j < i + 1; ++j) {
-                XTX_[pos + j] += s.XTX_[pos + j];
+                xtx_[pos + j] += s.xtx_[pos + j];
             }
             pos += i + 1;
-            XTy_[i] += s.XTy_[i];
+            xty_[i] += s.xty_[i];
+            sumX_[i] += s.sumX_[i];
         }
 
         return *this;
@@ -178,15 +234,18 @@ public:
 
     BinStat& subtractSized(const BinStat& s, int size) {
         w_ -= s.w_;
+        sumY_ -= s.sumY_;
+        sumY2_ -= s.sumY2_;
         trace_ -= s.trace_;
 
         int pos = 0;
         for (int i = 0; i < size; ++i) {
             for (int j = 0; j < i + 1; ++j) {
-                XTX_[pos + j] -= s.XTX_[pos + j];
+                xtx_[pos + j] -= s.xtx_[pos + j];
             }
             pos += i + 1;
-            XTy_[i] -= s.XTy_[i];
+            xty_[i] -= s.xty_[i];
+            sumX_[i] -= s.sumX_[i];
         }
 
         return *this;
@@ -215,10 +274,13 @@ public:
     int filledSize_;
     int maxUpdatedPos_;
 
-    std::vector<float> XTX_;
-    std::vector<float> XTy_;
     float w_;
-    double trace_;
+    float trace_;
+    float sumY_;
+    float sumY2_;
+    std::vector<float> xtx_;
+    std::vector<float> xty_;
+    std::vector<float> sumX_;
 };
 
 inline BinStat addFilled(const BinStat& lhs, const BinStat& rhs) {
@@ -294,7 +356,7 @@ class GreedyLinearObliviousTreeLearnerV2 final
         : public Optimizer {
 public:
     explicit GreedyLinearObliviousTreeLearnerV2(GridPtr grid, int32_t maxDepth = 6, int biasCol = -1,
-                                              double l2reg = 0.0, double traceReg = 0.0)
+                                                double l2reg = 0.0, double traceReg = 0.0)
             : grid_(std::move(grid))
             , biasCol_(biasCol)
             , maxDepth_(maxDepth)
@@ -345,7 +407,7 @@ private:
 
 class LinearObliviousTreeV2 final
         : public Stub<BinOptimizedModel, LinearObliviousTreeV2>
-        , std::enable_shared_from_this<LinearObliviousTreeV2> {
+                , std::enable_shared_from_this<LinearObliviousTreeV2> {
 public:
 
     LinearObliviousTreeV2(const LinearObliviousTreeV2& other, double scale)
