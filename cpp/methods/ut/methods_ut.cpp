@@ -12,6 +12,7 @@
 #include <methods/greedy_linear_oblivious_trees_v2.h>
 #include <methods/boosting_weak_target_factory.h>
 #include <targets/cross_entropy.h>
+#include <targets/linear_l2.h>
 #include <metrics/accuracy.h>
 
 #define EPS 1e-5
@@ -38,7 +39,7 @@ inline std::unique_ptr<GreedyLinearObliviousTreeLearnerV2> createWeakLinearLearn
         double l2reg,
         double traceReg,
         GridPtr grid) {
-    return std::make_unique<GreedyLinearObliviousTreeLearnerV2>(std::move(grid), depth, biasCol, l2reg, traceReg);
+    return std::make_unique<GreedyLinearObliviousTreeLearnerV2>(std::move(grid), depth, biasCol, l2reg);
 }
 
 inline std::unique_ptr<EmpiricalTargetFactory> createWeakTarget() {
@@ -302,7 +303,7 @@ TEST(BoostingSimple, V2) {
     trainMetricsCalcer->addMetric(L2(ds), "l2-train");
     boosting.addListener(trainMetricsCalcer);
 
-    L2 target(ds);
+    LinearL2 target(ds);
     auto ensemble = boosting.fit(ds, target);
 
     for (int i = 0; i < ds.samplesCount(); ++i) {
@@ -351,8 +352,9 @@ TEST(Boosting, LinearV2FeaturesTxtBootstrap) {
     auto grid = buildGrid(ds, config);
 
     BoostingConfig boostingConfig;
-    boostingConfig.iterations_ = 200;
-    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLinearLearnerV2(6, 0, 1, 0.00, grid));
+    boostingConfig.iterations_ = 2000;
+    boostingConfig.step_ = 0.01;
+    Boosting boosting(boostingConfig, createBootstrapWeakTarget(), createWeakLinearLearnerV2(6, 0, 3.0, 0.00, grid));
 
     auto testMetricsCalcer = std::make_shared<BoostingMetricsCalcer>(test);
     testMetricsCalcer->addMetric(L2(test), "l2-test");

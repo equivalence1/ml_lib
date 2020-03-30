@@ -57,6 +57,7 @@ inline void parallelForInThreadPool(ThreadPool& pool, int64_t from, int64_t to, 
                     }
                 });
             } else {
+                SemaphoreReleaseGuard srg(sema, endBlock - startBlock);
                 for (int64_t i = startBlock; i < endBlock; ++i) {
                     task(blockId, i);
                 }
@@ -86,6 +87,7 @@ inline void parallelForInThreadPool(ThreadPool& pool, int64_t from, int64_t to, 
                     }
                 });
             } else {
+                SemaphoreReleaseGuard srg(sema, endBlock - startBlock);
                 for (int64_t i = startBlock; i < endBlock; ++i) {
                     task(i);
                 }
